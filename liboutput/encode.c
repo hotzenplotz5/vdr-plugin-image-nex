@@ -78,11 +78,7 @@ bool cEncode::Register()
     av_register_all();
     avcodec_register_all();
 #endif
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59,0,100)
     m_pavCodec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
-#else
-    m_pavCodec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
-#endif
     if (!m_pavCodec) {
         esyslog("imageplugin: Failed to find CODEC_ID_MPEG2VIDEO.\n");
 	      return false;
