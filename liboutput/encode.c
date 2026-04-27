@@ -18,7 +18,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 #else
-#include "libavcodec/imgconvert.h">
+#include <libavcodec/imgconvert.h>
 #endif
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51,63,100)
 extern "C" {
@@ -30,7 +30,7 @@ extern "C" {
 #include <vdr/device.h>
 #include <vdr/tools.h>
 
-AVCodec *cEncode::m_pavCodec = NULL;
+const AVCodec *cEncode::m_pavCodec = NULL;
 
 /*******************************************************************************
 
@@ -81,7 +81,7 @@ bool cEncode::Register()
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59,0,100)
     m_pavCodec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
 #else
-    m_pavCodec = (AVCodec*) avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
+    m_pavCodec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
 #endif
     if (!m_pavCodec) {
         esyslog("imageplugin: Failed to find CODEC_ID_MPEG2VIDEO.\n");
