@@ -28,10 +28,11 @@ eject)
   eject "$path" || exit 1         # eject disk
   ;;
 status)
-  cat /proc/mounts | grep -q "$path" # check if mounted
+  grep -q "$path" /proc/mounts       # check if mounted
   if [ $? -ne 0 ]; then              # not mounted ...
     exit 1
   fi
+  ;;
 esac
 
 exit 0

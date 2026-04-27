@@ -107,7 +107,7 @@ cEncode::~cEncode(void)
 {
     ReleaseBuffers();
     if(m_pFrameSizes) {
-      delete m_pFrameSizes;
+      delete[] m_pFrameSizes;
       m_pFrameSizes = NULL;
     }
 }

@@ -72,7 +72,7 @@ fi
   PARFILE="$OUTFILE.par"
   
   # remove precreated files if called with flip "left","right" or "original"
-  [ -s "$OUTFILE" -a "$FLIPCMD" != "" ] &&  rm -f "$OUTFILE"
+  [ -s "$OUTFILE" ] && [ "$FLIPCMD" != "" ] &&  rm -f "$OUTFILE"
 
   if [ -s "$OUTFILE" ] ; then
     [ "z$VERBOSE" = "zyes" ] && echo "Success! Convert not required, $OUTFILE exists already!" 
@@ -80,7 +80,7 @@ fi
   else
 
       # Get image resolution
-      RES=`echo $( identify -format "%wx%h" "$INFILE" )` # checked with imagemagick 6.0.6 ...
+      RES=$(identify -format "%wx%h" "$INFILE") # checked with imagemagick 6.0.6 ...
       # Parse identify output image.jpg JPEG 3456x2304 DirectClass 4.7mb 3.720u 0:04
       X_RES=$(echo -e "$RES"| cut -d "x" -f 1)
       Y_RES=$(echo -e "$RES"| cut -d "x" -f 2)

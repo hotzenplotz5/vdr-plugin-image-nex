@@ -74,8 +74,8 @@ fi
   PARFILE="$OUTFILE.par"
   
   # remove precreated files if called with flip "left","right" or "original"
-  [ -s "$OUTFILE" -a "$FLIPCMD" != "" ] &&  rm -f "$OUTFILE"
-  [ -s "$TMPFILE" -a "$FLIPCMD" != "" ] &&  rm -f "$TMPFILE"
+  [ -s "$OUTFILE" ] && [ "$FLIPCMD" != "" ] &&  rm -f "$OUTFILE"
+  [ -s "$TMPFILE" ] && [ "$FLIPCMD" != "" ] &&  rm -f "$TMPFILE"
 
   if [ -s "$OUTFILE" ] ; then
     [ "z$VERBOSE" = "zyes" ] && echo "Success! Convert not required, $OUTFILE exists already!" 
@@ -88,7 +88,7 @@ fi
     if [ -s "$TMPFILE" ] ; then
     
       # Get image resolution
-      RES=`echo $( pnmfile < "$TMPFILE" -)` # checked with netpbm 10.0,
+      RES=$(pnmfile < "$TMPFILE" -) # checked with netpbm 10.0,
       # Parse pnmfile output "-: PPM raw, 768 by 576  maxval 255" => 768 x 576
       X_RES=$(echo -e "$RES"| cut -d " " -f 4)
       Y_RES=$(echo -e "$RES"| cut -d " " -f 6)
