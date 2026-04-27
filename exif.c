@@ -248,3 +248,17 @@ ImageExifOrientation GetRotationFromExifData (const char *filename, int& rotate,
     return ieo;
 }
 
+bool ExtractExifThumbnail(const char* jpegFile, const char* thumbOut) {
+    ExifData *edata = exif_data_new_from_file(jpegFile);
+    if (edata && edata->data && edata->size > 0) {
+        FILE *f = fopen(thumbOut, "wb");
+        if (f) {
+            fwrite(edata->data, 1, edata->size, f);
+            fclose(f);
+            exif_data_unref(edata);
+            return true;
+        }
+    }
+    if (edata) exif_data_unref(edata);
+    return false;
+}

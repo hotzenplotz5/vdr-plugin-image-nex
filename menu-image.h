@@ -16,6 +16,7 @@
 #include <vdr/menuitems.h>
 
 #include "menu.h"
+#include "data.h"
 
 // ----------------------------------------------------------------
 class cMenuImageBrowse:public cMenuBrowse {
@@ -28,4 +29,25 @@ class cMenuImageBrowse:public cMenuBrowse {
     virtual eOSState ProcessKey(eKeys Key);
 };
 
+class cMenuImageGrid : public cOsdMenu {
+private:
+    cOsd *myOsd;
+    cFileSource *source;
+    cDirList *list;
+    int currentIndex;
+    int columns;
+    int osdWidth, osdHeight;
+    char *currentdir;
+
+    bool LoadDir(const char *dir);
+    void DrawGrid();
+    cDirItem *CurrentItem();
+    eOSState Select(bool isred);
+    eOSState Parent();
+public:
+    cMenuImageGrid(cFileSource *Source);
+    virtual ~cMenuImageGrid();
+    virtual void Display(void);
+    virtual eOSState ProcessKey(eKeys Key);
+};
 #endif				//___MENU_IMAGE_H

@@ -49,4 +49,6 @@ enum ImageMirror {
 
 ImageExifOrientation GetRotationFromExifData (const char *filename, int& rotate, ImageMirror& mirror);
 
+bool ExtractExifThumbnail(const char* jpegFile, const char* thumbOut);
+
 #endif //__MENU_EXIF_H

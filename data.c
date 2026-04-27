@@ -27,6 +27,10 @@
 
 #include <vdr/tools.h>
 
+#ifdef HAVE_LIBEXIF
+#include "exif.h"
+#endif
+
 // ----------------------------------------------------------------
 
 const char *g_szMountScript = "mount.sh";
@@ -280,6 +284,27 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
       if (access(folderJpgPath, R_OK) == 0) {
           HasFolderJpg = true;
       }
+#ifdef HAVE_LIBEXIF
+      else {
+          // Lazy-Loading: Extract EXIF thumbnail from the first JPEG in the folder
+          DIR *dp = opendir(fullDirPath);
+          if (dp) {
+              struct dirent *ep;
+              while ((ep = readdir(dp)) != NULL) {
+                  const char *ext = strrchr(ep->d_name, '.');
+                  if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
+                      char *firstJpgPath = AddPath(fullDirPath, ep->d_name);
+                      if (ExtractExifThumbnail(firstJpgPath, folderJpgPath)) {
+                          HasFolderJpg = true;
+                      }
+                      free(firstJpgPath);
+                      if (HasFolderJpg) break;
+                  }
+              }
+              closedir(dp);
+          }
+      }
+#endif
 
       FILE *f = fopen(aliasPath, "r");
       if (f) {

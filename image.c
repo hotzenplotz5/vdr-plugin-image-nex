@@ -140,6 +140,9 @@ void cPluginImage::RemoveServiceSource()
 
 cOsdMenu *cPluginImage::MainMenuAction(void)
 {
+  if (ImageSetup.m_nDisplayMode == 1) {
+      return new cMenuImageGrid(ImageSources.GetSource());
+  }
   return new cMenuImageBrowse;
 }
 
