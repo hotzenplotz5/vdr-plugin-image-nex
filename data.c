@@ -265,8 +265,44 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
 {
   Source = src;
   Subdir = subdir ? strdup(subdir) : 0;
-  Name = name ? strdup(name) : 0;
   Type = type;
+  HasFolderJpg = false;
+
+  // Alias-Feature: Check for .directory_name in directories
+  char *aliasName = NULL;
+  if (type == itDir && name && strcmp(name, "..") != 0) {
+      char *dirPath = subdir ? AddPath(subdir, name) : strdup(name);
+      char *fullDirPath = src->BuildName(dirPath);
+      char *aliasPath = AddPath(fullDirPath, ".directory_name");
+      char *folderJpgPath = AddPath(fullDirPath, "folder.jpg");
+
+      // Check if a folder.jpg exists for the upcoming Grid-View
+      if (access(folderJpgPath, R_OK) == 0) {
+          HasFolderJpg = true;
+      }
+
+      FILE *f = fopen(aliasPath, "r");
+      if (f) {
+          char buf[256];
+          if (fgets(buf, sizeof(buf), f)) {
+              // Remove newline
+              char *nl = strchr(buf, '\n');
+              if (nl) *nl = 0;
+              
+              // Set alias if not empty
+              if (strlen(buf) > 0) {
+                  aliasName = strdup(buf);
+              }
+          }
+          fclose(f);
+      }
+      free(folderJpgPath);
+      free(aliasPath);
+      free(fullDirPath);
+      free(dirPath);
+  }
+
+  Name = aliasName ? aliasName : (name ? strdup(name) : 0);
 }
 
 cDirItem::~cDirItem()

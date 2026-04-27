@@ -42,6 +42,9 @@ public:
   int m_bRemoveImmediately;
   /* Use as output DeviceStillPicture */
   int m_bUseDeviceStillPicture;
+  
+  /* 0 = List, 1 = Grid View */
+  int m_nDisplayMode;
 
   /** Minimum Value for Slideshow */
   static const int m_cSSMin;

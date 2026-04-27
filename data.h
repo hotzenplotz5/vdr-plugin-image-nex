@@ -52,6 +52,7 @@ public:
   char *Subdir;
   char *Name;
   eItemType Type;
+  bool HasFolderJpg;
   };
 
 // ----------------------------------------------------------------
