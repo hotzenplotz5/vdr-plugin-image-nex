@@ -21,11 +21,11 @@
 # *
 msgid ""
 msgstr ""
-"Project-Id-Version: vdr-image 0.4.0\n"
+"Project-Id-Version: vdr-image 0.6.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
 "POT-Creation-Date: 2013-02-12 18:44+0100\n"
-"PO-Revision-Date: 2013-02-19 20:04+0100\n"
-"Last-Translator: Diego Pierotto <vdr-italian@tiscali.it>\n"
+"PO-Revision-Date: 2026-04-28 04:03+0200\n"
+"Last-Translator: hotze <hotze@vdr-portal.de>\n"
 "Language-Team:  <vdr at linuxtv.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -167,3 +167,14 @@ msgstr "Bordo per Underscan (altezza)"
 msgid "Border for Underscan (Width)"
 msgstr "Bordo per Underscan (largh.)"
 
+msgid "Image Grid"
+msgstr "Vista a griglia"
+
+msgid "Display Mode"
+msgstr "Modalità di visualizzazione"
+
+msgid "List"
+msgstr "Elenco"
+
+msgid "Grid"
+msgstr "Griglia"

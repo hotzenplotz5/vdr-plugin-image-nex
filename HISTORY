@@ -1,6 +1,13 @@
 VDR Plugin 'image' Revision History
 -----------------------------------
 
+2026-04-27: Version 0.6.0
+- Added grid view for a modern browsing experience (Patch by hotze).
+- Added setup option to switch between list and grid view.
+- Implemented display of folder thumbnails (`folder.jpg`) in grid view.
+- Added support for directory alias names via `.directory_name` files.
+- Reworked grid view to be fully skin-compatible and stable.
+
 2022-06-20: Version 0.5.0
 - Several fixes for later FFMPEG versions (Patches submitted by lnj@vdr-portal)
 

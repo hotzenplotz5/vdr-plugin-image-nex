@@ -3,7 +3,7 @@
 # *
 # * (C) 2004 - 2007 Andreas Brachold    <anbr at users.berlios.de>
 # * based on (C) 2003 Kai Tobias Burwieck      <kai-at-burwieck.net>
-# * Jesús Bravo Álvarez  <EMAIL at ADDRESS>
+# * Jesï¿½s Bravo ï¿½lvarez  <EMAIL at ADDRESS>
 # *
 # * This code is free software; you can redistribute it and/or
 # * modify it under the terms of the GNU General Public License
@@ -22,37 +22,37 @@
 # *
 msgid ""
 msgstr ""
-"Project-Id-Version: vdr-image 0.4.0\n"
+"Project-Id-Version: vdr-image 0.6.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
 "POT-Creation-Date: 2013-02-12 18:44+0100\n"
-"PO-Revision-Date: 2007-08-18 08:13+0200\n"
-"Last-Translator: Jesús Bravo Álvarez <EMAIL at ADDRESS>\n"
+"PO-Revision-Date: 2026-04-28 04:03+0200\n"
+"Last-Translator: hotze <hotze@vdr-portal.de>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
-"Language: \n"
+"Language: es\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Convert..."
 msgstr "Convertir..."
 
 msgid "Select picture via key 1..9!"
-msgstr "¡Seleccione la imagen con los botones 1..9!"
+msgstr "Â¡Seleccione la imagen con los botones 1..9!"
 
 msgid "Zoom"
-msgstr "Ampliación"
+msgstr "AmpliaciÃ³n"
 
 msgid "Operation failed"
-msgstr "Operación fallida"
+msgstr "OperaciÃ³n fallida"
 
 msgid "Commands"
-msgstr "Órdenes"
+msgstr "Ã“rdenes"
 
 msgid "Show exif informations from image"
-msgstr "Mostrar información exif de la imagen"
+msgstr "Mostrar informaciÃ³n exif de la imagen"
 
 msgid "Could not load exif data from image!"
-msgstr "¡No se pudo cargar los datos exif de la imagen!"
+msgstr "Â¡No se pudo cargar los datos exif de la imagen!"
 
 msgid "Marker"
 msgstr "Marca"
@@ -61,13 +61,13 @@ msgid "Tags"
 msgstr "Etiquetas"
 
 msgid "Back"
-msgstr "Atrás"
+msgstr "Atrï¿½s"
 
 msgid "A Image Viewer plugin"
-msgstr "Un plugin para visualizar imágenes"
+msgstr "Un plugin para visualizar imÃ¡genes"
 
 msgid "Images"
-msgstr "Imágenes"
+msgstr "ImÃ¡genes"
 
 msgid "Select"
 msgstr "Seleccionar"
@@ -76,7 +76,7 @@ msgid "Parent"
 msgstr "Superior"
 
 msgid "Error scanning directory!"
-msgstr "¡Error al leer la carpeta!"
+msgstr "Â¡Error al leer la carpeta!"
 
 msgid "Mount"
 msgstr "Montar"
@@ -88,28 +88,28 @@ msgid "Eject"
 msgstr ""
 
 msgid "Selected data medium is not mounted!"
-msgstr "¡El medio de datos no está montado!"
+msgstr "Â¡El medio de datos no estÃ¡ montado!"
 
 msgid "Mount failed!"
-msgstr "¡Fallo al montar!"
+msgstr "Â¡Fallo al montar!"
 
 msgid "Mount succeeded"
 msgstr "Montaje correcto"
 
 msgid "Unmount succeeded!"
-msgstr "¡Desmontaje correcto!"
+msgstr "Â¡Desmontaje correcto!"
 
 msgid "Unmount failed!"
-msgstr "¡Fallo al desmontar!"
+msgstr "Â¡Fallo al desmontar!"
 
 msgid "Eject failed!"
-msgstr "¡No se puede expulsar!"
+msgstr "Â¡No se puede expulsar!"
 
 msgid "Execute"
 msgstr "Ejecutar"
 
 msgid "Image browser"
-msgstr "Examinador de imágenes"
+msgstr "Examinador de imï¿½genes"
 
 msgid "Play"
 msgstr "Play"
@@ -118,10 +118,10 @@ msgid "Data medium"
 msgstr "Medio de datos"
 
 msgid "Image source"
-msgstr "Fuente de imágenes"
+msgstr "Fuente de imÃ¡genes"
 
 msgid "No files!"
-msgstr "¡No hay ficheros!"
+msgstr "Â¡No hay ficheros!"
 
 msgid "Image couldn't load"
 msgstr "No se pudo cargar la imagen"
@@ -130,16 +130,16 @@ msgid "Script execution failed"
 msgstr "Fallo al ejecutar el script"
 
 msgid "Slide show"
-msgstr "Presentación de imágenes"
+msgstr "PresentaciÃ³n de imÃ¡genes"
 
 msgid "Slide duration (sec)"
-msgstr "Duración de cada imagen (sg)"
+msgstr "Duraciï¿½n de cada imagen (sg)"
 
 msgid "Repeat slide show"
-msgstr "Repetir la presentación"
+msgstr "Repetir la presentaciï¿½n"
 
 msgid "Show numbers on index image"
-msgstr "Mostrar números en la imagen índice"
+msgstr "Mostrar nÃºmeros en la imagen Ã­ndice"
 
 msgid "Hide main menu entry"
 msgstr ""
@@ -165,3 +165,14 @@ msgstr "Margen para underscan (altura)"
 msgid "Border for Underscan (Width)"
 msgstr "Margen para underscan (anchura)"
 
+msgid "Image Grid"
+msgstr "Vista de cuadrÃ­cula"
+
+msgid "Display Mode"
+msgstr "Modo de visualizaciÃ³n"
+
+msgid "List"
+msgstr "Lista"
+
+msgid "Grid"
+msgstr "CuadrÃ­cula"

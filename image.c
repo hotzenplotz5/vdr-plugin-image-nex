@@ -26,7 +26,7 @@
 #include "commands.h"
 #include "liboutput/encode.h"
 
-static const char *VERSION        = "0.5.0";
+static const char *VERSION        = "0.6.0";
 
 class cPluginImage : public cPlugin {
     cDirItem*      m_pServiceDirItem;
@@ -140,10 +140,10 @@ void cPluginImage::RemoveServiceSource()
 
 cOsdMenu *cPluginImage::MainMenuAction(void)
 {
-  if (ImageSetup.m_nDisplayMode == 1) {
+  if (ImageSetup.m_nDisplayMode == 1) { // 1 = Grid view
       return new cMenuImageGrid(ImageSources.GetSource());
   }
-  return new cMenuImageBrowse;
+  return new cMenuImageBrowse();
 }
 
 cMenuSetupPage *cPluginImage::SetupMenu(void)
