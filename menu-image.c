@@ -25,6 +25,7 @@
 #include "menu-image.h"
 #include "control-image.h"
 #include <vdr/i18n.h>
+#include <vdr/image.h>
 
 #include <vdr/osd.h>
 #include <vdr/font.h>
@@ -111,7 +112,6 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
 : cOsdMenu("Image Grid")
 {
-    myOsd = NULL;
     source = Source;
     list = new cDirList;
     currentIndex = 0;
@@ -131,7 +131,6 @@ cMenuImageGrid::~cMenuImageGrid()
 
     delete list;
     free(currentdir);
-    if (myOsd) delete myOsd;
 }
 
 bool cMenuImageGrid::LoadDir(const char *dir)
@@ -142,43 +141,44 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 
 void cMenuImageGrid::Display(void)
 {
-    if (!myOsd) {
-        double aspect;
-        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
-        myOsd = cOsdProvider::NewOsd(0, 0);
-        if (myOsd) {
-            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-            myOsd->SetAreas(&Area, 1);
-        }
-    }
-    columns = (osdWidth > 1900) ? 6 : 4;
-    if (osdWidth > 3000) columns = 8; // 4K Support
-
+    // Die Basisklasse cOsdMenu zeichnet den Titel und die Hilfs-Buttons.
+    cOsdMenu::Display();
+    // Wir zeichnen unseren Kachel-Inhalt darüber.
     DrawGrid();
+    // Wichtig: Die Änderungen auf dem Bildschirm sichtbar machen.
+    if (osd)
+       osd->Flush();
 }
 
 void cMenuImageGrid::DrawGrid()
 {
-    if (!myOsd) return;
+    if (!osd) return; // 'osd' aus der Basisklasse cOsdMenu verwenden
 
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, clrBackground);
+    int osdWidth = OsdWidth();
+    int osdHeight = OsdHeight();
+
+    columns = (osdWidth > 1900) ? 6 : 4;
+    if (osdWidth > 3000) columns = 8; // 4K Support
+
+    // Den Menübereich mit der Hintergrundfarbe des Skins leeren
+    osd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, Theme.Color(clrMenuBg));
 
     int margin = 50;
     int padding = 20;
     int kachelBreite = (osdWidth - (2 * margin) - ((columns - 1) * padding)) / columns;
     int kachelHoehe = kachelBreite * 3 / 4;
 
-    int totalItems = list->Count();
-
     char titleBuf[256];
     snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, clrWhite, clrBackground, cFont::GetFont(fontOsd));
+    SetTitle(titleBuf); // Titel an cOsdMenu übergeben, damit der Skin ihn zeichnet
 
-    int visibleRows = (osdHeight - 100) / (kachelHoehe + padding);
+    int totalItems = list->Count();
+    const cFont *font = cFont::GetFont(fontMenu);
+    int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
+
+    int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
-    int startRow = currentIndex / columns;
-    if (startRow > visibleRows - 1) startRow = startRow - visibleRows + 1;
-    else startRow = 0;
+    int startRow = (currentIndex / columns / visibleRows) * visibleRows;
 
     for (int i = 0; i < totalItems; i++) {
         int row = (i / columns) - startRow;
@@ -186,23 +186,58 @@ void cMenuImageGrid::DrawGrid()
 
         int col = i % columns;
         int x = margin + col * (kachelBreite + padding);
-        int y = 80 + row * (kachelHoehe + padding);
+        int y = titleHeight + row * (kachelHoehe + padding);
 
-        tColor bgColor = (i == currentIndex) ? clrYellow : clrBlue;
-        tColor textColor = (i == currentIndex) ? clrBlack : clrWhite;
-        myOsd->DrawRectangle(x, y, x + kachelBreite, y + kachelHoehe, bgColor);
+        tColor bgColor = (i == currentIndex) ? Theme.Color(clrMenuHighlight) : Theme.Color(clrMenuBg);
+        tColor textColor = (i == currentIndex) ? Theme.Color(clrMenuHighlightFg) : Theme.Color(clrMenuFg);
+        osd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Draw tile background
 
         cDirItem *item = list->Get(i);
         if (item) {
-            myOsd->DrawText(x + 5, y + kachelHoehe - 30, item->Name, textColor, bgColor, cFont::GetFont(fontSml));
-            if (item->Type == itDir || item->Type == itParent) {
-                myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, cFont::GetFont(fontSml));
-            } else if (item->HasFolderJpg) {
-                myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, cFont::GetFont(fontSml));
+            bool thumbDrawn = false;
+            if (item->HasFolderJpg) {
+                char *dirPath = item->Path();
+                char *fullDirPath = source->BuildName(dirPath);
+                char *thumbPath = AddPath(fullDirPath, "folder.jpg");
+
+                cImage thumb;
+                if (thumb.Load(thumbPath)) {
+                    // Scale image to fit the tile, preserving aspect ratio
+                    double aspect = (double)thumb.Height() / thumb.Width();
+                    int newWidth = kachelBreite;
+                    int newHeight = newWidth * aspect;
+                    if (newHeight > kachelHoehe) {
+                        newHeight = kachelHoehe;
+                        newWidth = newHeight / aspect;
+                    }
+                    thumb.Scale(cSize(newWidth, newHeight));
+
+                    // Center the image in the tile
+                    int thumbX = x + (kachelBreite - newWidth) / 2;
+                    int thumbY = y + (kachelHoehe - newHeight) / 2;
+
+                    osd->DrawImage(thumbX, thumbY, thumb);
+                    thumbDrawn = true;
+                }
+
+                free(thumbPath);
+                free(fullDirPath);
+                free(dirPath);
             }
+
+            // If no thumbnail was drawn, draw the text icon
+            if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
+                osd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, font);
+            }
+
+            // Draw the name at the bottom with a semi-transparent bar
+            int textBarHeight = font->Height() + 4;
+            int textY = y + kachelHoehe - textBarHeight;
+            tColor textBg = 0xA0000000; // Semi-transparent black
+            osd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
+            osd->DrawText(x + 5, textY + 2, item->Name, textColor, textBg, font);
         }
     }
-    myOsd->Flush();
 }
 
 cDirItem *cMenuImageGrid::CurrentItem()
@@ -221,21 +256,21 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     switch (Key & ~k_Repeat) {
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
-            DrawGrid();
+            Display();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
-            DrawGrid();
+            Display();
             return osContinue;
         case kDown:
             if (currentIndex + columns < totalItems) currentIndex += columns;
             else currentIndex = totalItems - 1;
-            DrawGrid();
+            Display();
             return osContinue;
         case kUp:
             if (currentIndex - columns >= 0) currentIndex -= columns;
             else currentIndex = 0;
-            DrawGrid();
+            Display();
             return osContinue;
         case kOk:
         case kRed:
@@ -262,7 +297,7 @@ eOSState cMenuImageGrid::Parent(void)
         free(currentdir);
         currentdir = parentDir;
         LoadDir(currentdir);
-        DrawGrid();
+        Display();
     } else {
         return osEnd;
     }
@@ -283,7 +318,7 @@ eOSState cMenuImageGrid::Select(bool isred)
         currentdir = newdir;
         free(path);
         LoadDir(currentdir);
-        DrawGrid();
+        Display();
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);
