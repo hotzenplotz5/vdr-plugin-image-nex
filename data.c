@@ -29,6 +29,52 @@
 
 #ifdef HAVE_LIBEXIF
 #include "exif.h"
+#include <queue>
+#include <string>
+#include <vdr/thread.h>
+
+struct ExifTask {
+    std::string firstJpgPath;
+    std::string folderJpgPath;
+};
+
+class cExifExtractorThread : public cThread {
+    std::queue<ExifTask> tasks;
+    cMutex mutex;
+    cCondVar cond;
+public:
+    cExifExtractorThread() : cThread("ImageExifExtractor") {}
+    
+    void AddTask(const std::string& jpg, const std::string& folder) {
+        cMutexLock lock(&mutex);
+        ExifTask t;
+        t.firstJpgPath = jpg;
+        t.folderJpgPath = folder;
+        tasks.push(t);
+        cond.Broadcast();
+        if (!Active()) Start();
+    }
+    
+    virtual void Action() {
+        while (Running()) {
+            ExifTask task;
+            {
+                cMutexLock lock(&mutex);
+                if (tasks.empty()) {
+                    cond.Wait(mutex, 1000);
+                    if (tasks.empty()) break;
+                }
+                task = tasks.front();
+                tasks.pop();
+            }
+            if (!task.firstJpgPath.empty() && !task.folderJpgPath.empty()) {
+                ExtractExifThumbnail(task.firstJpgPath.c_str(), task.folderJpgPath.c_str());
+            }
+        }
+    }
+};
+
+static cExifExtractorThread ExifThread;
 #endif
 
 // ----------------------------------------------------------------
@@ -294,11 +340,10 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
                   const char *ext = strrchr(ep->d_name, '.');
                   if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
                       char *firstJpgPath = AddPath(fullDirPath, ep->d_name);
-                      if (ExtractExifThumbnail(firstJpgPath, folderJpgPath)) {
-                          HasFolderJpg = true;
-                      }
+                      // Asynchrone Extraktion, UI wird nicht blockiert
+                      ExifThread.AddTask(firstJpgPath, folderJpgPath);
                       free(firstJpgPath);
-                      if (HasFolderJpg) break;
+                      break;
                   }
               }
               closedir(dp);

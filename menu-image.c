@@ -18,6 +18,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <typeinfo>
+#include <map>
+#include <string>
 
 #include "image.h"
 #include "menu.h"
@@ -30,6 +32,40 @@
 #include <vdr/osd.h>
 #include <vdr/font.h>
 #include <vdr/status.h>
+
+class cThumbCache {
+public:
+    static std::map<std::string, cImage*> Cache;
+    static cImage* Get(const char* path, int maxWidth, int maxHeight) {
+        std::string key = path;
+        if (Cache.find(key) != Cache.end()) {
+            return Cache[key];
+        }
+        cImage* thumb = new cImage;
+        if (thumb->Load(path)) {
+            double aspect = (double)thumb->Height() / thumb->Width();
+            int newWidth = maxWidth;
+            int newHeight = newWidth * aspect;
+            if (newHeight > maxHeight) {
+                newHeight = maxHeight;
+                newWidth = newHeight / aspect;
+            }
+            thumb->Scale(cSize(newWidth, newHeight));
+            Cache[key] = thumb;
+            return thumb;
+        }
+        delete thumb;
+        Cache[key] = NULL; // Fehler vermerken, um Endlos-Neuladen zu verhindern
+        return NULL;
+    }
+    static void Clear() {
+        for (std::map<std::string, cImage*>::iterator it = Cache.begin(); it != Cache.end(); ++it) {
+            delete it->second;
+        }
+        Cache.clear();
+    }
+};
+std::map<std::string, cImage*> cThumbCache::Cache;
 
 
 // --- cMenuImageBrowse ---------------------------------------------------------
@@ -157,8 +193,13 @@ void cMenuImageGrid::DrawGrid()
     int osdWidth = OsdWidth();
     int osdHeight = OsdHeight();
 
-    columns = (osdWidth > 1900) ? 6 : 4;
-    if (osdWidth > 3000) columns = 8; // 4K Support
+    if (ImageSetup.m_nGridColumns > 0) {
+        columns = ImageSetup.m_nGridColumns;
+    } else {
+        // Auto-calculation based on resolution
+        columns = (osdWidth >= 1920) ? 6 : 4;
+        if (osdWidth >= 3840) columns = 8; // 4K Support
+    }
 
     // Den Menübereich mit der Hintergrundfarbe des Skins leeren
     osd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, Theme.Color(clrMenuBg));
@@ -195,35 +236,29 @@ void cMenuImageGrid::DrawGrid()
         cDirItem *item = list->Get(i);
         if (item) {
             bool thumbDrawn = false;
+            char *dirPath = item->Path();
+            char *fullDirPath = source->BuildName(dirPath);
+            char *thumbPath = AddPath(fullDirPath, "folder.jpg");
+
+            if (!item->HasFolderJpg && access(thumbPath, R_OK) == 0) {
+                item->HasFolderJpg = true;
+            }
+
             if (item->HasFolderJpg) {
-                char *dirPath = item->Path();
-                char *fullDirPath = source->BuildName(dirPath);
-                char *thumbPath = AddPath(fullDirPath, "folder.jpg");
-
-                cImage thumb;
-                if (thumb.Load(thumbPath)) {
-                    // Scale image to fit the tile, preserving aspect ratio
-                    double aspect = (double)thumb.Height() / thumb.Width();
-                    int newWidth = kachelBreite;
-                    int newHeight = newWidth * aspect;
-                    if (newHeight > kachelHoehe) {
-                        newHeight = kachelHoehe;
-                        newWidth = newHeight / aspect;
-                    }
-                    thumb.Scale(cSize(newWidth, newHeight));
-
+                cImage* thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
+                if (thumb) {
                     // Center the image in the tile
-                    int thumbX = x + (kachelBreite - newWidth) / 2;
-                    int thumbY = y + (kachelHoehe - newHeight) / 2;
+                    int thumbX = x + (kachelBreite - thumb->Width()) / 2;
+                    int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
 
-                    osd->DrawImage(thumbX, thumbY, thumb);
+                    osd->DrawImage(thumbX, thumbY, *thumb);
                     thumbDrawn = true;
                 }
-
-                free(thumbPath);
-                free(fullDirPath);
-                free(dirPath);
             }
+            
+            free(thumbPath);
+            free(fullDirPath);
+            free(dirPath);
 
             // If no thumbnail was drawn, draw the text icon
             if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {

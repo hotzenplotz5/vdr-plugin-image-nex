@@ -45,6 +45,8 @@ public:
   
   /* 0 = List, 1 = Grid View */
   int m_nDisplayMode;
+  /* Number of columns in Grid (0 = Auto) */
+  int m_nGridColumns;
 
   /** Minimum Value for Slideshow */
   static const int m_cSSMin;

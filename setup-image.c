@@ -47,6 +47,7 @@ cImageSetup::cImageSetup(void)
   m_bUseDeviceStillPicture = 1;
   m_bRemoveImmediately = false;
   m_nDisplayMode = 0;
+  m_nGridColumns = 0;
 
   m_nBorderHeight = 16;
   m_nBorderWidth = 16;
@@ -77,6 +78,7 @@ bool cImageSetup::SetupParse(const char *szName, const char *szValue)
   else ParseInteger("UseDeviceStillPicture",  m_bUseDeviceStillPicture,0,1)
   else ParseInteger("RemoveImmediately", m_bRemoveImmediately,0,1)
   else ParseInteger("DisplayMode",   m_nDisplayMode,0,1)
+  else ParseInteger("GridColumns",   m_nGridColumns,0,20)
   else if(!strcasecmp(szName, "TempDir")) {
         strn0cpy(m_szTempDir,szValue,sizeof(m_szTempDir));
   }
@@ -101,6 +103,7 @@ void cMenuSetupImage::Store(void)
   SetupStore("UseDeviceStillPicture",   ImageSetup.m_bUseDeviceStillPicture);
   SetupStore("RemoveImmediately",       ImageSetup.m_bRemoveImmediately);
   SetupStore("DisplayMode",             ImageSetup.m_nDisplayMode);
+  SetupStore("GridColumns",             ImageSetup.m_nGridColumns);
 }
 
 cMenuSetupImage::cMenuSetupImage(void)
@@ -111,6 +114,10 @@ cMenuSetupImage::cMenuSetupImage(void)
   Add(new cMenuEditBoolItem(tr("Display Mode"),                    
         &m_tmpSetup.m_nDisplayMode,    
         tr("List"), tr("Grid")));
+
+  Add(new cMenuEditIntItem(tr("Grid columns (0=auto)"),
+        &m_tmpSetup.m_nGridColumns,
+        0, 20));
 
   Add(new cMenuEditBoolItem(tr("Slide show"),                    
         &m_tmpSetup.m_bSlideShow,    
@@ -132,7 +139,7 @@ cMenuSetupImage::cMenuSetupImage(void)
           &m_tmpSetup.m_bHideMenu,    
           trVDR("no"), trVDR("yes")));
 
-  Add(new cMenuEditBoolItem(tr("Send encoded frame several times"),                    
+  Add(new cMenuEditBoolItem(tr("Output via DeviceStillPicture"),                    
           &m_tmpSetup.m_bUseDeviceStillPicture,    
           trVDR("yes"), trVDR("no")));
 
