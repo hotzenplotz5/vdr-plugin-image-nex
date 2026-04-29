@@ -137,6 +137,7 @@ private:
   void OriginalImage(bool bCached);
   void ConvertZoom();
   void ConvertJump(int Step);
+  void SetAspectRatioEnv(void);
   
   void IncSlideTime(void);
   void DecSlideTime(void);

@@ -666,6 +666,7 @@ const char* cImageControl::szRotation [] =
 
 void cImageControl::OriginalImage(bool bCached)
 {
+  SetAspectRatioEnv();
   m_nZoomFactor = 0;
   m_nRotation = 2;
 #ifdef HAVE_LIBEXIF
@@ -702,6 +703,7 @@ void cImageControl::OriginalImage(bool bCached)
 
 void cImageControl::RFlipImage(void)
 {
+  SetAspectRatioEnv();
   m_ePlayMode = ePlayModeNormal;
   --m_nRotation;
   m_nRotation %= memberof(szRotation);
@@ -715,6 +717,7 @@ void cImageControl::RFlipImage(void)
 
 void cImageControl::LFlipImage(void)
 {
+  SetAspectRatioEnv();
   m_ePlayMode = ePlayModeNormal;
   ++m_nRotation;
   m_nRotation %= memberof(szRotation);
@@ -786,6 +789,7 @@ void cImageControl::PictureZoomInitial(void)
 
 void cImageControl::ConvertZoom()
 {
+  SetAspectRatioEnv();
   if(!player)
     return;
   
@@ -847,6 +851,7 @@ void cImageControl::ConvertZoom()
 
 void cImageControl::ConvertJump(int nOffset)
 {
+  SetAspectRatioEnv();
   m_ePlayMode = ePlayModeJump;
   if(!CheckAccess() 
     || !player->ConvertJump(nOffset))
@@ -860,6 +865,26 @@ bool cImageControl::IsConvertRunning() const
   if(player) 
    return player->IsConvertRunning();
   return false;
+}
+
+void cImageControl::SetAspectRatioEnv(void) {
+    if (!osd) {
+        dsyslog("imageplugin: OSD not available, cannot set ASPECT_RATIO.");
+        return;
+    }
+
+    int osdWidth = osd->OsdWidth();
+    int osdHeight = osd->OsdHeight();
+
+    // Calculate aspect ratio.
+    // Ein Schwellenwert von 1.55 wird verwendet, um 4:3 (ca. 1.33) von 16:9 (ca. 1.77) zu unterscheiden.
+    double aspectRatio = (double)osdWidth / osdHeight;
+
+    if (aspectRatio > 1.55) { // Wenn das Verhältnis größer als 1.55 ist, gehen wir von 16:9 aus.
+        Setenv("ASPECT_RATIO", "16:9");
+    } else { // Andernfalls wird 4:3 als Standard angenommen.
+        Setenv("ASPECT_RATIO", "4:3");
+    }
 }
 
 
