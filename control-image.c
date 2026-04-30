@@ -876,14 +876,16 @@ void cImageControl::SetAspectRatioEnv(void) {
     int osdWidth = osd->OsdWidth();
     int osdHeight = osd->OsdHeight();
 
-    // Calculate aspect ratio.
-    // Ein Schwellenwert von 1.55 wird verwendet, um 4:3 (ca. 1.33) von 16:9 (ca. 1.77) zu unterscheiden.
-    double aspectRatio = (double)osdWidth / osdHeight;
+    if (osdHeight > 0) {
+        // Calculate aspect ratio.
+        // Ein Schwellenwert von 1.55 wird verwendet, um 4:3 (ca. 1.33) von 16:9 (ca. 1.77) zu unterscheiden.
+        double aspectRatio = (double)osdWidth / osdHeight;
 
-    if (aspectRatio > 1.55) { // Wenn das Verhältnis größer als 1.55 ist, gehen wir von 16:9 aus.
-        Setenv("ASPECT_RATIO", "16:9");
-    } else { // Andernfalls wird 4:3 als Standard angenommen.
-        Setenv("ASPECT_RATIO", "4:3");
+        if (aspectRatio > 1.55) { // Wenn das Verhältnis größer als 1.55 ist, gehen wir von 16:9 aus.
+            Setenv("ASPECT_RATIO", "16:9");
+        } else { // Andernfalls wird 4:3 als Standard angenommen.
+            Setenv("ASPECT_RATIO", "4:3");
+        }
     }
 }
 

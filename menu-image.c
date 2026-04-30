@@ -167,6 +167,9 @@ cMenuImageGrid::~cMenuImageGrid()
 
     delete list;
     free(currentdir);
+
+    // Thumbnail-Cache leeren, um ein unbegrenztes Anwachsen des RAMs zu verhindern
+    cThumbCache::Clear();
 }
 
 bool cMenuImageGrid::LoadDir(const char *dir)
