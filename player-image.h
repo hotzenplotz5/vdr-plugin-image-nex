@@ -22,42 +22,45 @@
 class cImageData;
 class cSlideShow;    
 
-struct cShellWrapper {
+struct cDecodeRequest {
     
-  char* szCmd;
-  char* szPNM;
+  char* szSource;
   char  szNumber;
   unsigned int nOffLeft;
   unsigned int nOffTop;
-  unsigned int nWidth;
-  unsigned int nHeight;
+  unsigned int nTargetWidth; // Target width on OSD
+  unsigned int nTargetHeight; // Target height on OSD
   bool bClearBackground;
+  // Zoom/Crop parameters
+  int nZoomFactor; // 0 for no zoom, >0 for zoom level
+  int nCropX;      // X offset for cropping in original image pixels (or zoomed image pixels for zoom mode)
+  int nCropY;      // Y offset for cropping in original image pixels (or zoomed image pixels for zoom mode)
 
-  cShellWrapper()
-  : szCmd(NULL)
-  , szPNM(NULL)
+  cDecodeRequest()
+  : szSource(NULL) // Initialize all members
   , szNumber('\0')
   , nOffLeft(0)
   , nOffTop(0)
-  , nWidth(0)
-  , nHeight(0)
+  , nTargetWidth(0)
+  , nTargetHeight(0)
   , bClearBackground(false)
+  , nZoomFactor(0)
+  , nCropX(0)
+  , nCropY(0)
 
   {
   }
 
-  virtual ~cShellWrapper() {
-    if(szPNM)
-      free(szPNM);
-    if(szCmd)
-      free(szCmd);
+  virtual ~cDecodeRequest() {
+    if(szSource)
+      free(szSource);
   }
 };
 
-struct cShellWrapperQueue
- : public std::vector<cShellWrapper*>
+struct cDecodeRequestQueue
+ : public std::vector<cDecodeRequest*>
 {
-  virtual ~cShellWrapperQueue()
+  virtual ~cDecodeRequestQueue()
   {
     iterator i = begin();
     const_iterator e = end();
@@ -71,16 +74,16 @@ struct cShellWrapperQueue
     return 64;
   }
 
-  inline bool add(cShellWrapper* pCmd) {
+  inline bool add(cDecodeRequest* pCmd) {
     if(size()<max_size())
     {
-      if(NULL == pCmd->szPNM || !pCmd->bClearBackground) //Pregeneration or Index
+      if(NULL == pCmd->szSource || !pCmd->bClearBackground) //Pregeneration or Index
         push_back(pCmd);
       else { 
         // Remove all other viewed images from queue
         iterator i = begin();
         while(end()!=i) {
-          if((*i)->szPNM) {
+          if((*i)->szSource) {
             delete(*i);
             erase(i);
             }
@@ -104,15 +107,15 @@ class cImagePlayer
   volatile bool               m_bConvertRunning;
 
   cMutex                      m_Mutex;
-  cShellWrapperQueue          m_queue;
+  cDecodeRequestQueue         m_queue;
   cMutex                      m_MutexErr;
   char*                       m_szError;
 protected:
-  void Exec(cShellWrapper* pCmd);
+  void Exec(cDecodeRequest* pCmd);
 
-  void LoadImage(cShellWrapper* pShell);
+  bool DecodeNative(cDecodeRequest* pShell);
   /** Show Errorimage if operation failed*/
-  void ExecFailed(cShellWrapper* pShell,const char* szErr);
+  void ExecFailed(cDecodeRequest* pShell,const char* szErr);
 
   virtual void Activate(bool On);
   virtual bool Worker(bool bDoIt);

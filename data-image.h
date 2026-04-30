@@ -29,9 +29,6 @@ class cImageData
   cFileSource *m_pSource;
   char        *m_szFileName;
   
-  char        *m_szFileNamePNM;
-  char        *m_szFileNameIndex;
-  char        *m_szFileNameZoom;
 #ifdef HAVE_LIBEXIF
   int          m_nDefaultRotate;
 #endif
@@ -41,15 +38,11 @@ public:
   cImageData(const char *szName, cFileSource * pSource);
   virtual ~cImageData();
   bool CompareBaseDir(const cFileSource * pSource) const;
-  static void Unlink(const char *szName);
 
   inline const char *Name(void) const       
   { 
     return m_szFileName; 
   } 
-  const char *NameZoom();
-  const char *NamePNM();
-  const char *NameIndex();
 
 #ifdef HAVE_LIBEXIF
   int DefaultRotate() const { return m_nDefaultRotate; }

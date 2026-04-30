@@ -90,9 +90,7 @@ const char *cImageCommand::Execute(const char *szFileName)
     }
     else {
       /// Replace Mode, replace any %s with filename
-      /// e.g. :    jpegtran -rotate 90 %s > $CONVERT_TEMPDIR/tmp.jpg && mv $CONVERT_TEMPDIR/tmp.jpg %s
-      /// would to  jpegtran -rotate 90 'my_image.png' > $CONVERT_TEMPDIR/tmp.jpg && mv $CONVERT_TEMPDIR/tmp.jpg 'my_image.png'
-      char *szF;
+      /// e.g. :    
       asprintf(&szF, "\'%s\'", szFileName);
       if(szF) {
         szCmdBuf = (char*)calloc(PATH_MAX,1);

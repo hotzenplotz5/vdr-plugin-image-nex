@@ -39,13 +39,10 @@ cImageSetup::cImageSetup(void)
 {
   m_bSlideShow = 0;
   m_nSSsec = 10;
-  strncpy(m_szTempDir, "/tmp/image", sizeof(m_szTempDir));
   m_bAutoRepeat = 0;
   m_bShowNumbers = 1;
   m_bLiveAudio = 0;
-  m_bHousekeeping = 1;
   m_bUseDeviceStillPicture = 1;
-  m_bRemoveImmediately = false;
   m_nDisplayMode = 0;
   m_nGridColumns = 0;
 
@@ -73,15 +70,10 @@ bool cImageSetup::SetupParse(const char *szName, const char *szValue)
   else ParseInteger("AutoRepeat",    m_bAutoRepeat,0,1)
   else ParseInteger("ShowNumbers",   m_bShowNumbers,0,1)
   else ParseInteger("LiveAudio",     m_bLiveAudio,0,1)
-  else ParseInteger("Housekeeping",  m_bHousekeeping,0,1)
   else ParseInteger("HideMainMenu",  m_bHideMenu,0,1)
   else ParseInteger("UseDeviceStillPicture",  m_bUseDeviceStillPicture,0,1)
-  else ParseInteger("RemoveImmediately", m_bRemoveImmediately,0,1)
   else ParseInteger("DisplayMode",   m_nDisplayMode,0,1)
   else ParseInteger("GridColumns",   m_nGridColumns,0,20)
-  else if(!strcasecmp(szName, "TempDir")) {
-        strn0cpy(m_szTempDir,szValue,sizeof(m_szTempDir));
-  }
   else return false;
   return true;
 }
@@ -92,16 +84,13 @@ void cMenuSetupImage::Store(void)
   ImageSetup = m_tmpSetup;
   SetupStore("SlideShow",               ImageSetup.m_bSlideShow);
   SetupStore("SSsec",                   ImageSetup.m_nSSsec);
-  SetupStore("TempDir",                 ImageSetup.m_szTempDir);
   SetupStore("AutoRepeat",              ImageSetup.m_bAutoRepeat);
   SetupStore("ShowNumbers",             ImageSetup.m_bShowNumbers);
   SetupStore("LiveAudio",               ImageSetup.m_bLiveAudio);
-  SetupStore("Housekeeping",            ImageSetup.m_bHousekeeping);
   SetupStore("BorderHeight",            ImageSetup.m_nBorderHeight);
   SetupStore("BorderWidth",             ImageSetup.m_nBorderWidth);
   SetupStore("HideMainMenu",            ImageSetup.m_bHideMenu);
   SetupStore("UseDeviceStillPicture",   ImageSetup.m_bUseDeviceStillPicture);
-  SetupStore("RemoveImmediately",       ImageSetup.m_bRemoveImmediately);
   SetupStore("DisplayMode",             ImageSetup.m_nDisplayMode);
   SetupStore("GridColumns",             ImageSetup.m_nGridColumns);
 }
@@ -147,18 +136,6 @@ cMenuSetupImage::cMenuSetupImage(void)
         &m_tmpSetup.m_bLiveAudio,
         trVDR("no"), trVDR("yes")));
 
-  Add(new cMenuEditStrItem (tr("Directory with temporary files"), 
-        m_tmpSetup.m_szTempDir,sizeof(m_tmpSetup.m_szTempDir), 
-        "abcdefghijklmopqrstuvwxyz/-"));
-
-  Add(new cMenuEditBoolItem(tr("Remove temporary files immediately"),
-          &m_tmpSetup.m_bRemoveImmediately,
-          trVDR("no"), trVDR("yes")));
-
-  Add(new cMenuEditBoolItem(tr("Remove temporary files"),
-        &m_tmpSetup.m_bHousekeeping,  
-        trVDR("no"), trVDR("yes")));
-
   Add(new cMenuEditIntItem (tr("Border for Underscan (Height)"),
         &m_tmpSetup.m_nBorderHeight,
         cImageSetup::m_cnMinBorderHeight, cImageSetup::m_cnMaxBorderHeight));
@@ -182,7 +159,6 @@ void cImageSetup::SetEnv(void) const
   } nEnvironTable [] =
   {
     {"ASPECT_RATIO",Setup.VideoFormat?"16:9":"4:3"}, // Get from DVB-Setup
-    {"CONVERT_TEMPDIR",m_szTempDir},            
   };
 
   for(i=0;i < sizeof(nEnvironTable)/sizeof(*nEnvironTable);++i)

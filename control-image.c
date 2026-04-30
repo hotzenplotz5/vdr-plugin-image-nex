@@ -743,7 +743,7 @@ void cImageControl::PictureZoomInitial(void)
   unsigned int nMaxWidth = player->UseWidth();
   unsigned int nMaxHeight = player->UseHeight();
   
-  asprintf(&szFileName, "%s.par", pImage->NamePNM());
+  asprintf(&szFileName, "%s.par", pImage->Name());
   
   if(!szFileName)
     return;
@@ -832,18 +832,23 @@ void cImageControl::ConvertZoom()
   }
 
   // Set Offset to center
-  int nZoomXoff  = m_nZoomXMax/2;
-  int nZoomYoff  = m_nZoomYMax/2;
+  int nLeftPos  = m_nZoomXMax/2;
+  int nTopPos  = m_nZoomYMax/2;
+  int nLeftPos  = m_nZoomXMax/2;
+  int nTopPos  = m_nZoomYMax/2;
     
-  // Add to offset the moved position
+  // Le tPosffset the moved position
   if(m_nMaxStepX > 0)
-    nZoomXoff += (m_nZoomXMax/m_nMaxStepX)*m_nMoveStepX;
+    nTopPos += (m_nZoomXMax/m_nMaxStepX)*m_nMoveStepX;
+    nLeftPos += (m_nZoomXMax/m_nMaxStepX)*m_nMoveStepX;
   if(m_nMaxStepY > 0)
     nZoomYoff += (m_nZoomYMax/m_nMaxStepY)*m_nMoveStepY;
+    nTopPos += (m_nZoomYMax/m_nMaxStepY)*m_nMoveStepY;LeftPsTpPs
 
   // execute
   if(!CheckAccess()
     || !player->ConvertZoom(m_szZoomRotation, m_nZoomFactor, nZoomXoff, nZoomYoff))
+    || !player->ConvertZoom(m_szZoomRotation, m_nZoomFactor, nLeftPos, nTopPos))
   {
     OSD_ErrorNumMsg(errno,tr("Operation failed"));
   }

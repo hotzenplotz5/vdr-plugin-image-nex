@@ -63,13 +63,10 @@ const char *cPluginImage::CommandLineHelp(void)
   free(help_str);    //                                     for easier orientation, this is column 80|
   asprintf(&help_str,"  -m CMD,   --mount=CMD    use CMD to mount/unmount/eject image sources\n"
                      "                           (default: \"%s\")\n"
-                     "  -C CMD,   --convert=CMD  use CMD when converting images\n"
-                     "                           (default: \"%s\")\n"
                      "  -c PATH,  --config=PATH  to specify directory of configuration data\n"
                      "                           relative to VDR Plugin configuration directory\n"
                      "                           (default: \"%s\")\n",
                     g_szMountScript,
-                    g_szConvertScript,
                     g_szConfigDirectory?g_szConfigDirectory:""
                     );
   return help_str;
@@ -79,16 +76,14 @@ bool cPluginImage::ProcessArgs(int argc, char *argv[])
 {
   static struct option long_options[] = {
       { "mount",    required_argument, NULL, 'm' },
-      { "convert",  required_argument, NULL, 'C' },
       { "config",   required_argument, NULL, 'c' },
       { NULL }
     };
     
   int c, option_index = 0;
-  while((c=getopt_long(argc,argv,"m:C:c:",long_options,&option_index))!=-1) {
+  while((c=getopt_long(argc,argv,"m:c:",long_options,&option_index))!=-1) {
     switch (c) {
       case 'm': g_szMountScript=optarg;break;
-      case 'C': g_szConvertScript=optarg;break;
       case 'c': g_szConfigDirectory=optarg;break;
       default:  return false;
       }

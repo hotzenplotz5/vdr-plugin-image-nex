@@ -17,6 +17,12 @@
 #include <signal.h>
 #include <wait.h>
 
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+}
+
 #include "player-image.h"
 #include "control-image.h"
 #include "setup-image.h"
@@ -27,10 +33,6 @@
 
 #include "libimage/pnm.h"
 #include "libimage/xpm.h"
-
-
-const char *g_szConvertScript = "imageplugin.sh";
-
 
 //----------cImagePlayer-------------
 
@@ -102,26 +104,17 @@ bool cImagePlayer::Convert(const char *szChange)
   cImageData* pImage = theSlideShow.GetImage();
   if(pImage)
   {
-    cShellWrapper* pCmd = new cShellWrapper;
-    pCmd->bClearBackground = true;  
-    pCmd->nOffLeft = m_StillImage.GetBorderWidth();
-    pCmd->nOffTop = m_StillImage.GetBorderHeight();
-    pCmd->nWidth = UseWidth();
-    pCmd->nHeight = UseHeight();
+    cDecodeRequest* pCmd = new cDecodeRequest;
+    pCmd->bClearBackground = true;
+    pCmd->nOffLeft = 0; // OSD offset will be handled in DecodeNative
+    pCmd->nOffTop = 0;  // OSD offset will be handled in DecodeNative
+    pCmd->nTargetWidth = UseWidth();
+    pCmd->nTargetHeight = UseHeight();
+    pCmd->nZoomFactor = 0; // No zoom
+    pCmd->nCropX = 0;      // No crop
+    pCmd->nCropY = 0;      // No crop
   
-    // Build image_convert.sh "source.jpg" "/tmp/image/dest.pnm" 720 576 0 0 0 0 original
-    pCmd->szPNM = strdup(pImage->NamePNM());
-      
-    asprintf(&pCmd->szCmd, "%s \"%s\" \"%s\" %d %d %d %d %d %s", 
-        g_szConvertScript,
-        pImage->Name(), 
-        pCmd->szPNM,
-        pCmd->nWidth,
-        pCmd->nHeight,
-        0,
-        0,
-        0,
-        szChange ? szChange : "");
+    pCmd->szSource = strdup(pImage->Name());
   
     Exec(pCmd);
     return true;
@@ -147,31 +140,15 @@ bool cImagePlayer::ConvertJump(int nOffset)
     for (h = 0; h < nMatrix; ++h) 
       for (w = 0; w < nMatrix && pImage[(h*nMatrix)+w]; ++w) 
       {
-        cShellWrapper* pCmd = new cShellWrapper;
+        cDecodeRequest* pCmd = new cDecodeRequest;
       
         pCmd->bClearBackground = (w == 0 && h == 0);  
-        pCmd->nWidth = UseWidth();
-        pCmd->nHeight = UseHeight();
-        pCmd->nWidth /= nMatrix;
-        pCmd->nHeight /= nMatrix;
-        pCmd->nOffLeft = (pCmd->nWidth * w) +  m_StillImage.GetBorderWidth();
-        pCmd->nOffTop =  (pCmd->nHeight * h) + m_StillImage.GetBorderHeight();
+        pCmd->nTargetWidth = UseWidth() / nMatrix;
+        pCmd->nTargetHeight = UseHeight() / nMatrix;
+        pCmd->nOffLeft = (pCmd->nTargetWidth * w) + m_StillImage.GetBorderWidth();
+        pCmd->nOffTop =  (pCmd->nTargetHeight * h) + m_StillImage.GetBorderHeight();
       
-        // Build image_convert.sh "source.jpg" "/tmp/image/source.jpg-i.pnm" 256 192 0 0 0 0 original
-        pCmd->szPNM = strdup(pImage[(h*nMatrix)+w]->NameIndex());
-
-      
-    
-        asprintf(&pCmd->szCmd, "%s \"%s\" \"%s\" %d %d %d %d %d %s", 
-            g_szConvertScript,
-            pImage[(h*nMatrix)+w]->Name(), 
-            pCmd->szPNM,
-            pCmd->nWidth,
-            pCmd->nHeight,
-            0,
-            0,
-            0,
-            /*szChange ? szChange : */"");
+        pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
         pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
 
         Exec(pCmd);
@@ -188,26 +165,19 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
   cImageData* pImage = theSlideShow.GetImage();
   if(pImage)
   {
-    cShellWrapper* pCmd = new cShellWrapper;
-    pCmd->bClearBackground = true;  
-    pCmd->nOffLeft = m_StillImage.GetBorderWidth() + (nLeftPos>0?0:(nLeftPos*-1));
-    pCmd->nOffTop = m_StillImage.GetBorderHeight() + (nTopPos>0?0:(nTopPos*-1));
-    pCmd->nWidth = UseWidth();
-    pCmd->nHeight = UseHeight();
+    cDecodeRequest* pCmd = new cDecodeRequest;
+    pCmd->bClearBackground = true;
+    pCmd->nOffLeft = 0; // OSD offset will be handled in DecodeNative
+    pCmd->nOffTop = 0;  // OSD offset will be handled in DecodeNative
+    pCmd->nTargetWidth = UseWidth();
+    pCmd->nTargetHeight = UseHeight();
+    pCmd->nZoomFactor = nZoomFaktor;
+    pCmd->nCropX = nLeftPos; // These are pixel offsets in the *zoomed* image
+    pCmd->nCropY = nTopPos; // These are pixel offsets in the *zoomed* image
   
-    // Build image_convert.sh "source.jpg" "/tmp/image/dest.pnm" 720 576 0 0 0 0 original
-    pCmd->szPNM = strdup(pImage->NameZoom());
-      
-    asprintf(&pCmd->szCmd, "%s \"%s\" \"%s\" %d %d %d %d %d %s", 
-        g_szConvertScript,
-        pImage->Name(), 
-        pCmd->szPNM,
-        pCmd->nWidth,
-        pCmd->nHeight,
-        nZoomFaktor,
-        nLeftPos>0?nLeftPos:0,
-        nTopPos>0?nTopPos:0,
-        szChange ? szChange : "");
+    // TODO: Natives Crop-Handling (Zoom) muss später implementiert werden.
+    // Vorerst laden wir zur Fehlervermeidung das unskalierte Original-Bild.
+    pCmd->szSource = strdup(pImage->Name());
   
     Exec(pCmd);
     return true;
@@ -215,146 +185,131 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
   return false;
 }
 
-
-void cImagePlayer::LoadImage(cShellWrapper* pShell)
+bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 {
-    cPNM pnmImage;
-    bool bSuccess = false;
-    register unsigned int nHeight = m_StillImage.GetHeight();
-    register unsigned int nWidth = m_StillImage.GetWidth();
-    register unsigned int nOffLeft = 0;
-    register unsigned int nOffTop = 0;
-    errno = 0;
     if(!pShell || pShell->bClearBackground)
       m_StillImage.ClearRGBMem();
 
-    if(pShell && pShell->szPNM)
-    {  
-      nHeight = std::min(nHeight,pShell->nHeight);
-      nWidth = std::min(nWidth,pShell->nWidth);
-      nOffLeft = pShell->nOffLeft;
-      nOffTop = pShell->nOffTop;
-  
-      FILE *f=fopen(pShell->szPNM, "r");
-      if(f)
-      {
-        xel* pRow = NULL;
-        register unsigned int w;
-        register unsigned int h;
-      
-        if(pnmImage.readHeader(f))
-        {
-          register unsigned int nColorDepth = pnmImage.GetColorDepth();
-        
-          if(pnmImage.GetWidth() < nWidth)
-            nOffLeft +=  (nWidth - pnmImage.GetWidth()) / 2;
-    
-          if(pnmImage.GetHeight() < nHeight)
-            nOffTop +=  (nHeight - pnmImage.GetHeight()) / 2;
-  
-  
-          for(h = 0;
-              h < pnmImage.GetHeight() 
-              && h < nHeight 
-              && h+nOffTop < m_StillImage.GetHeight();
-              ++h)
-            {  
-              if(!pnmImage.allocrow(&pRow) 
-                ||!pnmImage.readrow(f, pRow) )
-               break;
-  
-              xel* pP = pRow;
-              for(w = 0;w < pnmImage.GetWidth() 
-                 && w < nWidth
-                 && w+nOffLeft < m_StillImage.GetWidth();
-                 ++w,++pP)
-              {  
-                uint8_t* pImageRGB = m_StillImage.GetRGBMem() + 
-                          ((((h+nOffTop)*m_StillImage.GetWidth())+w+nOffLeft)*3);
-            
-                if(nColorDepth == 0xFF) // normal 8-bit at any canal (24 Bit) colordepth
-                {  
-                  *(pImageRGB + 0) = (uint8_t) PPM_GETR(*pP);
-                  *(pImageRGB + 1) = (uint8_t) PPM_GETG(*pP);
-                  *(pImageRGB + 2) = (uint8_t) PPM_GETB(*pP);
+    if (!pShell || !pShell->szSource) return false;
+
+    AVFormatContext *fmt_ctx = NULL;
+    if (avformat_open_input(&fmt_ctx, pShell->szSource, NULL, NULL) < 0) return false;
+    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) { avformat_close_input(&fmt_ctx); return false; }
+
+    int video_stream_idx = -1;
+    for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
+        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            video_stream_idx = i;
+            break;
+        }
+    }
+    if (video_stream_idx == -1) { avformat_close_input(&fmt_ctx); return false; }
+
+    AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_idx]->codecpar;
+    const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
+    AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
+    avcodec_parameters_to_context(codec_ctx, codecpar);
+    if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        return false;
+    }
+
+    AVFrame *frame = av_frame_alloc();
+    AVPacket *pkt = av_packet_alloc();
+    bool decoded = false;
+
+    // Decode fully native from source into AVFrame
+    while (av_read_frame(fmt_ctx, pkt) >= 0) {
+        if (pkt->stream_index == video_stream_idx) {
+            if (avcodec_send_packet(codec_ctx, pkt) == 0) {
+                if (avcodec_receive_frame(codec_ctx, frame) == 0) {
+                    decoded = true;
+                    break;
                 }
-                else if(nColorDepth == 1) // black/white image
-                {  
-                  *(pImageRGB + 0) = (uint8_t) PPM_GETR(*pP)==0?0x00:0xFF;
-                  *(pImageRGB + 1) = (uint8_t) PPM_GETG(*pP)==0?0x00:0xFF;
-                  *(pImageRGB + 2) = (uint8_t) PPM_GETB(*pP)==0?0x00:0xFF;
-                }
-                else // Adjust other colordepth to 8bit
-                {  
-                  *(pImageRGB + 0) = (uint8_t) (PPM_GETR(*pP)*255 / pnmImage.GetColorDepth()) & 0xFF;
-                  *(pImageRGB + 1) = (uint8_t) (PPM_GETG(*pP)*255 / pnmImage.GetColorDepth()) & 0xFF;
-                  *(pImageRGB + 2) = (uint8_t) (PPM_GETB(*pP)*255 / pnmImage.GetColorDepth()) & 0xFF;
-                }
-              }
-              pnmImage.freerow(pRow);
-              pRow = NULL;
             }
-          if(pRow)
-            pnmImage.freerow((char*)pRow);
-          else
-          {
-            if(pShell->szNumber && ImageSetup.m_bShowNumbers)
-              cXPM::Overlay(pShell->szNumber,m_StillImage.GetRGBMem(),
-                  m_StillImage.GetWidth(),m_StillImage.GetHeight(),
-                  cXPM::TopRight,nOffLeft,nOffTop,pnmImage.GetWidth(),pnmImage.GetHeight());
-  
-            bSuccess = true;
-          }
         }
-        fclose(f);
-        if (ImageSetup.m_bRemoveImmediately) {
-            cImageData::Unlink (pShell->szPNM);
+        av_packet_unref(pkt);
+    }
+    av_packet_free(&pkt);
+
+    if (decoded) {
+        // Image Scale and Aspect Ratio logic
+        int src_w = frame->width;
+        int src_h = frame->height;
+        int crop_x = 0;
+        int crop_y = 0;
+        int crop_w = src_w;
+        int crop_h = src_h;
+
+        if (pShell->nZoomFactor > 0) {
+            // Calculate the crop window in the *original* image dimensions
+            // pShell->nCropX and pShell->nCropY are offsets in the *zoomed* image.
+            // We need to convert these to offsets in the *original* image for sws_scale.
+            crop_x = pShell->nCropX / pShell->nZoomFactor;
+            crop_y = pShell->nCropY / pShell->nZoomFactor;
+
+            // The width and height of the crop window in the original image
+            // This is the portion of the original image that, when zoomed, fills the target area.
+            crop_w = pShell->nTargetWidth / pShell->nZoomFactor;
+            crop_h = pShell->nTargetHeight / pShell->nZoomFactor;
+
+            // Ensure crop dimensions don't exceed original image dimensions
+            if (crop_x < 0) crop_x = 0;
+            if (crop_y < 0) crop_y = 0;
+            if (crop_x + crop_w > src_w) crop_w = src_w - crop_x;
+            if (crop_y + crop_h > src_h) crop_h = src_h - crop_y;
+            if (crop_w <= 0) crop_w = 1; // Avoid zero dimension
+            if (crop_h <= 0) crop_h = 1; // Avoid zero dimension
         }
-      }
-    }
-  if(!bSuccess) {
-  
-    // Merge Errorimage with Encoder-Memory
-    if(pShell && pShell->szNumber)
-      cXPM::Overlay('s',m_StillImage.GetRGBMem(),
-          m_StillImage.GetWidth(),m_StillImage.GetHeight(),
-          cXPM::Center,pShell->nOffLeft,pShell->nOffTop,pShell->nWidth,pShell->nHeight);
-    else
-      cXPM::Error(m_StillImage.GetRGBMem(),
-        m_StillImage.GetWidth(),m_StillImage.GetHeight());
-    
-    // Build Error, depends PNM Errormsg or system messages
-    char szErr[128];
-    szErr[0] = '\0';
+        // If nZoomFactor is 0, crop_x, crop_y, crop_w, crop_h remain initialized to full image dimensions.
 
-    if(pnmImage.GetError())
-      strncpy(szErr,pnmImage.GetError(),sizeof(szErr));
-    else if(errno) {  
-        int nErr = errno;
-        szErr[sizeof(szErr)-1] = '\0';
-        if(0 != strerror_r(nErr,szErr,sizeof(szErr)-1)) {
-            szErr[0] = '\0';
-        } 
+        double aspect_src_cropped = (double)crop_w / crop_h;
+        double aspect_dst = (double)pShell->nTargetWidth / pShell->nTargetHeight;
+        int scaled_w = pShell->nTargetWidth;
+        int scaled_h = pShell->nTargetHeight;
+        
+        // Calculate letterboxing or pillarboxing
+        if (aspect_src_cropped > aspect_dst) {
+            scaled_h = pShell->nTargetWidth / aspect_src_cropped;
+        } else {
+            scaled_w = pShell->nTargetHeight * aspect_src_cropped;
+        }
+
+        // Calculate final OSD offsets, including borders and centering
+        int osd_offset_x = pShell->nOffLeft + m_StillImage.GetBorderWidth() + (pShell->nTargetWidth - scaled_w) / 2;
+        int osd_offset_y = pShell->nOffTop + m_StillImage.GetBorderHeight() + (pShell->nTargetHeight - scaled_h) / 2;
+
+        SwsContext *sws_ctx = sws_getContext(
+            crop_w, crop_h, codec_ctx->pix_fmt,
+            scaled_w, scaled_h, AV_PIX_FMT_RGB24,
+            SWS_BILINEAR, NULL, NULL, NULL
+        );
+
+        if (sws_ctx) {
+            int linesize[4] = { (int)m_StillImage.GetWidth() * 3, 0, 0, 0 };
+            uint8_t *dest[4] = { m_StillImage.GetRGBMem() + (osd_offset_y * m_StillImage.GetWidth() + osd_offset_x) * 3, NULL, NULL, NULL };
+
+            // Perform scaling and cropping
+            uint8_t *src_slice_ptr[AV_NUM_DATA_POINTERS] = {0};
+            src_slice_ptr[0] = frame->data[0] + crop_y * frame->linesize[0] + crop_x * 3;
+
+            sws_scale(sws_ctx, src_slice_ptr, frame->linesize, 0, crop_h, dest, linesize);
+            sws_freeContext(sws_ctx);
+        }
+
+        if(pShell->szNumber && ImageSetup.m_bShowNumbers) {
+            cXPM::Overlay(pShell->szNumber, m_StillImage.GetRGBMem(),
+              m_StillImage.GetWidth(), m_StillImage.GetHeight(),
+              cXPM::TopRight, osd_offset_x, osd_offset_y, scaled_w, scaled_h);
+        }
     }
 
-    // Make Syslog entry
-    if(pShell && pShell->szPNM && szErr[0] != '\0') 
-      esyslog("imageplugin: Error until read %s : '%s'", pShell->szPNM, szErr);
-    else if(pShell && pShell->szPNM) 
-      esyslog("imageplugin: Error until read %s", pShell->szPNM);
-    else  
-      esyslog("imageplugin: Error until read image %s",(szErr[0] != '\0')?szErr:"");
-    
-    { // Copy Errormessage forward to OSD Thread
-      cMutexLock lock(&m_MutexErr);
-        if(m_szError)
-          free(m_szError);
-        if(szErr[0] != '\0')
-          asprintf(&m_szError, "%s : %s", tr("Image couldn't load"),szErr);
-        else
-          m_szError = strdup(tr("Image couldn't load"));
-    }
-  }
+    av_frame_free(&frame);
+    avcodec_free_context(&codec_ctx);
+    avformat_close_input(&fmt_ctx);
+
+    return decoded;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -362,7 +317,7 @@ void cImagePlayer::LoadImage(cShellWrapper* pShell)
 Show a precompiled Image if Exec can't find a converted Image
 @param  - char* szErr
 @return - nothing */
-void cImagePlayer::ExecFailed(cShellWrapper* pShell,const char* szErr)
+void cImagePlayer::ExecFailed(cDecodeRequest* pShell,const char* szErr)
 {
     if(!pShell || pShell->bClearBackground)
       m_StillImage.ClearRGBMem();
@@ -371,7 +326,7 @@ void cImagePlayer::ExecFailed(cShellWrapper* pShell,const char* szErr)
     if(pShell && pShell->szNumber)
       cXPM::Overlay('s',m_StillImage.GetRGBMem(),
           m_StillImage.GetWidth(),m_StillImage.GetHeight(),
-          cXPM::Center,pShell->nOffLeft,pShell->nOffTop,pShell->nWidth,pShell->nHeight);
+          cXPM::Center,pShell->nOffLeft,pShell->nOffTop,pShell->nTargetWidth,pShell->nTargetHeight);
     else
       cXPM::Error(m_StillImage.GetRGBMem(),
         m_StillImage.GetWidth(),m_StillImage.GetHeight());
@@ -412,9 +367,9 @@ const char* cImagePlayer::FileName(void) const
   return pImage?pImage->Name():NULL;
 }
 
-void cImagePlayer::Exec(cShellWrapper* pCmd)
+void cImagePlayer::Exec(cDecodeRequest* pCmd)
 {
-  if(pCmd->szPNM)
+  if(pCmd->szSource)
     m_bConvertRunning = true;
   if(pCmd) {
     cMutexLock lock(&m_Mutex);
@@ -426,7 +381,7 @@ void cImagePlayer::Exec(cShellWrapper* pCmd)
 bool cImagePlayer::Worker(bool bDoIt)
 {
   bool bQueueEmpty;
-  cShellWrapper *pShell = NULL;
+  cDecodeRequest *pShell = NULL;
   
   { // Protect the queue ++
     cMutexLock lock(&m_Mutex);
@@ -443,25 +398,14 @@ bool cImagePlayer::Worker(bool bDoIt)
     return bQueueEmpty;
   }  
 
-  if(pShell->szCmd) {
-    //dsyslog("imageplugin: executing script '%s'", pShell->szCmd);
-    
-    ImageSetup.SetEnv();
-    if(0 == SystemExec(pShell->szCmd))
-    {  
-      if(pShell->szPNM) {
-          LoadImage(pShell);
-          m_StillImage.EncodeRequired(true);
-      }
-    }    
-    else
-    {
-      esyslog("imageplugin: script execution failed '%s'", pShell->szCmd);
-      if(pShell->szPNM) {
-        ExecFailed(pShell,tr("Script execution failed"));        
+  if(pShell->szSource) {
+    if(DecodeNative(pShell)) {
         m_StillImage.EncodeRequired(true);
-      }
-    }   
+    } else {
+        esyslog("imageplugin: native decoding failed for '%s'", pShell->szSource);
+        ExecFailed(pShell, tr("Image couldn't load"));        
+        m_StillImage.EncodeRequired(true);
+    }
   } 
   delete pShell;
   return bQueueEmpty;

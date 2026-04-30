@@ -21,25 +21,25 @@
 # *
 msgid ""
 msgstr ""
-"Project-Id-Version: vdr-image 0.4.0\n"
+"Project-Id-Version: vdr-image 0.6.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
 "POT-Creation-Date: 2013-02-12 18:44+0100\n"
-"PO-Revision-Date: 2007-08-18 08:13+0200\n"
-"Last-Translator: Andreas Brachold <anbr at users.berlios.de>\n"
+"PO-Revision-Date: 2026-04-28 04:10+0200\n"
+"Last-Translator: Holger Schvestka <hotzenplotz5@gmx.de>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
-"Language: \n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Convert..."
 msgstr "Wandle..."
 
 msgid "Select picture via key 1..9!"
-msgstr "Bildauswahl über Taste 1..9!"
+msgstr "Bildauswahl Ã¼ber Taste 1..9!"
 
 msgid "Zoom"
-msgstr "Vergrößere"
+msgstr "VergrÃ¶ÃŸern"
 
 msgid "Operation failed"
 msgstr "Vorgang fehlgeschlagen"
@@ -60,7 +60,7 @@ msgid "Tags"
 msgstr "Bezeichnung"
 
 msgid "Back"
-msgstr "Zurück"
+msgstr "ZurÃ¼ck"
 
 msgid "A Image Viewer plugin"
 msgstr "Ein Bildbetrachter Plugin"
@@ -69,10 +69,10 @@ msgid "Images"
 msgstr "Bilder"
 
 msgid "Select"
-msgstr "Auswählen"
+msgstr "AuswÃ¤hlen"
 
 msgid "Parent"
-msgstr "Zurück"
+msgstr "ZurÃ¼ck"
 
 msgid "Error scanning directory!"
 msgstr "Fehler beim Lesen des Verzeichnisses!"
@@ -81,13 +81,13 @@ msgid "Mount"
 msgstr "Einbinden"
 
 msgid "Unmount"
-msgstr "Aushängen"
+msgstr "AushÃ¤ngen"
 
 msgid "Eject"
 msgstr "Auswerfen"
 
 msgid "Selected data medium is not mounted!"
-msgstr "Ausgewählter Datenträger ist nicht eingebunden!"
+msgstr "AusgewÃ¤hlter DatentrÃ¤ger ist nicht eingebunden!"
 
 msgid "Mount failed!"
 msgstr "Einbinden fehlgeschlagen!"
@@ -96,16 +96,16 @@ msgid "Mount succeeded"
 msgstr "Einbinden erfolgreich"
 
 msgid "Unmount succeeded!"
-msgstr "Aushängen erfolgreich!"
+msgstr "AushÃ¤ngen erfolgreich!"
 
 msgid "Unmount failed!"
-msgstr "Aushängen fehlgeschlagen!"
+msgstr "AushÃ¤ngen fehlgeschlagen!"
 
 msgid "Eject failed!"
 msgstr "Auswerfen fehlgeschlagen!"
 
 msgid "Execute"
-msgstr "Ausführen"
+msgstr "AusfÃ¼hren"
 
 msgid "Image browser"
 msgstr "Bilder Verzeichnisanzeige"
@@ -114,10 +114,10 @@ msgid "Play"
 msgstr "Wiedergabe"
 
 msgid "Data medium"
-msgstr "Datenträger"
+msgstr "DatentrÃ¤ger"
 
 msgid "Image source"
-msgstr "Bilder-Datenträger"
+msgstr "Bilder-DatentrÃ¤ger"
 
 msgid "No files!"
 msgstr "Keine Dateien!"
@@ -126,41 +126,52 @@ msgid "Image couldn't load"
 msgstr "Konnte Bild nicht lesen"
 
 msgid "Script execution failed"
-msgstr "Scriptausführung fehlgeschlagen"
+msgstr "ScriptausfÃ¼hrung fehlgeschlagen"
 
 msgid "Slide show"
-msgstr "Diavorführung"
+msgstr "DiavorfÃ¼hrung"
 
 msgid "Slide duration (sec)"
 msgstr "Anzeigedauer (Sek)"
 
 msgid "Repeat slide show"
-msgstr "Wiederholung der Diavorführung"
+msgstr "Wiederholung der DiavorfÃ¼hrung"
 
 msgid "Show numbers on index image"
 msgstr "Zeige Zahlen im Indexbild"
 
 msgid "Hide main menu entry"
-msgstr "Hauptmenueintrag verstecken"
+msgstr "HauptmenÃ¼eintrag verstecken"
 
 msgid "Send encoded frame several times"
 msgstr "Sende enkodierte Bilddaten mehrfach"
 
 msgid "Live Audio from primary Device"
-msgstr "Live Audio vom primären Gerät"
+msgstr "Live Audio vom primÃ¤ren GerÃ¤t"
 
 msgid "Directory with temporary files"
-msgstr "Verzeichnis mit temporären Dateien"
+msgstr "Verzeichnis mit temporÃ¤ren Dateien"
 
 msgid "Remove temporary files immediately"
-msgstr "Temporäre Dateien unverzüglich löschen"
+msgstr "TemporÃ¤re Dateien unverzÃ¼glich lÃ¶schen"
 
 msgid "Remove temporary files"
-msgstr "Lösche temporäre Dateien"
+msgstr "LÃ¶sche temporÃ¤re Dateien"
 
 msgid "Border for Underscan (Height)"
-msgstr "Rand für Underscan (Höhe)"
+msgstr "Rand fÃ¼r Underscan (HÃ¶he)"
 
 msgid "Border for Underscan (Width)"
-msgstr "Rand für Underscan (Breite)"
+msgstr "Rand fÃ¼r Underscan (Breite)"
 
+msgid "Image Grid"
+msgstr "Kachelansicht"
+
+msgid "Display Mode"
+msgstr "Anzeigemodus"
+
+msgid "List"
+msgstr "Liste"
+
+msgid "Grid"
+msgstr "Kacheln"
