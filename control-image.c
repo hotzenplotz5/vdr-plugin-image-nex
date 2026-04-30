@@ -308,11 +308,11 @@ eOSState cImageControl::ProcessKey(eKeys nKey)
     {
         //processed global keybindings
         //None key, check for ErrorMsg from Worker
-        case kNone:   if(player)player->ErrorMsg();     break;
-        case kOk:     ToogleShowMode();                 break;
+        case kNone:   if(player)player->ErrorMsg(); break;
+        case kOk:     ToggleShowMode();             break;
         // Toggle between Play/Pause
-        case kPlay:     
-        case kPause:  ToogleSlideShowActiv();           break;
+        case kPlay:
+        case kPause:  ToggleSlideShowActiv();       break;
         // Stop Plugin    
         case kStop:     
         case kBlue:    eOSRet = ProcessKeyStopped();    break;
@@ -557,7 +557,7 @@ void cImageControl::ProcessKeyBeginZoom()
  //////////////////////////////////////////////////////////////////////////////
 /** Toogle between all supported OSD Modes 
 */
-void cImageControl::ToogleShowMode(void)
+void cImageControl::ToggleShowMode(void)
 {
   switch(m_eOSDStatusVisable)
   {
@@ -570,7 +570,7 @@ void cImageControl::ToogleShowMode(void)
 //////////////////////////////////////////////////////////////////////////////
 /** Toogle between Play and Stop of the current SlideShow 
 */
-void cImageControl::ToogleSlideShowActiv(void)
+void cImageControl::ToggleSlideShowActiv(void)
 {
   m_nZoomFactor = 0;
   m_bSlideShowActiv = !m_bSlideShowActiv;

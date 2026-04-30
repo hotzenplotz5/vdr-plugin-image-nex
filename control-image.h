@@ -110,9 +110,9 @@ private:
   /** Check if key for pluginstop was processed*/
   eOSState ProcessKeyStopped();
   /** Toogle between all supported OSD Modes */
-  void ToogleShowMode(void);
+  void ToggleShowMode(void);
   /** Toogle between Play and Stop of the current SlideShow */
-  void ToogleSlideShowActiv(void);
+  void ToggleSlideShowActiv(void);
   
   /** Zoom inside a image*/
   void ZoomIn();
