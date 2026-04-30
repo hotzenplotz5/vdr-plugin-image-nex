@@ -324,8 +324,6 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
             av_packet_unref(outpkt);
             return false;
         }
-        outpkt->data = ( m_pMPEG + m_nMPEGSize);
-        outpkt->size =  m_nMaxMPEGSize - m_nMPEGSize;
 
         err = avcodec_receive_packet(context, outpkt);
         if (err == AVERROR(EAGAIN)) { // No more packets for now.
