@@ -13,18 +13,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef HAVE_SWSCALER
 extern "C" {
 #include <libswscale/swscale.h>
-}
-#else
-#include <libavcodec/imgconvert.h>
-#endif
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51,63,100)
-extern "C" {
 #include <libavutil/imgutils.h>
 }
-#endif
 
 #include "encode.h"
 #include <vdr/device.h>
@@ -42,11 +34,6 @@ cEncode::cEncode(unsigned int nNumberOfFramesToEncode)
 , m_pMPEG(NULL)
 , m_pImageRGB(NULL)
 {
-#if VDRVERSNUM < 20301
-    m_bUsePAL = (cDevice::PrimaryDevice()->GetVideoSystem() == vsPAL);
-    m_nWidth  = 720;
-    m_nHeight = m_bUsePAL ? 576 : 480;
-#else
     double aspect = 0;
 
     cDevice::PrimaryDevice()->GetOsdSize((int&)m_nWidth, (int&)m_nHeight, (double&)aspect);
@@ -62,8 +49,6 @@ cEncode::cEncode(unsigned int nNumberOfFramesToEncode)
         m_nHeight = 1080;
     }
 
-#endif
-//    esyslog("imageplugin: width %d height %d\n",m_nWidth, m_nHeight);
     m_pFrameSizes = new unsigned int[m_nNumberOfFramesToEncode];
     memset (m_pFrameSizes, 0, sizeof(int) * m_nNumberOfFramesToEncode);
     // Just a wild guess: 3 x output image size should be enough for the MPEG
@@ -74,10 +59,6 @@ cEncode::cEncode(unsigned int nNumberOfFramesToEncode)
 
 bool cEncode::Register()
 {
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58,10,100)
-    av_register_all();
-    avcodec_register_all();
-#endif
     m_pavCodec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
     if (!m_pavCodec) {
         esyslog("imageplugin: Failed to find CODEC_ID_MPEG2VIDEO.\n");
@@ -146,17 +127,10 @@ bool cEncode::Encode()
                 {
                     bSuccess = EncodeFrames(pAVCC, pAVF); 
                 }
-#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(55,63,100)
-                avcodec_close(pAVCC);
-#endif
             }
-            av_free(pAVF);
+            av_frame_free(&pAVF);
         }
-#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(55,63,100)
-        av_free(pAVCC);
-#else
         avcodec_free_context(&pAVCC);
-#endif
     }
     return bSuccess;
 }
@@ -167,23 +141,14 @@ void cEncode::SetupEncodingParameters(AVCodecContext *context)
     context->width  = m_nWidth;
     context->height = m_nHeight;
 
-#if LIBAVCODEC_BUILD >= 4754
         context->time_base=(AVRational){1, (int)GetFrameRate()};
-#else
-        context->frame_rate=GetFrameRate();
-        context->frame_rate_base=1;
-#endif
     //IPB //1 => Encode only I-Frames, bigger 
     context->gop_size=m_nNumberOfFramesToEncode-1;
     if(context->gop_size <= 1) {
       context->gop_size = 1;
     }
     context->max_b_frames=1;
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(56,56,100)
-    context->flags |= CODEC_FLAG_QSCALE;
-#else
     context->flags |= AV_CODEC_FLAG_QSCALE;
-#endif
     context->pix_fmt = AV_PIX_FMT_YUV420P;
 }
 
@@ -205,23 +170,10 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
     frame->quality = 1;
 
     // Convert RGB to YUV 
-#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(51,63,100)
-    if(!avpicture_fill((AVPicture*)m_pImageFilled, 
-                                    m_pImageRGB, 
-                                    AV_PIX_FMT_RGB24, m_nWidth, m_nHeight))
-#else
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57,5,0)
-    if(av_image_fill_arrays(((AVPicture*)m_pImageFilled)->data,
-                         ((AVPicture*)m_pImageFilled)->linesize,
-                         m_pImageRGB,
-                         AV_PIX_FMT_RGB24, m_nWidth, m_nHeight, 1) < 0)
-#else
     if(av_image_fill_arrays(((AVFrame*)m_pImageFilled)->data,
                          ((AVFrame*)m_pImageFilled)->linesize,
                          m_pImageRGB,
                          AV_PIX_FMT_RGB24, m_nWidth, m_nHeight, 1) < 0)
-#endif
-#endif
     {
         esyslog("imageplugin: failed avpicture_fill\n");
         return false;
@@ -229,11 +181,6 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
     else
     {
         int result;
-#ifndef HAVE_SWSCALER
-        result=img_convert((AVPicture*)frame->data, AV_PIX_FMT_YUV420P,
-                       (AVPicture*)m_pImageFilled, AV_PIX_FMT_RGB24,
-                       m_nWidth, m_nHeight);
-#else
         ((AVFrame*)m_pImageFilled)->width = m_nWidth;
         ((AVFrame*)m_pImageFilled)->height = m_nHeight;
         ((AVFrame*)m_pImageFilled)->quality = 1;
@@ -241,26 +188,17 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
         SwsContext* convert_ctx = sws_getContext(m_nWidth, m_nHeight, 
                         AV_PIX_FMT_RGB24, m_nWidth, m_nHeight,
                         AV_PIX_FMT_YUV420P,
-#if LIBSWSCALE_VERSION_INT >= AV_VERSION_INT(6,5,0)
                         SWS_FULL_CHR_H_INT | SWS_ACCURATE_RND |
-#endif
                         SWS_BICUBIC, NULL, NULL, NULL);
 
 	    if(!convert_ctx) {
             esyslog("imageplugin: failed to initialize swscaler context\n");
             return false;
     	}
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57,5,0)
-	    result=sws_scale(convert_ctx, ((AVPicture*)m_pImageFilled)->data, 
-                                      ((AVPicture*)m_pImageFilled)->linesize, 
-                         0, m_nHeight, frame->data, frame->linesize);
-#else
 	    result=sws_scale(convert_ctx, ((AVFrame*)m_pImageFilled)->data, 
                                       ((AVFrame*)m_pImageFilled)->linesize, 
                          0, m_nHeight, frame->data, frame->linesize);
-#endif
 	    sws_freeContext(convert_ctx);
-#endif
         if(result < 0)
         {
             esyslog("imageplugin: failed convert RGB to YUV: %X\n", result);
@@ -299,17 +237,12 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
 
     unsigned int i;
     m_nMPEGSize = 0;
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58,33,100)
-    AVPacket outpkt[1];
-    av_init_packet(outpkt);
-#else
     AVPacket * outpkt;
     outpkt = av_packet_alloc();
 
     frame->format = context->pix_fmt;
     frame->width  = context->width;
     frame->height = context->height;
-#endif
     // Encode m_nNumberOfFramesToEncode number of frames
     for(i=0; (i < m_nNumberOfFramesToEncode) && (m_nMPEGSize < m_nMaxMPEGSize); ++i)
     {
@@ -353,9 +286,7 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
         *(m_pFrameSizes + i) = outpkt->size;
     }
     av_packet_unref(outpkt);
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58,33,100)
     av_packet_free(&outpkt);
-#endif
     // Add four bytes MPEG end sequence
 
     if (m_nMPEGSize == 0) return false;
