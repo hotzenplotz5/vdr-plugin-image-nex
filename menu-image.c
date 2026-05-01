@@ -268,13 +268,19 @@ void cMenuImageGrid::DrawGrid()
             bool thumbDrawn = false;
             char *dirPath = item->Path();
             char *fullDirPath = source->BuildName(dirPath);
-            char *thumbPath = AddPath(fullDirPath, "folder.jpg");
+            char *thumbPath = NULL;
+            
+            if (item->Type == itDir) {
+                thumbPath = AddPath(fullDirPath, "folder.jpg");
+            } else if (item->Type == itFile) {
+                thumbPath = strdup(fullDirPath);
+            }
 
-            if (!item->HasFolderJpg && access(thumbPath, R_OK) == 0) {
+            if (thumbPath && !item->HasFolderJpg && access(thumbPath, R_OK) == 0) {
                 item->HasFolderJpg = true;
             }
 
-            if (item->HasFolderJpg) {
+            if (thumbPath && item->HasFolderJpg) {
                 cImage* thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
                 if (thumb) {
                     // Center the image in the tile
@@ -286,7 +292,7 @@ void cMenuImageGrid::DrawGrid()
                 }
             }
             
-            free(thumbPath);
+            if (thumbPath) free(thumbPath);
             free(fullDirPath);
             free(dirPath);
 

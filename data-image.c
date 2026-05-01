@@ -85,6 +85,10 @@ bool cSlideShow::Load(void)
 {
   bool res = false;
   Clear();
+  if (m_szFirstImageName) {
+      free(m_szFirstImageName);
+      m_szFirstImageName = NULL;
+  }
   switch (m_DirItem.Type)
 	{
 	case itFile:
