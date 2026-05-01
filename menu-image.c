@@ -160,9 +160,9 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 				delete newss;
 				state = osContinue;
 			}
-            delete lastselect;
-			lastselect = nullptr;
 		}
+    delete lastselect;
+    lastselect = nullptr;
   free(full);
   free(name);
   }

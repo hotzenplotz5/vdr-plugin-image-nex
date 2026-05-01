@@ -193,7 +193,9 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 			if(!s)  //open bracket
 				asprintf(&s, " \\( ");
 
-			asprintf(&sn, "%s-iname \"%s\" ",s,QuoteString(src->Ext()));
+			char *quotedExt = QuoteString(src->Ext());
+			asprintf(&sn, "%s-iname \"%s\" ",s,quotedExt);
+			free(quotedExt);
 			if(s) free(s);
 			s = sn;
 			
@@ -226,7 +228,9 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 			if(!e)  //open bracket
 				asprintf(&e, "-not \\( ");
 
-			asprintf(&en, "%s-iname \"%s\" ",e,QuoteString(src->Ext()));
+			char *quotedExt = QuoteString(src->Ext());
+			asprintf(&en, "%s-iname \"%s\" ",e,quotedExt);
+			free(quotedExt);
 			if(e) free(e);
 			e = en;
 			
@@ -248,11 +252,15 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 		}
 	}
 #if 0
+  char *quotedDir = QuoteString(dir);
   asprintf(&cmd, "find \"%s\" -follow -type %c %s %s %s 2>/dev/null | sort -df",
-             QuoteString(dir), tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1");
+             quotedDir, tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1");
+  free(quotedDir);
 #else
+  char *quotedDir = QuoteString(dir);
   asprintf(&cmd, "find \"%s\" -follow -type %c %s %s %s 2>/dev/null | sort -df | grep -v \"/\\.\"",
-             QuoteString(dir), tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1");
+             quotedDir, tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1");
+  free(quotedDir);
 #endif
   //fprintf(stderr,"%s\n",cmd);
   cReadLine l;
@@ -284,10 +292,7 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 
 char *cScanDir::QuoteString(const char *str)
 {
-  static char *nstr = 0;
-
-  free(nstr);
-  nstr = MALLOC(char, strlen(str) * 2);
+  char *nstr = MALLOC(char, strlen(str) * 2 + 1); // +1 required for null terminator!
   char *p = nstr;
   while(*str)
 	{
