@@ -38,8 +38,13 @@ void cImageControl::SetSlideShow(cSlideShow * pNewSlideShow)
 #if APIVERSNUM < 20402
   if(cControl::Control())
 #else
-  cMutexLock ControlMutexLock;
-  if(cControl::Control(ControlMutexLock))
+  bool bHasControl = false;
+  {
+      cMutexLock ControlMutexLock;
+      if(cControl::Control(ControlMutexLock))
+          bHasControl = true;
+  }
+  if(bHasControl)
 #endif
   	cControl::Shutdown();
 

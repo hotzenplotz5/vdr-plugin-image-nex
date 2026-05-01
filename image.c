@@ -54,7 +54,7 @@ bool cPluginImage::SetupParse(const char *szName, const char *szValue)
 	return ImageSetup.SetupParse(szName,szValue);
 }
 
-const char *g_szConfigDirectory = NULL;
+const char *g_szConfigDirectory = "image";
 
 const char *cPluginImage::CommandLineHelp(void)
 {
@@ -167,8 +167,13 @@ bool cPluginImage::Service(const char *Id, void *Data)
     if(cControl::Control())
         cControl::Shutdown();
 #else
-    cMutexLock ControlMutexLock;
-    if(cControl::Control(ControlMutexLock))
+    bool bHasControl = false;
+    {
+        cMutexLock ControlMutexLock;
+        if(cControl::Control(ControlMutexLock))
+            bHasControl = true;
+    }
+    if(bHasControl)
         cControl::Shutdown();
 #endif
 

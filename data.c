@@ -47,13 +47,17 @@ public:
     cExifExtractorThread() : cThread("ImageExifExtractor") {}
     
     void AddTask(const std::string& jpg, const std::string& folder) {
-        cMutexLock lock(&mutex);
-        ExifTask t;
-        t.firstJpgPath = jpg;
-        t.folderJpgPath = folder;
-        tasks.push(t);
+        bool bStart = false;
+        {
+            cMutexLock lock(&mutex);
+            ExifTask t;
+            t.firstJpgPath = jpg;
+            t.folderJpgPath = folder;
+            tasks.push(t);
+            bStart = !Active();
+        }
         cond.Broadcast();
-        if (!Active()) Start();
+        if (bStart) Start();
     }
     
     virtual void Action() {
@@ -231,7 +235,7 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
   free(quotedDir);
 #else
   char *quotedDir = QuoteString(dir);
-  asprintf(&cmd, "find \"%s\" -follow -type %c %s %s %s 2>/dev/null | sort -df | grep -v \"/\\.\"",
+  asprintf(&cmd, "find \"%s\" -follow -not -path '*/.*' -type %c %s %s %s 2>/dev/null | sort -df",
              quotedDir, tc, s_str.c_str(), e_str.c_str(), recursiv?"":"-maxdepth 1");
   free(quotedDir);
 #endif

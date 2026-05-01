@@ -350,6 +350,12 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         int osd_offset_x = pShell->nOffLeft + m_StillImage.GetBorderWidth() + (pShell->nTargetWidth - scaled_w) / 2;
         int osd_offset_y = pShell->nOffTop + m_StillImage.GetBorderHeight() + (pShell->nTargetHeight - scaled_h) / 2;
 
+        // Strict boundary checks to prevent any potential buffer overflow
+        if (osd_offset_x < 0) osd_offset_x = 0;
+        if (osd_offset_y < 0) osd_offset_y = 0;
+        if (osd_offset_x + scaled_w > (int)m_StillImage.GetWidth()) scaled_w = m_StillImage.GetWidth() - osd_offset_x;
+        if (osd_offset_y + scaled_h > (int)m_StillImage.GetHeight()) scaled_h = m_StillImage.GetHeight() - osd_offset_y;
+
         // Convert to RGB24 full image to safely crop & avoid planar chroma issues
         AVFrame *rgb_frame = av_frame_alloc();
         rgb_frame->format = AV_PIX_FMT_RGB24;
@@ -431,7 +437,7 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         SwsContext *sws_ctx = sws_getContext(
             crop_w, crop_h, AV_PIX_FMT_RGB24,
             scaled_w, scaled_h, AV_PIX_FMT_RGB24,
-            SWS_BILINEAR, nullptr, nullptr, nullptr
+            SWS_BICUBIC, nullptr, nullptr, nullptr
         );
 
         if (sws_ctx) {
