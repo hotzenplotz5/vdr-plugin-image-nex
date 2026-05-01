@@ -142,7 +142,6 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 
   if(state == osBack && lastselect) {
     char *name = lastselect->Path();
-    char *full = source->BuildName(name);
     cDirItem *item = cMenuBrowse::GetSelected();
     if(item) {
     
@@ -163,7 +162,6 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 		}
     delete lastselect;
     lastselect = nullptr;
-  free(full);
   free(name);
   }
   if(state == osUnknown && Key == kYellow)

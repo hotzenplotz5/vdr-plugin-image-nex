@@ -25,6 +25,7 @@
 #include "data-image.h"
 #include "list.h"
 
+#include <string>
 #include <vdr/tools.h>
 
 #ifdef HAVE_LIBEXIF
@@ -165,7 +166,8 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 		       const char *spec, const char *excl, bool recursiv)
 {
   bool result = true;
-  char *cmd = 0, *dir = 0, *s = 0, *e = 0, tc;
+  char *cmd = 0, *dir = 0, tc;
+  std::string s_str, e_str;
 
   switch (type)
 	{
@@ -189,71 +191,37 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 	{
     	cFileExtList list(spec); //Splitt *.jpg *.jpeg
    		
-		cFileExt *src = list.First(); 
-		while(src) //Loop throw all found item 
+		cFileExt *extItem = list.First(); 
+		if(extItem) s_str += " \\( ";
+		while(extItem) //Loop throw all found item 
 		{
-			char* sn;
-		
-			if(!s)  //open bracket
-				asprintf(&s, " \\( ");
-
-			char *quotedExt = QuoteString(src->Ext());
-			asprintf(&sn, "%s-iname \"%s\" ",s,quotedExt);
+			char *quotedExt = QuoteString(extItem->Ext());
+			s_str += "-iname \"";
+			s_str += quotedExt;
+			s_str += "\" ";
 			free(quotedExt);
-			if(s) free(s);
-			s = sn;
-			
-	    	src = list.Next(src);			
-			if(src) //follow ext
-			{
-				char* sn;
-				asprintf(&sn, "%s-o ",s);
-				free(s);
-				s = sn;
-			}
+			extItem = list.Next(extItem);			
+			if(extItem) s_str += "-o ";
 		}
-		if(s) // close bracket
-		{
-			char* sn;
-			asprintf(&sn, "%s\\)",s);
-			free(s);
-			s = sn;
-		}
+		if(!s_str.empty()) s_str += "\\)";
 	}
 	// Check if filter is set build complex exclude find  -not ( -iname "*.jpg" -o -iname "*.jpeg" -o .. )
   if(stFile == type && excl) {
     cFileExtList list(excl); //Splitt *.jpg *.jpeg
    		
-		cFileExt *src = list.First(); 
-		while(src) //Loop throw all found item 
+		cFileExt *extItem = list.First(); 
+		if(extItem) e_str += "-not \\( ";
+		while(extItem) //Loop throw all found item 
 		{
-			char* en;
-
-			if(!e)  //open bracket
-				asprintf(&e, "-not \\( ");
-
-			char *quotedExt = QuoteString(src->Ext());
-			asprintf(&en, "%s-iname \"%s\" ",e,quotedExt);
+			char *quotedExt = QuoteString(extItem->Ext());
+			e_str += "-iname \"";
+			e_str += quotedExt;
+			e_str += "\" ";
 			free(quotedExt);
-			if(e) free(e);
-			e = en;
-			
-	    	src = list.Next(src);			
-			if(src) //follow ext
-			{
-				char* en;
-				asprintf(&en, "%s-o ",e);
-				free(e);
-				e = en;
-			}
+			extItem = list.Next(extItem);			
+			if(extItem) e_str += "-o ";
 		}
-		if(e) // close bracket
-		{
-			char* en;
-			asprintf(&en, "%s\\)",e);
-			free(e);
-			e = en;
-		}
+		if(!e_str.empty()) e_str += "\\)";
 	}
 #if 0
   char *quotedDir = QuoteString(dir);
@@ -263,7 +231,7 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 #else
   char *quotedDir = QuoteString(dir);
   asprintf(&cmd, "find \"%s\" -follow -type %c %s %s %s 2>/dev/null | sort -df | grep -v \"/\\.\"",
-             quotedDir, tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1");
+             quotedDir, tc, s_str.c_str(), e_str.c_str(), recursiv?"":"-maxdepth 1");
   free(quotedDir);
 #endif
   //fprintf(stderr,"%s\n",cmd);
@@ -289,8 +257,6 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 
   free(cmd);
   free(dir);
-  free(s);
-  free(e);
   return result;
 }
 

@@ -137,9 +137,8 @@ bool cImagePlayer::ConvertJump(int nOffset)
 {
   register unsigned int w,h;
   const unsigned int MAX_BILDER = 9;
-  cImageData* pImage[MAX_BILDER];
-  for (w = 0; w < MAX_BILDER; ++w)
-    pImage[w] = NULL;
+  // Moderne C++11 Initialisierung (verhindert Speicherfehler)
+  cImageData* pImage[MAX_BILDER] = { nullptr };
   int nBilder = theSlideShow.GetJumpNames(nOffset,pImage,MAX_BILDER);
   if(nBilder > 0 
     && pImage[0]) {
