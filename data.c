@@ -88,6 +88,7 @@ const char *g_szMountScript = "mount.sh";
 
 char *AddPath(const char *dir, const char *filename)
 {
+  if (!dir || !filename) return NULL;
   int l = strlen(dir);
   char *name = MALLOC(char, l + strlen(filename) + 2);
   if(name)

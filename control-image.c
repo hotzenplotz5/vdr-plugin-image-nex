@@ -147,7 +147,9 @@ void cImageControl::ShowStatusMsg()
   {
     switch(m_ePlayMode)
     {
-      case ePlayModeNormal: asprintf(&sz,"%s",FileName());break;
+      case ePlayModeNormal: 
+        if (FileName()) asprintf(&sz,"%s",FileName());
+        break;
       case ePlayModeJump:   asprintf(&sz,"%s",tr("Select picture via key 1..9!"));break;
       case ePlayModeZoom:   asprintf(&sz,"%s %dx",tr("Zoom"),m_nZoomFactor);break;
     }
@@ -193,8 +195,10 @@ void cImageControl::ShowMode(void)
       {
 		// Get the current activ filename
 		const char* szFileName = FileName();
-		if(!szFileName)
+		if(!szFileName) {
+			free(sz);
 			return;
+        }
 		snprintf(sz, nMaxCharacter, "%s", szFileName);	
         break;
       }
