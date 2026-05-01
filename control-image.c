@@ -707,8 +707,7 @@ void cImageControl::RFlipImage(void)
 {
   SetAspectRatioEnv();
   m_ePlayMode = ePlayModeNormal;
-  --m_nRotation;
-  m_nRotation %= memberof(szRotation);
+  m_nRotation = (m_nRotation + memberof(szRotation) - 1) % memberof(szRotation);
   
   if(!CheckAccess()
     || !player->Convert(szRotation[m_nRotation]))

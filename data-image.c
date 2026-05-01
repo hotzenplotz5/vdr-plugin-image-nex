@@ -29,6 +29,9 @@ cFileSources ImageSources;
 cImageData::cImageData(const char *szName, cFileSource * pSource)
 : m_pSource(pSource)
 , m_szFileName(NULL)
+#ifdef HAVE_LIBEXIF
+, m_nDefaultRotate(0)
+#endif
 {
   if(szName) {
     m_szFileName = m_pSource->BuildName(szName);

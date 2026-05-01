@@ -243,6 +243,13 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 
     AVFrame *frame = av_frame_alloc();
     AVPacket *pkt = av_packet_alloc();
+    if (!frame || !pkt) {
+        if(frame) av_frame_free(&frame);
+        if(pkt) av_packet_free(&pkt);
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        return false;
+    }
     bool decoded = false;
 
     // Decode fully native from source into AVFrame

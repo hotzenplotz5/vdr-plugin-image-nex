@@ -118,8 +118,10 @@ const char *cImageCommand::Execute(const char *szFileName)
     if(NULL == strstr(m_szCommand, "%s")) {
       /// Merge command and filename e.g : identify 'my_image.png'
       char *quotedFileName = ShellQuote(szFileName);
-      asprintf(&szCmdBuf, "%s %s", m_szCommand, quotedFileName);
-      free(quotedFileName);
+      if (quotedFileName) {
+        asprintf(&szCmdBuf, "%s %s", m_szCommand, quotedFileName);
+        free(quotedFileName);
+      }
     }
     else {
       /// Replace Mode, replace any %s with filename

@@ -232,6 +232,10 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
 
     m_nMPEGSize = 0;
     AVPacket * outpkt = av_packet_alloc();
+    if (!outpkt) {
+        esyslog("imageplugin: Failed to alloc memory for AVPacket.\n");
+        return false;
+    }
 
     frame->format = context->pix_fmt;
     frame->width  = context->width;
