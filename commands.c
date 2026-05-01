@@ -16,6 +16,37 @@
 #include "commands.h"
 #include "setup-image.h"
 
+// Helper to safely quote a string for use in a shell command.
+// This replaces every single quote with '\'', effectively breaking out of the
+// surrounding quotes to insert a literal quote, then re-entering.
+// The result is a single, unbreakable token for the shell.
+// The caller must free the returned string.
+static char *ShellQuote(const char *s)
+{
+  if (!s)
+    return strdup("''");
+
+  int l = strlen(s);
+  // Worst case: every char is a single quote, needing 4 chars ('\'')
+  // +2 for the surrounding quotes and +1 for the null terminator.
+  char *r = (char *)malloc(4 * l + 3);
+  if (!r)
+    return NULL;
+
+  char *p = r;
+  *p++ = '\'';
+  for (int i = 0; i < l; i++) {
+    if (s[i] == '\'') {
+      memcpy(p, "'\\''", 4);
+      p += 4;
+    } else {
+      *p++ = s[i];
+    }
+  }
+  *p++ = '\'';
+  *p = '\0';
+  return r;
+}
 
 // --- cImageCommand -------------------------------------------------------------
 
@@ -86,13 +117,14 @@ const char *cImageCommand::Execute(const char *szFileName)
 
     if(NULL == strstr(m_szCommand, "%s")) {
       /// Merge command and filename e.g : identify 'my_image.png'
-      asprintf(&szCmdBuf, "%s \'%s\'", m_szCommand, szFileName);
+      char *quotedFileName = ShellQuote(szFileName);
+      asprintf(&szCmdBuf, "%s %s", m_szCommand, quotedFileName);
+      free(quotedFileName);
     }
     else {
       /// Replace Mode, replace any %s with filename
       /// e.g. :    
-      char *szF = NULL;
-      asprintf(&szF, "\'%s\'", szFileName);
+      char *szF = ShellQuote(szFileName);
       if(szF) {
         szCmdBuf = (char*)calloc(PATH_MAX,1);
         if(szCmdBuf)

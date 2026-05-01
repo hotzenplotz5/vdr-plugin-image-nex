@@ -404,6 +404,7 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
                 }
                 av_frame_free(&rgb_frame);
             } else {
+                av_frame_free(&rot_frame);
                 rot_frame = rgb_frame; // Fallback to unrotated if out of memory
             }
         }

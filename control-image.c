@@ -622,6 +622,8 @@ eOSState cImageControl::ProcessKeyCommands(eKeys nKey)
     Hide();
     
     const char* szFileName = FileName(); 
+    if (!szFileName)
+        return osContinue; // Cannot open commands menu without a file
     char* szTitle; 
     asprintf(&szTitle,"%s (%s)",tr("Commands"),basename(szFileName));
     m_pCmdMenu = new cImageMenuCommands(szTitle,pCmd,szFileName);
