@@ -127,20 +127,18 @@ endif
 
 OBJS = ${PLUGIN}.o data.o menu.o data-image.o menu-image.o \
  setup-image.o player-image.o control-image.o commands.o menu-commands.o \
- list.o
+ list.o \
+ liboutput/encode.o liboutput/stillimage.o liboutput/stillimage-player.o \
+ libimage/xpm.o
 
 
 ifndef WITHOUT_LIBEXIF
   OBJS    += exif.o
 endif
 
-### The subdirectories:
-
-SUBDIRS = liboutput libimage
-
 ### The main target:
 
-all: subdirs $(SOFILE) i18n
+all: $(SOFILE) i18n
 
 ### Implicit rules:
 
@@ -192,15 +190,6 @@ install-lib: $(SOFILE)
 
 install: install-lib install-i18n
 
-subdirs:
-	@for i in $(SUBDIRS) ;\
-	do \
-	    ( cd $$i;\
-              $(MAKE) all PLUGIN=$(PLUGIN);\
-       ) \
-	|| exit 1;\
-	done
-
 dist: $(I18Npo) clean
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@mkdir $(TMPDIR)/$(ARCHIVE)
@@ -213,15 +202,6 @@ dist: $(I18Npo) clean
 	@echo Distribution package created as $(PACKAGE).tgz
 	
 
-subdirs-clean:
-	@for i in $(SUBDIRS) ;\
-	do \
-	    ( cd $$i;\
-              $(MAKE) clean;\
-       ) \
-	|| exit 1;\
-	done
-
-clean: subdirs-clean
+clean:
 	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
 	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~ contrib/*~  examples/*~
