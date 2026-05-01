@@ -75,6 +75,10 @@ public:
 };
 
 static cExifExtractorThread ExifThread;
+
+void StopExifExtractor() {
+    ExifThread.Cancel(3);
+}
 #endif
 
 // ----------------------------------------------------------------
@@ -292,6 +296,8 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 
 char *cScanDir::QuoteString(const char *str)
 {
+  if (!str) return NULL;
+
   char *nstr = MALLOC(char, strlen(str) * 2 + 1); // +1 required for null terminator!
   char *p = nstr;
   while(*str)

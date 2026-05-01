@@ -117,6 +117,9 @@ cPluginImage::cPluginImage()
 cPluginImage::~cPluginImage()
 {
   cEncode::UnRegister();
+#ifdef HAVE_LIBEXIF
+  StopExifExtractor();
+#endif
   RemoveServiceSource();
 }
 

@@ -256,14 +256,14 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_idx) {
             int ret = avcodec_send_packet(codec_ctx, pkt);
-            // The official FFmpeg standard requires an inner loop here
-            while (ret >= 0) {
-                ret = avcodec_receive_frame(codec_ctx, frame);
-                if (ret == 0) {
+            // The official FFmpeg standard requires an unconditional inner loop here
+            while (true) {
+                int recv_ret = avcodec_receive_frame(codec_ctx, frame);
+                if (recv_ret == 0) {
                     decoded = true;
                     break;
                 }
-                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                if (recv_ret == AVERROR(EAGAIN) || recv_ret == AVERROR_EOF || recv_ret < 0)
                     break;
             }
         }
@@ -282,6 +282,14 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         // Image Scale and Aspect Ratio logic
         int src_w = frame->width;
         int src_h = frame->height;
+        if (src_w <= 0 || src_h <= 0) {
+            esyslog("imageplugin: decoded frame has invalid dimensions (%dx%d)", src_w, src_h);
+            av_frame_free(&frame);
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+            return false;
+        }
+        
         int rot_w = src_w;
         int rot_h = src_h;
         if (pShell->nRotationAngle == 90 || pShell->nRotationAngle == 270) {
