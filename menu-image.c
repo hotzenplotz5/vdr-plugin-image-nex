@@ -42,7 +42,9 @@ private:
 public:
     static std::map<std::string, std::unique_ptr<cImage>> Cache;
     static cImage* Get(const char* path, int maxWidth, int maxHeight) {
-        std::string key = path;
+        char keyBuf[1024];
+        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
+        std::string key = keyBuf;
         
         // Wenn gefunden, Key in der LRU-Liste ganz nach vorne schieben
         if (Cache.find(key) != Cache.end()) {

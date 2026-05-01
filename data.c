@@ -337,9 +337,8 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
       if (f) {
           char buf[256];
           if (fgets(buf, sizeof(buf), f)) {
-              // Remove newline
-              char *nl = strchr(buf, '\n');
-              if (nl) *nl = 0;
+              // Safely remove newline and potential carriage return (Windows/SMB edits)
+              buf[strcspn(buf, "\r\n")] = 0;
               
               // Set alias if not empty
               if (strlen(buf) > 0) {
