@@ -86,15 +86,21 @@ bool cImageCommand::Parse(const char *s)
       stripspace(strn0cpy(m_szTitle, s, l + 1));
       if(!isempty(m_szTitle))
       {
-        int l = strlen(m_szTitle);
-        if(l > 1 && m_szTitle[l - 1] == '?')
+        int len = strlen(m_szTitle);
+        if(len > 1 && m_szTitle[len - 1] == '?')
         {
           m_bConfirm = true;
-          m_szTitle[l - 1] = 0;
+          m_szTitle[len - 1] = 0;
         }
         m_szCommand = stripspace(strdup(skipspace(p + 1)));
-        return !isempty(m_szCommand);
+        if (!isempty(m_szCommand)) {
+          return true;
+        }
+        free(m_szCommand);
+        m_szCommand = NULL;
       }
+      free(m_szTitle);
+      m_szTitle = NULL;
     }
   }
   return false;
@@ -128,27 +134,29 @@ const char *cImageCommand::Execute(const char *szFileName)
       /// e.g. :    
       char *szF = ShellQuote(szFileName);
       if(szF) {
-        szCmdBuf = (char*)calloc(PATH_MAX,1);
+                int flen = strlen(szF);
+                int cmdlen = strlen(m_szCommand);
+                int count = 0;
+                for (char *tmp = m_szCommand; (tmp = strstr(tmp, "%s")) != NULL; tmp += 2) {
+                    count++;
+                }
+                int needed = cmdlen + count * (flen - 2) + 1;
+                szCmdBuf = (char*)malloc(needed);
         if(szCmdBuf)
         {  
           char* d = szCmdBuf;
           char* s = m_szCommand;
-          int remaining = PATH_MAX - 1;
-          while(remaining > 0 && *s != '\0') 
+                  while(*s != '\0') 
           {
             if(*s == '%' && *(s+1) == 's')
             {
-              int flen = strlen(szF);
-              if (flen > remaining) break; // Overflow-Schutz
               strcpy(d, szF);
               d += flen;
-              remaining -= flen;
               s += 2;
             }
             else 
             {
               *d++ = *s++;
-              remaining--;
             }
           }
           *d = '\0';
@@ -172,9 +180,10 @@ const char *cImageCommand::Execute(const char *szFileName)
     while((c = fgetc(p)) != EOF)
     {
       if(l % 20 == 0) {
-        m_szLastResult = (char *)realloc(m_szLastResult, l + 21);
-        if(!m_szLastResult)
+                char *tmp = (char *)realloc(m_szLastResult, l + 21);
+                if(!tmp)
           break;
+                m_szLastResult = tmp;
       }
       m_szLastResult[l++] = c;
     }
