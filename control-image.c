@@ -731,51 +731,35 @@ void cImageControl::LFlipImage(void)
 
 void cImageControl::PictureZoomInitial(void)
 {
-  
-  char *szFileName;
-  FILE *f;
-  char buf[80];
-
   cImageData* pImage = theSlideShow.GetImage();
-  if(!pImage)
+  if(!pImage || !player)
     return;
 
   unsigned int nMaxWidth = player->UseWidth();
   unsigned int nMaxHeight = player->UseHeight();
   
-  asprintf(&szFileName, "%s.par", pImage->Name());
-  
-  if(!szFileName)
-    return;
+  // Get the real image dimensions from the player, which knows them from the last decode.
+  m_nRealImageWidth = player->SourceWidth();
+  m_nRealImageHeight = player->SourceHeight();
+
+  // Fallback if dimensions are not yet known (e.g. image not decoded yet)
+  if (m_nRealImageWidth <= 0 || m_nRealImageHeight <= 0) {
+      esyslog("imageplugin: Could not get real image dimensions for zoom. Using OSD size as fallback.");
+      m_nRealImageWidth = nMaxWidth;
+      m_nRealImageHeight = nMaxHeight;
+  }
 
   strncpy(m_szZoomRotation, szRotation[m_nRotation],sizeof(m_szZoomRotation));
-
-  m_nRealImageWidth = nMaxWidth;
-  m_nRealImageHeight = nMaxHeight;
-  
-  if((f = fopen(szFileName, "rt")))
-  {
-    dsyslog("imageplugin: open file %s", szFileName);
-    fgets(buf, sizeof(buf) - 1, f);
-    dsyslog("imageplugin: line=%s", buf);
-    sscanf(buf, "%d %d %s", &m_nRealImageWidth,&m_nRealImageHeight,m_szZoomRotation);
-    fclose(f);
-  }
-  else
-  {
-    esyslog("imageplugin: error by open file %s", szFileName);
-  }
-  
-  free(szFileName);
 
   if(m_nRealImageWidth > nMaxWidth 
     || m_nRealImageHeight > nMaxHeight )
     m_nZoomMin = 1;
   else
   {  
-    m_nZoomMin = ((nMaxWidth / 100) + 1) /m_nRealImageWidth;
+    if (m_nRealImageWidth > 0)
+      m_nZoomMin = ((nMaxWidth / 100) + 1) /m_nRealImageWidth;
   }
-  if (m_nZoomMin < 0)
+  if (m_nZoomMin <= 0)
       m_nZoomMin = 1;
   
   // Start with minimum zoom
@@ -806,10 +790,8 @@ void cImageControl::ConvertZoom()
   if(m_nZoomXMax > 0)
   {  
     m_nMaxStepX = (m_nRealImageWidth  * m_nZoomFactor) /  nMaxWidth * 2;
-    if(m_nMoveStepX >= m_nMaxStepX)
-      m_nMoveStepX = m_nMaxStepX;
-    if(m_nMoveStepX <= -m_nMaxStepX)
-      m_nMoveStepX = (m_nMaxStepX)*-1;
+    if(abs(m_nMoveStepX) >= m_nMaxStepX)
+      m_nMoveStepX = m_nMoveStepX > 0 ? m_nMaxStepX -1 : -(m_nMaxStepX -1);
   }
   else 
   {
@@ -820,10 +802,8 @@ void cImageControl::ConvertZoom()
   if(m_nZoomYMax > 0)
   {
     m_nMaxStepY = (m_nRealImageHeight * m_nZoomFactor) /  nMaxHeight * 2;
-    if(m_nMoveStepY >= m_nMaxStepY)
-      m_nMoveStepY = m_nMaxStepY-1;
-    if(m_nMoveStepY <= -m_nMaxStepY)
-      m_nMoveStepY = (m_nMaxStepY)*-1;
+    if(abs(m_nMoveStepY) >= m_nMaxStepY)
+      m_nMoveStepY = m_nMoveStepY > 0 ? m_nMaxStepY -1 : -(m_nMaxStepY -1);
   }
   else 
   {
@@ -834,20 +814,15 @@ void cImageControl::ConvertZoom()
   // Set Offset to center
   int nLeftPos  = m_nZoomXMax/2;
   int nTopPos  = m_nZoomYMax/2;
-  int nLeftPos  = m_nZoomXMax/2;
-  int nTopPos  = m_nZoomYMax/2;
     
-  // Le tPosffset the moved position
+  // Offset the moved position
   if(m_nMaxStepX > 0)
-    nTopPos += (m_nZoomXMax/m_nMaxStepX)*m_nMoveStepX;
     nLeftPos += (m_nZoomXMax/m_nMaxStepX)*m_nMoveStepX;
   if(m_nMaxStepY > 0)
-    nZoomYoff += (m_nZoomYMax/m_nMaxStepY)*m_nMoveStepY;
-    nTopPos += (m_nZoomYMax/m_nMaxStepY)*m_nMoveStepY;LeftPsTpPs
+    nTopPos += (m_nZoomYMax/m_nMaxStepY)*m_nMoveStepY;
 
   // execute
   if(!CheckAccess()
-    || !player->ConvertZoom(m_szZoomRotation, m_nZoomFactor, nZoomXoff, nZoomYoff))
     || !player->ConvertZoom(m_szZoomRotation, m_nZoomFactor, nLeftPos, nTopPos))
   {
     OSD_ErrorNumMsg(errno,tr("Operation failed"));

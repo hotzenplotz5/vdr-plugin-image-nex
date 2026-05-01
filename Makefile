@@ -224,4 +224,4 @@ subdirs-clean:
 
 clean: subdirs-clean
 	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
-	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~ contrib/*~  examples/*~ scripts/*~
+	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~ contrib/*~  examples/*~

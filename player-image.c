@@ -46,6 +46,8 @@ cImagePlayer::cImagePlayer(cSlideShow *pCurSlideShow)
 )
 , m_bConvertRunning(false)
 , m_szError(NULL)
+, m_nSourceWidth(0)
+, m_nSourceHeight(0)
 {
   theSlideShow.Assign(pCurSlideShow);
 }
@@ -243,6 +245,9 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         int crop_h = src_h;
 
         if (pShell->nZoomFactor > 0) {
+            // Store original dimensions for zoom calculations in control
+            m_nSourceWidth = src_w;
+            m_nSourceHeight = src_h;
             // Calculate the crop window in the *original* image dimensions
             // pShell->nCropX and pShell->nCropY are offsets in the *zoomed* image.
             // We need to convert these to offsets in the *original* image for sws_scale.
@@ -263,6 +268,10 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
             if (crop_h <= 0) crop_h = 1; // Avoid zero dimension
         }
         // If nZoomFactor is 0, crop_x, crop_y, crop_w, crop_h remain initialized to full image dimensions.
+        else {
+            m_nSourceWidth = src_w;
+            m_nSourceHeight = src_h;
+        }
 
         double aspect_src_cropped = (double)crop_w / crop_h;
         double aspect_dst = (double)pShell->nTargetWidth / pShell->nTargetHeight;

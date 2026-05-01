@@ -1,6 +1,12 @@
 VDR Plugin 'image' Revision History
 -----------------------------------
 
+2026-05-01: Version 0.6.1
+- Completely removed dependencies on external bash scripts (imageplugin.sh, magickplugin.sh).
+- Image decoding, scaling, and zooming are now handled fully natively using libavcodec and libswscale.
+- Removed legacy .par file parsing. Real image dimensions are now retrieved directly from the native decoder.
+- Cleaned up setup menu and command line arguments related to temporary directories and conversion scripts.
+
 2026-04-27: Version 0.6.0
 - Added grid view for a modern browsing experience (Patch by hotze).
 - Added setup option to switch between list and grid view.

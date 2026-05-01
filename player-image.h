@@ -110,6 +110,9 @@ class cImagePlayer
   cDecodeRequestQueue         m_queue;
   cMutex                      m_MutexErr;
   char*                       m_szError;
+  // Store dimensions of the last decoded source image
+  int                         m_nSourceWidth;
+  int                         m_nSourceHeight;
 protected:
   void Exec(cDecodeRequest* pCmd);
 
@@ -141,6 +144,9 @@ public:
   virtual bool GetIndex(int &Current, int &Total, bool SnapToIFrame);
   /** ThreadSafe Method to show messages from Worker thread*/
   void ErrorMsg();
+
+  int SourceWidth() const { return m_nSourceWidth; }
+  int SourceHeight() const { return m_nSourceHeight; }
 };
 
 #endif				//__DVB_IMAGE_H
