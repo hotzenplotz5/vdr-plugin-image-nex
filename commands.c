@@ -10,8 +10,10 @@
 
 #include <malloc.h>
 #include <ctype.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string>
 
 #include "commands.h"
 #include "setup-image.h"
@@ -120,49 +122,25 @@ const char *cImageCommand::Execute(const char *szFileName)
 
   // Combine command and filename
   if(szFileName && m_szCommand) {
+    char *quotedFileNameRaw = ShellQuote(szFileName);
+    if (quotedFileNameRaw) {
+        std::string command = m_szCommand;
+        std::string replacement = quotedFileNameRaw;
+        free(quotedFileNameRaw);
 
-    if(NULL == strstr(m_szCommand, "%s")) {
-      /// Merge command and filename e.g : identify 'my_image.png'
-      char *quotedFileName = ShellQuote(szFileName);
-      if (quotedFileName) {
-        asprintf(&szCmdBuf, "%s %s", m_szCommand, quotedFileName);
-        free(quotedFileName);
-      }
-    }
-    else {
-      /// Replace Mode, replace any %s with filename
-      /// e.g. :    
-      char *szF = ShellQuote(szFileName);
-      if(szF) {
-                int flen = strlen(szF);
-                int cmdlen = strlen(m_szCommand);
-                int count = 0;
-                for (char *tmp = m_szCommand; (tmp = strstr(tmp, "%s")) != NULL; tmp += 2) {
-                    count++;
-                }
-                int needed = cmdlen + count * (flen - 2) + 1;
-                szCmdBuf = (char*)malloc(needed);
-        if(szCmdBuf)
-        {  
-          char* d = szCmdBuf;
-          char* s = m_szCommand;
-                  while(*s != '\0') 
-          {
-            if(*s == '%' && *(s+1) == 's')
-            {
-              strcpy(d, szF);
-              d += flen;
-              s += 2;
-            }
-            else 
-            {
-              *d++ = *s++;
-            }
-          }
-          *d = '\0';
+        size_t start_pos = 0;
+        bool found = false;
+        while((start_pos = command.find("%s", start_pos)) != std::string::npos) {
+            command.replace(start_pos, 2, replacement);
+            start_pos += replacement.length();
+            found = true;
         }
-      }
-      free(szF);
+
+        if (!found) {
+            command += " ";
+            command += replacement;
+        }
+        szCmdBuf = strdup(command.c_str());
     }
   }
 
@@ -175,21 +153,15 @@ const char *cImageCommand::Execute(const char *szFileName)
   FILE *p = popen(szCmd, "r");
   if(p)
   {
-    int l = 0;
-    int c;
-    while((c = fgetc(p)) != EOF)
-    {
-      if(l % 20 == 0) {
-                char *tmp = (char *)realloc(m_szLastResult, l + 21);
-                if(!tmp)
-          break;
-                m_szLastResult = tmp;
-      }
-      m_szLastResult[l++] = c;
+    std::string result;
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), p) != NULL) {
+        result.append(buffer);
     }
-    if(m_szLastResult)
-      m_szLastResult[l] = 0;
     pclose(p);
+    if (!result.empty()) {
+        m_szLastResult = strdup(result.c_str());
+    }
   } 
   else
     esyslog("imageplugin: can't open pipe for command '%s'", szCmd);
