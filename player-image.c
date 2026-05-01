@@ -256,14 +256,19 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_idx) {
             int ret = avcodec_send_packet(codec_ctx, pkt);
-            if (ret >= 0 || ret == AVERROR(EAGAIN)) {
-                if (avcodec_receive_frame(codec_ctx, frame) == 0) {
+            // The official FFmpeg standard requires an inner loop here
+            while (ret >= 0) {
+                ret = avcodec_receive_frame(codec_ctx, frame);
+                if (ret == 0) {
                     decoded = true;
                     break;
                 }
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                    break;
             }
         }
         av_packet_unref(pkt);
+        if (decoded) break;
     }
     if (!decoded) {
         avcodec_send_packet(codec_ctx, nullptr);

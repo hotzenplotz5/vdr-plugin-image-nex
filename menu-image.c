@@ -380,10 +380,8 @@ eOSState cMenuImageGrid::Select(bool isred)
         return Parent();
     } else if (item->Type == itDir) {
         char *path = item->Path();
-        char *newdir = currentdir ? AddPath(currentdir, path) : strdup(path);
         free(currentdir);
-        currentdir = newdir;
-        free(path);
+        currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
         Display();
         return osContinue;
