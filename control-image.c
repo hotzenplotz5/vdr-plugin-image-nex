@@ -171,6 +171,7 @@ void cImageControl::ShowMode(void)
 {
   if(eDisplayModeOnly != m_eOSDStatusIsOpen)
   {
+    HideOSD(); // Prevent memory leak of previously opened OSD elements
 	m_pDisplayReplay = Skins.Current()->DisplayReplay(m_eOSDStatusVisable==eDisplayModeOnly);  
     m_eOSDStatusIsOpen = eDisplayModeOnly;
   }

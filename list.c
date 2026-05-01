@@ -34,11 +34,12 @@ void cActivSlideShow::Remove(cFileSource* src){
     while (p) {
     if(p->CompareBaseDir(src)) {
       bool bRemoveCurrent = (m_pCurImage == p); 
+      cImageData* next = m_pCurSlideShow->cList < cImageData >::Next(p);
       m_pCurSlideShow->cList < cImageData >::Del(p);
-      p = m_pCurSlideShow->cList < cImageData >::First();
+      p = next;
       if(bRemoveCurrent) {
         m_nCurrentImage = 1;
-        m_pCurImage = p;
+        m_pCurImage = m_pCurSlideShow->cList < cImageData >::First();
       }
     } else {
       p = m_pCurSlideShow->cList < cImageData >::Next(p);
