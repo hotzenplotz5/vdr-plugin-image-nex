@@ -68,25 +68,25 @@ CXXFLAGS +=-D__STDC_CONSTANT_MACROS
 
 ifneq (exists, $(shell pkg-config libavcodec && echo exists))
   $(warning ******************************************************************)
-  $(warning 'libavcodec' not detected! ')
+  $(warning 'libavcodec' not detected!)
   $(warning ******************************************************************)
 endif
 
 ifneq (exists, $(shell pkg-config libavformat && echo exists))
   $(warning ******************************************************************)
-  $(warning 'libavformat' not detected! ')
+  $(warning 'libavformat' not detected!)
   $(warning ******************************************************************)
 endif
 
 ifneq (exists, $(shell pkg-config libswscale && echo exists))
   $(warning ******************************************************************)
-  $(warning 'libswscale' not detected! ')
+  $(warning 'libswscale' not detected!)
   $(warning ******************************************************************)
 endif
 
 ifneq (exists, $(shell pkg-config libexif && echo exists))
   $(warning ******************************************************************)
-  $(warning 'libexif' not detected! ')
+  $(warning 'libexif' not detected!)
   $(warning ******************************************************************)
   WITHOUT_LIBEXIF=1
 endif
@@ -132,7 +132,7 @@ all: $(SOFILE) i18n
 
 MAKEDEP = $(CXX) -MM -MG
 DEPFILE = .dependencies
-$(DEPFILE): Makefile
+$(DEPFILE): makefile
 	@$(MAKEDEP) $(DEFINES) $(INCLUDES) $(OBJS:%.o=%.c) *.h > $@
 
 -include $(DEPFILE)
