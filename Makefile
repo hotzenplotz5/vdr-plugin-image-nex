@@ -16,8 +16,6 @@
 ### uncomment the following line, if you don't have libexif installed
 #WITHOUT_LIBEXIF=1
 
-#FFMDIR = ../../../../ffmpeg
-
 
 # The official name of this plugin.
 # This name will be used in the '-P...' option of VDR to load the plugin.
@@ -68,17 +66,6 @@ INCLUDES += -I$(VDRDIR)/include -I.
 DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 CXXFLAGS +=-D__STDC_CONSTANT_MACROS
 
-### The version number of ffmpeg (taken from "libavcodec/avcodec.h" ):
-
-ifdef FFMDIR
-LIBAVCODECVERSION = $(shell grep "\#define LIBAVCODEC_VERSION " $(FFMDIR)/libavcodec/avcodec.h | \
-                    awk '{ print $$3 }' | cut -d "." -f 1 )
-endif
-
-### Includes and Defines (add further entries here):
-
-LIBS += liboutput/liboutput.a libimage/libimage.a
-
 ifneq (exists, $(shell pkg-config libavcodec && echo exists))
   $(warning ******************************************************************)
   $(warning 'libavcodec' not detected! ')
@@ -95,7 +82,6 @@ ifneq (exists, $(shell pkg-config libswscale && echo exists))
   $(warning ******************************************************************)
   $(warning 'libswscale' not detected! ')
   $(warning ******************************************************************)
-  WITHOUT_SWSCALER = 1
 endif
 
 ifneq (exists, $(shell pkg-config libexif && echo exists))
@@ -111,11 +97,8 @@ CXXFLAGS += $(shell pkg-config --cflags libavformat)
 LIBS += $(shell pkg-config --libs libavcodec)
 CXXFLAGS += $(shell pkg-config --cflags libavcodec)
 
-ifndef WITHOUT_SWSCALER
-  DEFINES += -DHAVE_SWSCALER
-  LIBS += $(shell pkg-config --libs libswscale)
-  CXXFLAGS += $(shell pkg-config --cflags libswscale)
-endif
+LIBS += $(shell pkg-config --libs libswscale)
+CXXFLAGS += $(shell pkg-config --cflags libswscale)
 
 ifndef WITHOUT_LIBEXIF
   CXXFLAGS += $(shell pkg-config --cflags libexif)
