@@ -208,7 +208,7 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
     FILE * outf=fopen("/tmp/conv.iyuv", "w");
 
     if(inf) {
-      fwrite(((AVFrame*)m_pImageFilled)->data[0], 1, nSize*3 , inf);
+      fwrite(m_pImageRGB, 1, nSize*3 , inf);
       fclose(inf);
     }
 
@@ -243,9 +243,11 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
     // Send frames and receive packets correctly handling EAGAIN flushing
     while (packets_received < m_nNumberOfFramesToEncode && m_nMPEGSize < m_nMaxMPEGSize) {
         if (frames_sent < m_nNumberOfFramesToEncode) {
-            frame->pts = frames_sent++;
+            frame->pts = frames_sent;
             int err = avcodec_send_frame(context, frame);
-            if(err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF) {
+            if (err == 0) {
+                frames_sent++;
+            } else if (err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF) {
                 esyslog("imageplugin: failed send encoding frame err %d", err);
                 av_packet_free(&outpkt);
                 return false;
@@ -306,6 +308,9 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
 
 void cEncode::AllocateBuffers()
 {
+    m_pMPEG = (uint8_t *)malloc(m_nMaxMPEGSize);
+    m_pImageRGB = (uint8_t *)malloc(m_nWidth * m_nHeight * 3);
+    m_pImageYUV = (uint8_t *)malloc(m_nWidth * m_nHeight * 3 / 2);
     
     if (!m_pMPEG || !m_pImageRGB || !m_pImageYUV)
     {

@@ -309,6 +309,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         else {
             m_nSourceWidth = rot_w;
             m_nSourceHeight = rot_h;
+            if (crop_w <= 0) crop_w = 1;
+            if (crop_h <= 0) crop_h = 1;
         }
 
         double aspect_src_cropped = (double)crop_w / crop_h;
