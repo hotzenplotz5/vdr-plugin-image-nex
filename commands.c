@@ -133,17 +133,25 @@ const char *cImageCommand::Execute(const char *szFileName)
         {  
           char* d = szCmdBuf;
           char* s = m_szCommand;
-          for(;d-szCmdBuf < PATH_MAX-1 && *s != '\0';++s,++d) 
+          int remaining = PATH_MAX - 1;
+          while(remaining > 0 && *s != '\0') 
           {
             if(*s == '%' && *(s+1) == 's')
             {
-              strncat(szCmdBuf,szF,PATH_MAX-1);
-              d += strlen(szF)-1;
-              ++s;
+              int flen = strlen(szF);
+              if (flen > remaining) break; // Overflow-Schutz
+              strcpy(d, szF);
+              d += flen;
+              remaining -= flen;
+              s += 2;
             }
             else 
-              *d = *s;
+            {
+              *d++ = *s++;
+              remaining--;
+            }
           }
+          *d = '\0';
         }
       }
       free(szF);

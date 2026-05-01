@@ -154,8 +154,8 @@ bool cImagePlayer::ConvertJump(int nOffset)
         pCmd->bClearBackground = (w == 0 && h == 0);  
         pCmd->nTargetWidth = UseWidth() / nMatrix;
         pCmd->nTargetHeight = UseHeight() / nMatrix;
-        pCmd->nOffLeft = (pCmd->nTargetWidth * w) + m_StillImage.GetBorderWidth();
-        pCmd->nOffTop =  (pCmd->nTargetHeight * h) + m_StillImage.GetBorderHeight();
+        pCmd->nOffLeft = (pCmd->nTargetWidth * w); // Border wird in DecodeNative addiert
+        pCmd->nOffTop =  (pCmd->nTargetHeight * h); // Border wird in DecodeNative addiert
       
         pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
         pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
