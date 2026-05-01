@@ -33,13 +33,14 @@
 #include <vdr/osd.h>
 #include <vdr/font.h>
 #include <vdr/status.h>
+#include <memory>
 
 class cThumbCache {
 private:
     static const size_t MAX_CACHE_SIZE = 100;
     static std::list<std::string> lruList;
 public:
-    static std::map<std::string, cImage*> Cache;
+    static std::map<std::string, std::unique_ptr<cImage>> Cache;
     static cImage* Get(const char* path, int maxWidth, int maxHeight) {
         std::string key = path;
         
@@ -47,10 +48,10 @@ public:
         if (Cache.find(key) != Cache.end()) {
             lruList.remove(key);
             lruList.push_front(key);
-            return Cache[key];
+            return Cache[key].get();
         }
         
-        cImage* thumb = new cImage;
+        auto thumb = std::unique_ptr<cImage>(new cImage);
         if (thumb->Load(path)) {
             double aspect = (double)thumb->Height() / thumb->Width();
             int newWidth = maxWidth;
@@ -60,41 +61,36 @@ public:
                 newWidth = newHeight / aspect;
             }
             thumb->Scale(cSize(newWidth, newHeight));
-            Cache[key] = thumb;
+            cImage* ret = thumb.get();
+            Cache[key] = std::move(thumb);
             lruList.push_front(key);
             
             // Cache-Größenlimit erzwingen
             if (Cache.size() > MAX_CACHE_SIZE) {
                 std::string last = lruList.back();
                 lruList.pop_back();
-                delete Cache[last];
                 Cache.erase(last);
             }
-            return thumb;
+            return ret;
         }
-        delete thumb;
-        Cache[key] = NULL; // Fehler vermerken, um Endlos-Neuladen zu verhindern
+        Cache[key] = nullptr; // Fehler vermerken, um Endlos-Neuladen zu verhindern
         lruList.push_front(key);
         
         // Auch bei fehlerhaften Bildern das Limit respektieren
         if (Cache.size() > MAX_CACHE_SIZE) {
             std::string last = lruList.back();
             lruList.pop_back();
-            delete Cache[last]; // delete NULL ist im C++ Standard explizit sicher
             Cache.erase(last);
         }
-        return NULL;
+        return nullptr;
     }
     static void Clear() {
-        for (std::map<std::string, cImage*>::iterator it = Cache.begin(); it != Cache.end(); ++it) {
-            delete it->second;
-        }
         Cache.clear();
         lruList.clear();
     }
 };
 std::list<std::string> cThumbCache::lruList;
-std::map<std::string, cImage*> cThumbCache::Cache;
+std::map<std::string, std::unique_ptr<cImage>> cThumbCache::Cache;
 
 
 // --- cMenuImageBrowse ---------------------------------------------------------

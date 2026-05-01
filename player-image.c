@@ -105,7 +105,7 @@ bool cImagePlayer::Convert(const char *szChange)
   cImageData* pImage = theSlideShow.GetImage();
   if(pImage)
   {
-    cDecodeRequest* pCmd = new cDecodeRequest;
+    std::unique_ptr<cDecodeRequest> pCmd(new cDecodeRequest);
     pCmd->bClearBackground = true;
     pCmd->nOffLeft = 0; // OSD offset will be handled in DecodeNative
     pCmd->nOffTop = 0;  // OSD offset will be handled in DecodeNative
@@ -125,7 +125,7 @@ bool cImagePlayer::Convert(const char *szChange)
   
     pCmd->szSource = strdup(pImage->Name());
   
-    Exec(pCmd);
+    Exec(std::move(pCmd));
     return true;
   }
   return false;
@@ -149,7 +149,7 @@ bool cImagePlayer::ConvertJump(int nOffset)
     for (h = 0; h < nMatrix; ++h) 
       for (w = 0; w < nMatrix && pImage[(h*nMatrix)+w]; ++w) 
       {
-        cDecodeRequest* pCmd = new cDecodeRequest;
+        std::unique_ptr<cDecodeRequest> pCmd(new cDecodeRequest);
       
         pCmd->bClearBackground = (w == 0 && h == 0);  
         pCmd->nTargetWidth = UseWidth() / nMatrix;
@@ -160,7 +160,7 @@ bool cImagePlayer::ConvertJump(int nOffset)
         pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
         pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
 
-        Exec(pCmd);
+        Exec(std::move(pCmd));
       }
       return true;
   }
@@ -174,7 +174,7 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
   cImageData* pImage = theSlideShow.GetImage();
   if(pImage)
   {
-    cDecodeRequest* pCmd = new cDecodeRequest;
+    std::unique_ptr<cDecodeRequest> pCmd(new cDecodeRequest);
     pCmd->bClearBackground = true;
     pCmd->nOffLeft = 0; // OSD offset will be handled in DecodeNative
     pCmd->nOffTop = 0;  // OSD offset will be handled in DecodeNative
@@ -194,7 +194,7 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
   
     pCmd->szSource = strdup(pImage->Name());
   
-    Exec(pCmd);
+    Exec(std::move(pCmd));
     return true;
   }
   return false;
@@ -207,9 +207,9 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 
     if (!pShell || !pShell->szSource) return false;
 
-    AVFormatContext *fmt_ctx = NULL;
-    if (avformat_open_input(&fmt_ctx, pShell->szSource, NULL, NULL) < 0) return false;
-    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) { avformat_close_input(&fmt_ctx); return false; }
+    AVFormatContext *fmt_ctx = nullptr;
+    if (avformat_open_input(&fmt_ctx, pShell->szSource, nullptr, nullptr) < 0) return false;
+    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { avformat_close_input(&fmt_ctx); return false; }
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -224,7 +224,7 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
     const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
     AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(codec_ctx, codecpar);
-    if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
+    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         return false;
@@ -248,7 +248,7 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         av_packet_unref(pkt);
     }
     if (!decoded) {
-        avcodec_send_packet(codec_ctx, NULL);
+        avcodec_send_packet(codec_ctx, nullptr);
         if (avcodec_receive_frame(codec_ctx, frame) == 0) {
             decoded = true;
         }
@@ -332,7 +332,7 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         SwsContext *sws_ctx_rgb = sws_getContext(
             src_w, src_h, (AVPixelFormat)frame->format,
             src_w, src_h, AV_PIX_FMT_RGB24,
-            SWS_BILINEAR, NULL, NULL, NULL
+            SWS_BILINEAR, nullptr, nullptr, nullptr
         );
 
         if (sws_ctx_rgb) {
@@ -389,12 +389,12 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         SwsContext *sws_ctx = sws_getContext(
             crop_w, crop_h, AV_PIX_FMT_RGB24,
             scaled_w, scaled_h, AV_PIX_FMT_RGB24,
-            SWS_BILINEAR, NULL, NULL, NULL
+            SWS_BILINEAR, nullptr, nullptr, nullptr
         );
 
         if (sws_ctx) {
             int linesize[4] = { (int)m_StillImage.GetWidth() * 3, 0, 0, 0 };
-            uint8_t *dest[4] = { m_StillImage.GetRGBMem() + (osd_offset_y * m_StillImage.GetWidth() + osd_offset_x) * 3, NULL, NULL, NULL };
+            uint8_t *dest[4] = { m_StillImage.GetRGBMem() + (osd_offset_y * m_StillImage.GetWidth() + osd_offset_x) * 3, nullptr, nullptr, nullptr };
 
             // Perform scaling and cropping
             uint8_t *src_slice_ptr[AV_NUM_DATA_POINTERS] = {0};
@@ -455,11 +455,11 @@ this functions is called only from cImageControl::ProcessKey(kNone)
 @return - nothing */
 void cImagePlayer::ErrorMsg()
 {
-  char* szErr = NULL;
+  char* szErr = nullptr;
   {
     cMutexLock lock(&m_MutexErr);
     szErr = m_szError;
-    m_szError = NULL;
+    m_szError = nullptr;
   }
   if(szErr)
   {  
@@ -471,29 +471,28 @@ void cImagePlayer::ErrorMsg()
 const char* cImagePlayer::FileName(void) const
 { 
   cImageData* pImage = theSlideShow.GetImage();
-  return pImage?pImage->Name():NULL;
+  return pImage?pImage->Name():nullptr;
 }
 
-void cImagePlayer::Exec(cDecodeRequest* pCmd)
+void cImagePlayer::Exec(std::unique_ptr<cDecodeRequest> pCmd)
 {
   if(pCmd->szSource)
     m_bConvertRunning = true;
   if(pCmd) {
     cMutexLock lock(&m_Mutex);
-    if(!m_queue.add(pCmd))
-      delete pCmd;          //Queue full or Thread is dead     
+    m_queue.add(std::move(pCmd)); // if full, pCmd is automatically deleted when out of scope
   }
 }
 
 bool cImagePlayer::Worker(bool bDoIt)
 {
   bool bQueueEmpty;
-  cDecodeRequest *pShell = NULL;
+  std::unique_ptr<cDecodeRequest> pShell;
   
   { // Protect the queue ++
     cMutexLock lock(&m_Mutex);
     if(bDoIt && !m_queue.empty()) {
-      pShell = *m_queue.begin();
+      pShell = std::move(m_queue.front());
       m_queue.erase(m_queue.begin());
     }
     bQueueEmpty = m_queue.empty();
@@ -506,14 +505,13 @@ bool cImagePlayer::Worker(bool bDoIt)
   }  
 
   if(pShell->szSource) {
-    if(DecodeNative(pShell)) {
+    if(DecodeNative(pShell.get())) {
         m_StillImage.EncodeRequired(true);
     } else {
         esyslog("imageplugin: native decoding failed for '%s'", pShell->szSource);
-        ExecFailed(pShell, tr("Image couldn't load"));        
+        ExecFailed(pShell.get(), tr("Image couldn't load"));        
         m_StillImage.EncodeRequired(true);
     }
   } 
-  delete pShell;
   return bQueueEmpty;
 }

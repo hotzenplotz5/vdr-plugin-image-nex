@@ -15,6 +15,7 @@
 #include <vector>
 #define __STL_CONFIG_H
 
+#include <memory>
 #include <vdr/thread.h>
 #include <vdr/player.h>
 #include <liboutput/stillimage-player.h>
@@ -38,7 +39,7 @@ struct cDecodeRequest {
   int nRotationAngle; // 0, 90, 180, 270
 
   cDecodeRequest()
-  : szSource(NULL) // Initialize all members
+  : szSource(nullptr) // Initialize all members
   , szNumber('\0')
   , nOffLeft(0)
   , nOffTop(0)
@@ -59,14 +60,10 @@ struct cDecodeRequest {
 };
 
 struct cDecodeRequestQueue
- : public std::vector<cDecodeRequest*>
+ : public std::vector<std::unique_ptr<cDecodeRequest>>
 {
   virtual ~cDecodeRequestQueue()
   {
-    iterator i = begin();
-    const_iterator e = end();
-    for(;e!=i;++i)
-        delete(*i);
     clear();
   }
 
@@ -75,24 +72,23 @@ struct cDecodeRequestQueue
     return 64;
   }
 
-  inline bool add(cDecodeRequest* pCmd) {
+  inline bool add(std::unique_ptr<cDecodeRequest> pCmd) {
     if(size()<max_size())
     {
-      if(NULL == pCmd->szSource || !pCmd->bClearBackground) //Pregeneration or Index
-        push_back(pCmd);
+      if(nullptr == pCmd->szSource || !pCmd->bClearBackground) //Pregeneration or Index
+        push_back(std::move(pCmd));
       else { 
         // Remove all other viewed images from queue
         iterator i = begin();
         while(end()!=i) {
           if((*i)->szSource) {
-            delete(*i);
-            erase(i);
-            }
+            i = erase(i);
+          }
           else
             ++i;
           }
         //Place next viewed image at front of the queue
-        insert(begin(),pCmd);
+        insert(begin(),std::move(pCmd));
       }
       return true;
     }  
@@ -115,7 +111,7 @@ class cImagePlayer
   int                         m_nSourceWidth;
   int                         m_nSourceHeight;
 protected:
-  void Exec(cDecodeRequest* pCmd);
+  void Exec(std::unique_ptr<cDecodeRequest> pCmd);
 
   bool DecodeNative(cDecodeRequest* pShell);
   /** Show Errorimage if operation failed*/
