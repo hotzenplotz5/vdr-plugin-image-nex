@@ -31,7 +31,6 @@ extern "C" {
 #include "list.h"
 #include <vdr/i18n.h>
 
-#include "libimage/pnm.h"
 #include "libimage/xpm.h"
 
 //----------cImagePlayer-------------
@@ -115,6 +114,14 @@ bool cImagePlayer::Convert(const char *szChange)
     pCmd->nZoomFactor = 0; // No zoom
     pCmd->nCropX = 0;      // No crop
     pCmd->nCropY = 0;      // No crop
+    
+    int rot = 0;
+    if (szChange) {
+        if (strcmp(szChange, "right") == 0) rot = 90;
+        else if (strcmp(szChange, "rotated") == 0) rot = 180;
+        else if (strcmp(szChange, "left") == 0) rot = 270;
+    }
+    pCmd->nRotationAngle = rot;
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -176,9 +183,15 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
     pCmd->nZoomFactor = nZoomFaktor;
     pCmd->nCropX = nLeftPos; // These are pixel offsets in the *zoomed* image
     pCmd->nCropY = nTopPos; // These are pixel offsets in the *zoomed* image
+
+    int rot = 0;
+    if (szChange) {
+        if (strcmp(szChange, "right") == 0) rot = 90;
+        else if (strcmp(szChange, "rotated") == 0) rot = 180;
+        else if (strcmp(szChange, "left") == 0) rot = 270;
+    }
+    pCmd->nRotationAngle = rot;
   
-    // TODO: Natives Crop-Handling (Zoom) muss später implementiert werden.
-    // Vorerst laden wir zur Fehlervermeidung das unskalierte Original-Bild.
     pCmd->szSource = strdup(pImage->Name());
   
     Exec(pCmd);
@@ -224,7 +237,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
     // Decode fully native from source into AVFrame
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_idx) {
-            if (avcodec_send_packet(codec_ctx, pkt) == 0) {
+            int ret = avcodec_send_packet(codec_ctx, pkt);
+            if (ret >= 0 || ret == AVERROR(EAGAIN)) {
                 if (avcodec_receive_frame(codec_ctx, frame) == 0) {
                     decoded = true;
                     break;
@@ -233,21 +247,34 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         }
         av_packet_unref(pkt);
     }
+    if (!decoded) {
+        avcodec_send_packet(codec_ctx, NULL);
+        if (avcodec_receive_frame(codec_ctx, frame) == 0) {
+            decoded = true;
+        }
+    }
     av_packet_free(&pkt);
 
     if (decoded) {
         // Image Scale and Aspect Ratio logic
         int src_w = frame->width;
         int src_h = frame->height;
+        int rot_w = src_w;
+        int rot_h = src_h;
+        if (pShell->nRotationAngle == 90 || pShell->nRotationAngle == 270) {
+            rot_w = src_h;
+            rot_h = src_w;
+        }
+
         int crop_x = 0;
         int crop_y = 0;
-        int crop_w = src_w;
-        int crop_h = src_h;
+        int crop_w = rot_w;
+        int crop_h = rot_h;
 
         if (pShell->nZoomFactor > 0) {
             // Store original dimensions for zoom calculations in control
-            m_nSourceWidth = src_w;
-            m_nSourceHeight = src_h;
+            m_nSourceWidth = rot_w;
+            m_nSourceHeight = rot_h;
             // Calculate the crop window in the *original* image dimensions
             // pShell->nCropX and pShell->nCropY are offsets in the *zoomed* image.
             // We need to convert these to offsets in the *original* image for sws_scale.
@@ -262,15 +289,15 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
             // Ensure crop dimensions don't exceed original image dimensions
             if (crop_x < 0) crop_x = 0;
             if (crop_y < 0) crop_y = 0;
-            if (crop_x + crop_w > src_w) crop_w = src_w - crop_x;
-            if (crop_y + crop_h > src_h) crop_h = src_h - crop_y;
+            if (crop_x + crop_w > rot_w) crop_w = rot_w - crop_x;
+            if (crop_y + crop_h > rot_h) crop_h = rot_h - crop_y;
             if (crop_w <= 0) crop_w = 1; // Avoid zero dimension
             if (crop_h <= 0) crop_h = 1; // Avoid zero dimension
         }
         // If nZoomFactor is 0, crop_x, crop_y, crop_w, crop_h remain initialized to full image dimensions.
         else {
-            m_nSourceWidth = src_w;
-            m_nSourceHeight = src_h;
+            m_nSourceWidth = rot_w;
+            m_nSourceHeight = rot_h;
         }
 
         double aspect_src_cropped = (double)crop_w / crop_h;
@@ -289,8 +316,78 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         int osd_offset_x = pShell->nOffLeft + m_StillImage.GetBorderWidth() + (pShell->nTargetWidth - scaled_w) / 2;
         int osd_offset_y = pShell->nOffTop + m_StillImage.GetBorderHeight() + (pShell->nTargetHeight - scaled_h) / 2;
 
+        // Convert to RGB24 full image to safely crop & avoid planar chroma issues
+        AVFrame *rgb_frame = av_frame_alloc();
+        rgb_frame->format = AV_PIX_FMT_RGB24;
+        rgb_frame->width = src_w;
+        rgb_frame->height = src_h;
+        if (av_frame_get_buffer(rgb_frame, 0) < 0) {
+            av_frame_free(&rgb_frame);
+            av_frame_free(&frame);
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+            return false;
+        }
+
+        SwsContext *sws_ctx_rgb = sws_getContext(
+            src_w, src_h, (AVPixelFormat)frame->format,
+            src_w, src_h, AV_PIX_FMT_RGB24,
+            SWS_BILINEAR, NULL, NULL, NULL
+        );
+
+        if (sws_ctx_rgb) {
+            sws_scale(sws_ctx_rgb, frame->data, frame->linesize, 0, src_h, rgb_frame->data, rgb_frame->linesize);
+            sws_freeContext(sws_ctx_rgb);
+        }
+
+        AVFrame *rot_frame = rgb_frame;
+        if (pShell->nRotationAngle > 0) {
+            rot_frame = av_frame_alloc();
+            rot_frame->format = AV_PIX_FMT_RGB24;
+            rot_frame->width = rot_w;
+            rot_frame->height = rot_h;
+            if (av_frame_get_buffer(rot_frame, 0) == 0) {
+                int src_linesize = rgb_frame->linesize[0];
+                int dst_linesize = rot_frame->linesize[0];
+                uint8_t *src_data = rgb_frame->data[0];
+                uint8_t *dst_data = rot_frame->data[0];
+
+                if (pShell->nRotationAngle == 90) {
+                    for (int y = 0; y < src_h; y++) {
+                        uint8_t *src_row = src_data + y * src_linesize;
+                        int dst_x = src_h - 1 - y;
+                        for (int x = 0; x < src_w; x++) {
+                            memcpy(dst_data + x * dst_linesize + dst_x * 3, src_row + x * 3, 3);
+                        }
+                    }
+                } else if (pShell->nRotationAngle == 180) {
+                    for (int y = 0; y < src_h; y++) {
+                        uint8_t *src_row = src_data + y * src_linesize;
+                        int dst_y = src_h - 1 - y;
+                        uint8_t *dst_row = dst_data + dst_y * dst_linesize;
+                        for (int x = 0; x < src_w; x++) {
+                            int dst_x = src_w - 1 - x;
+                            memcpy(dst_row + dst_x * 3, src_row + x * 3, 3);
+                        }
+                    }
+                } else if (pShell->nRotationAngle == 270) {
+                    for (int y = 0; y < src_h; y++) {
+                        uint8_t *src_row = src_data + y * src_linesize;
+                        int dst_x = y;
+                        for (int x = 0; x < src_w; x++) {
+                            int dst_y = src_w - 1 - x;
+                            memcpy(dst_data + dst_y * dst_linesize + dst_x * 3, src_row + x * 3, 3);
+                        }
+                    }
+                }
+                av_frame_free(&rgb_frame);
+            } else {
+                rot_frame = rgb_frame; // Fallback to unrotated if out of memory
+            }
+        }
+
         SwsContext *sws_ctx = sws_getContext(
-            crop_w, crop_h, codec_ctx->pix_fmt,
+            crop_w, crop_h, AV_PIX_FMT_RGB24,
             scaled_w, scaled_h, AV_PIX_FMT_RGB24,
             SWS_BILINEAR, NULL, NULL, NULL
         );
@@ -301,11 +398,12 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 
             // Perform scaling and cropping
             uint8_t *src_slice_ptr[AV_NUM_DATA_POINTERS] = {0};
-            src_slice_ptr[0] = frame->data[0] + crop_y * frame->linesize[0] + crop_x * 3;
+            src_slice_ptr[0] = rot_frame->data[0] + crop_y * rot_frame->linesize[0] + crop_x * 3;
 
-            sws_scale(sws_ctx, src_slice_ptr, frame->linesize, 0, crop_h, dest, linesize);
+            sws_scale(sws_ctx, src_slice_ptr, rot_frame->linesize, 0, crop_h, dest, linesize);
             sws_freeContext(sws_ctx);
         }
+        av_frame_free(&rot_frame);
 
         if(pShell->szNumber && ImageSetup.m_bShowNumbers) {
             cXPM::Overlay(pShell->szNumber, m_StillImage.GetRGBMem(),
