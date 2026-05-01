@@ -161,6 +161,17 @@ bool cPluginImage::Service(const char *Id, void *Data)
       return false;
     }
     *Name++='\0';
+
+    // Shut down any active image player first, so it doesn't hold references to the old service source!
+#if APIVERSNUM < 20402
+    if(cControl::Control())
+        cControl::Shutdown();
+#else
+    cMutexLock ControlMutexLock;
+    if(cControl::Control(ControlMutexLock))
+        cControl::Shutdown();
+#endif
+
     RemoveServiceSource();
     m_pServiceFileSource=new cFileSource(Basedir, "called via Service()", false);
     m_pServiceDirItem=new cDirItem(m_pServiceFileSource, NULL, Name, itFile);
