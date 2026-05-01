@@ -737,6 +737,9 @@ void cImageControl::PictureZoomInitial(void)
 
   unsigned int nMaxWidth = player->UseWidth();
   unsigned int nMaxHeight = player->UseHeight();
+
+  if (nMaxWidth == 0) nMaxWidth = 1;
+  if (nMaxHeight == 0) nMaxHeight = 1;
   
   // Get the real image dimensions from the player, which knows them from the last decode.
   m_nRealImageWidth = player->SourceWidth();
@@ -779,6 +782,8 @@ void cImageControl::ConvertZoom()
   
   unsigned int nMaxWidth = player->UseWidth();
   unsigned int nMaxHeight = player->UseHeight();
+  if (nMaxWidth == 0) nMaxWidth = 1;
+  if (nMaxHeight == 0) nMaxHeight = 1;
 
   m_ePlayMode = ePlayModeZoom;
 

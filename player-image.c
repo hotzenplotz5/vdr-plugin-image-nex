@@ -322,6 +322,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         } else {
             scaled_w = pShell->nTargetHeight * aspect_src_cropped;
         }
+        if (scaled_w <= 0) scaled_w = 1;
+        if (scaled_h <= 0) scaled_h = 1;
 
         // Calculate final OSD offsets, including borders and centering
         int osd_offset_x = pShell->nOffLeft + m_StillImage.GetBorderWidth() + (pShell->nTargetWidth - scaled_w) / 2;
@@ -349,6 +351,13 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         if (sws_ctx_rgb) {
             sws_scale(sws_ctx_rgb, frame->data, frame->linesize, 0, src_h, rgb_frame->data, rgb_frame->linesize);
             sws_freeContext(sws_ctx_rgb);
+        } else {
+            esyslog("imageplugin: failed to initialize SWS RGB context");
+            av_frame_free(&rgb_frame);
+            av_frame_free(&frame);
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+            return false;
         }
 
         AVFrame *rot_frame = rgb_frame;
@@ -413,6 +422,13 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 
             sws_scale(sws_ctx, src_slice_ptr, rot_frame->linesize, 0, crop_h, dest, linesize);
             sws_freeContext(sws_ctx);
+        } else {
+            esyslog("imageplugin: failed to initialize SWS scaling context");
+            av_frame_free(&rot_frame);
+            av_frame_free(&frame);
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+            return false;
         }
         av_frame_free(&rot_frame);
 

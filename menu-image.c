@@ -236,6 +236,7 @@ void cMenuImageGrid::DrawGrid()
     int margin = 50;
     int padding = 20;
     int kachelBreite = (osdWidth - (2 * margin) - ((columns - 1) * padding)) / columns;
+    if (kachelBreite < 10) kachelBreite = 10; // Prevent negative/zero sizes on exotic skins
     int kachelHoehe = kachelBreite * 3 / 4;
 
     char titleBuf[256];

@@ -306,11 +306,11 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
 
 void cEncode::AllocateBuffers()
 {
-    if(NULL == (m_pMPEG=(uint8_t *)malloc(m_nMaxMPEGSize*3)) //~1200kb
-      || NULL == (m_pImageRGB=(uint8_t *)malloc(m_nWidth*m_nHeight*3))  //~1200kb
-      || NULL == (m_pImageYUV=(uint8_t *)malloc(m_nWidth*m_nHeight*3/2))) //~600kb
+    
+    if (!m_pMPEG || !m_pImageRGB || !m_pImageYUV)
     {
         esyslog("imageplugin: Failed to alloc memory for bitmaps.\n");
+        ReleaseBuffers();
         return;
     }
 }
