@@ -65,8 +65,11 @@ void cImageData::Clear(void)
 
 bool cImageData::CompareBaseDir(const cFileSource * pSource) const
 {
-  return 0 == strcmp(m_pSource->BaseDir(),pSource->BaseDir());
-
+  if (!m_pSource || !pSource) return false;
+  const char *s1 = m_pSource->BaseDir();
+  const char *s2 = pSource->BaseDir();
+  if (!s1 || !s2) return false;
+  return 0 == strcmp(s1, s2);
 }
 // -- cSlideShow --------------------------------------------------------------
 
@@ -102,7 +105,8 @@ bool cSlideShow::Load(void)
 			    0, true);
         if(res)
         {
-               m_szFirstImageName = strdup(m_DirItem.Name); 
+            if (m_DirItem.Name)
+                m_szFirstImageName = strdup(m_DirItem.Name); 
         }
         else
         {
@@ -136,10 +140,14 @@ bool cSlideShow::Load(void)
 void cSlideShow::DoItem(cFileSource * src, const char *subdir,
 			 const char *name)
 {
+  if (!name) return; // Prevent creating empty image items which cause crashes later
+
   char *path = (char *)name;
   if(subdir)
     path = AddPath(subdir, name);
-  Add(new cImageData(path, src));
-  if(subdir)
-    free(path);
+  if(path) {
+      Add(new cImageData(path, src));
+      if(subdir)
+        free(path);
+  }
 }
