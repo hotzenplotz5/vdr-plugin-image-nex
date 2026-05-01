@@ -230,68 +230,65 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
         return false;
     }
 
-    unsigned int i;
     m_nMPEGSize = 0;
-    AVPacket * outpkt;
-    outpkt = av_packet_alloc();
+    AVPacket * outpkt = av_packet_alloc();
 
     frame->format = context->pix_fmt;
     frame->width  = context->width;
     frame->height = context->height;
-    // Encode m_nNumberOfFramesToEncode number of frames
-    for(i=0; (i < m_nNumberOfFramesToEncode) && (m_nMPEGSize < m_nMaxMPEGSize); ++i)
-    {
 
-        int err = avcodec_send_frame(context, frame);
-        if(err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF) {
-            esyslog("imageplugin: failed send encoding frame %d at %d %d/%d err %d\n",
-                   i,
-                   frame ? (int) frame->pts : -1,
-                   context->time_base.num,
-                   context->time_base.den, err);
-            av_packet_free(&outpkt);
-            av_packet_unref(outpkt);
-            return false;
+    int frames_sent = 0;
+    int packets_received = 0;
+
+    // Send frames and receive packets correctly handling EAGAIN flushing
+    while (packets_received < m_nNumberOfFramesToEncode && m_nMPEGSize < m_nMaxMPEGSize) {
+        if (frames_sent < m_nNumberOfFramesToEncode) {
+            frame->pts = frames_sent++;
+            int err = avcodec_send_frame(context, frame);
+            if(err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF) {
+                esyslog("imageplugin: failed send encoding frame err %d", err);
+                av_packet_free(&outpkt);
+                return false;
+            }
+        } else {
+            // Flush encoder
+            avcodec_send_frame(context, nullptr);
         }
 
-        err = avcodec_receive_packet(context, outpkt);
-        if (err == AVERROR(EAGAIN)) { // No more packets for now.
-            if (frame == NULL) {
-                esyslog("imageplugin: sent flush frame %d, got EAGAIN.\n", i);
+        int err = avcodec_receive_packet(context, outpkt);
+        if (err == AVERROR(EAGAIN) || err == AVERROR_EOF) { 
+            if (frames_sent >= m_nNumberOfFramesToEncode && err == AVERROR_EOF) {
+                break; // Fully flushed
             }
             continue;
-        }
-        else if (err == AVERROR_EOF) { // No more packets, ever.
-            if (frame != NULL) {
-                esyslog("imageplugin: sent image frame %d, got EOF.\n", i);
-            }
-            continue;
-        }
-        else if(err < 0) {
-            esyslog("imageplugin: failed receive encoded frame %d at %d %d/%d\n",
-                   i,
-                   frame ? (int) frame->pts : -1,
-                   context->time_base.num,
-                   context->time_base.den);
+        } else if(err < 0) {
+            esyslog("imageplugin: failed receive encoded frame err %d", err);
             break;
         }
 
-        memcpy(m_pMPEG + m_nMPEGSize,outpkt->data,outpkt->size);
+        if (m_nMPEGSize + outpkt->size > m_nMaxMPEGSize) {
+            esyslog("imageplugin: MPEG buffer overflow prevented");
+            av_packet_unref(outpkt);
+            break;
+        }
 
+        memcpy(m_pMPEG + m_nMPEGSize, outpkt->data, outpkt->size);
         m_nMPEGSize += outpkt->size;
-        *(m_pFrameSizes + i) = outpkt->size;
+        *(m_pFrameSizes + packets_received) = outpkt->size;
+        packets_received++;
+        
+        av_packet_unref(outpkt); // CRITICAL: Free packet data to prevent memory leak
     }
-    av_packet_unref(outpkt);
     av_packet_free(&outpkt);
+
+    if (m_nMPEGSize == 0 || packets_received == 0) return false;
+
     // Add four bytes MPEG end sequence
-
-    if (m_nMPEGSize == 0) return false;
-
     if ((m_nMaxMPEGSize - m_nMPEGSize) >= 4)
     {
-         memcpy(m_pMPEG + m_nMPEGSize,"\0x00\0x00\0x01\0xb7",4);
+         memcpy(m_pMPEG + m_nMPEGSize,"\x00\x00\x01\xb7",4);
          m_nMPEGSize += 4;
-         *(m_pFrameSizes + i - 1) += 4;
+         *(m_pFrameSizes + packets_received - 1) += 4;
     }
     else
     { 

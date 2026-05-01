@@ -142,7 +142,7 @@ void cStillImage::Action(void)
 void cStillImage::BuildPesPacket(const unsigned char *data, int len, int timestamp) {
 #define PES_MAX_SIZE 2048
     int ptslen = timestamp ? 5 : 1;
-    static unsigned char pes_header[PES_MAX_SIZE];
+    unsigned char pes_header[PES_MAX_SIZE]; // Removed 'static' for thread-safety!
 
     // startcode:
     pes_header[0] = pes_header[1] = 0;
