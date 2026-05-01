@@ -207,6 +207,9 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 
     if (!pShell || !pShell->szSource) return false;
 
+    if (pShell->nTargetWidth == 0) pShell->nTargetWidth = 1;
+    if (pShell->nTargetHeight == 0) pShell->nTargetHeight = 1;
+
     AVFormatContext *fmt_ctx = nullptr;
     if (avformat_open_input(&fmt_ctx, pShell->szSource, nullptr, nullptr) < 0) return false;
     if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { avformat_close_input(&fmt_ctx); return false; }
@@ -222,7 +225,15 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
 
     AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_idx]->codecpar;
     const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
+    if (!codec) {
+        avformat_close_input(&fmt_ctx);
+        return false;
+    }
     AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
+    if (!codec_ctx) {
+        avformat_close_input(&fmt_ctx);
+        return false;
+    }
     avcodec_parameters_to_context(codec_ctx, codecpar);
     if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         avcodec_free_context(&codec_ctx);

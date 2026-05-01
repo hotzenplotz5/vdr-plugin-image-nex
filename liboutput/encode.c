@@ -28,8 +28,7 @@ const AVCodec *cEncode::m_pavCodec = NULL;
 
 */
 cEncode::cEncode(unsigned int nNumberOfFramesToEncode)
-: m_pImageFilled(NULL)
-, m_pImageYUV(NULL)
+: m_pImageYUV(NULL)
 , m_nNumberOfFramesToEncode(nNumberOfFramesToEncode)
 , m_pMPEG(NULL)
 , m_pImageRGB(NULL)
@@ -154,7 +153,7 @@ void cEncode::SetupEncodingParameters(AVCodecContext *context)
 
 bool cEncode::ConvertImageToFrame(AVFrame *frame)
 {
-    if(!m_pImageYUV || !m_pImageFilled || !m_pImageRGB || !m_pMPEG) 
+    if(!m_pImageYUV || !m_pImageRGB || !m_pMPEG) 
     {
         esyslog("imageplugin: Failed to convert MPEG sequence, insufficient memory.\n");
         return false;
@@ -169,10 +168,12 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
     frame->linesize[1]=frame->linesize[2]=m_nWidth/2;
     frame->quality = 1;
 
+    uint8_t *src_data[4];
+    int src_linesize[4];
+
     // Convert RGB to YUV 
-    if(av_image_fill_arrays(((AVFrame*)m_pImageFilled)->data,
-                         ((AVFrame*)m_pImageFilled)->linesize,
-                         m_pImageRGB,
+    if(av_image_fill_arrays(src_data, src_linesize,
+                            m_pImageRGB,
                          AV_PIX_FMT_RGB24, m_nWidth, m_nHeight, 1) < 0)
     {
         esyslog("imageplugin: failed avpicture_fill\n");
@@ -181,10 +182,6 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
     else
     {
         int result;
-        ((AVFrame*)m_pImageFilled)->width = m_nWidth;
-        ((AVFrame*)m_pImageFilled)->height = m_nHeight;
-        ((AVFrame*)m_pImageFilled)->quality = 1;
-
         SwsContext* convert_ctx = sws_getContext(m_nWidth, m_nHeight, 
                         AV_PIX_FMT_RGB24, m_nWidth, m_nHeight,
                         AV_PIX_FMT_YUV420P,
@@ -195,9 +192,7 @@ bool cEncode::ConvertImageToFrame(AVFrame *frame)
             esyslog("imageplugin: failed to initialize swscaler context\n");
             return false;
     	}
-	    result=sws_scale(convert_ctx, ((AVFrame*)m_pImageFilled)->data, 
-                                      ((AVFrame*)m_pImageFilled)->linesize, 
-                         0, m_nHeight, frame->data, frame->linesize);
+	    result=sws_scale(convert_ctx, src_data, src_linesize, 0, m_nHeight, frame->data, frame->linesize);
 	    sws_freeContext(convert_ctx);
         if(result < 0)
         {
@@ -254,6 +249,7 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
                    frame ? (int) frame->pts : -1,
                    context->time_base.num,
                    context->time_base.den, err);
+            av_packet_free(&outpkt);
             av_packet_unref(outpkt);
             return false;
         }
@@ -315,7 +311,6 @@ void cEncode::AllocateBuffers()
 {
     if(NULL == (m_pMPEG=(uint8_t *)malloc(m_nMaxMPEGSize*3)) //~1200kb
       || NULL == (m_pImageRGB=(uint8_t *)malloc(m_nWidth*m_nHeight*3))  //~1200kb
-      || NULL == (m_pImageFilled=(uint8_t *)malloc(m_nWidth*m_nHeight*3)) //~1200kb
       || NULL == (m_pImageYUV=(uint8_t *)malloc(m_nWidth*m_nHeight*3/2))) //~600kb
     {
         esyslog("imageplugin: Failed to alloc memory for bitmaps.\n");
@@ -330,12 +325,6 @@ void cEncode::ReleaseBuffers()
         free(m_pImageYUV);
         m_pImageYUV = NULL;
     }
-  
-    if(m_pImageFilled) 
-    {
-        free(m_pImageFilled);
-        m_pImageFilled = NULL;  
-    } 
     if(m_pImageRGB)
     {
         free(m_pImageRGB);

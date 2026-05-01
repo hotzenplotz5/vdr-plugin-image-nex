@@ -153,8 +153,10 @@ bool cPluginImage::Service(const char *Id, void *Data)
       return true;
     char* Basedir=strdup((char*)Data);
     char* Name=strrchr(Basedir, '/');
-    if(Name==NULL)
+    if(Name==NULL) {
+      free(Basedir);
       return false;
+    }
     *Name++='\0';
     RemoveServiceSource();
     m_pServiceFileSource=new cFileSource(Basedir, "called via Service()", false);
