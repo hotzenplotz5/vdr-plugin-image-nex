@@ -789,8 +789,8 @@ void cImageControl::ConvertZoom()
   m_ePlayMode = ePlayModeZoom;
 
   // How may pixel are outside screen after zoom
-  m_nZoomXMax = ((m_nRealImageWidth  * m_nZoomFactor) - nMaxWidth);
-  m_nZoomYMax = ((m_nRealImageHeight * m_nZoomFactor) - nMaxHeight);
+  m_nZoomXMax = (int)(m_nRealImageWidth  * m_nZoomFactor) - (int)nMaxWidth;
+  m_nZoomYMax = (int)(m_nRealImageHeight * m_nZoomFactor) - (int)nMaxHeight;
 
   // If image bigger than screen, how many step can i'm move in zoomed image
   if(m_nZoomXMax > 0)

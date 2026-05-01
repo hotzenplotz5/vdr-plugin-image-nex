@@ -53,14 +53,16 @@ public:
         
         auto thumb = std::unique_ptr<cImage>(new cImage);
         if (thumb->Load(path)) {
-            double aspect = (double)thumb->Height() / thumb->Width();
-            int newWidth = maxWidth;
-            int newHeight = newWidth * aspect;
-            if (newHeight > maxHeight) {
-                newHeight = maxHeight;
-                newWidth = newHeight / aspect;
+            if (thumb->Width() > 0 && thumb->Height() > 0) {
+                double aspect = (double)thumb->Height() / thumb->Width();
+                int newWidth = maxWidth;
+                int newHeight = newWidth * aspect;
+                if (newHeight > maxHeight) {
+                    newHeight = maxHeight;
+                    newWidth = newHeight / aspect;
+                }
+                thumb->Scale(cSize(newWidth, newHeight));
             }
-            thumb->Scale(cSize(newWidth, newHeight));
             cImage* ret = thumb.get();
             Cache[key] = std::move(thumb);
             lruList.push_front(key);
