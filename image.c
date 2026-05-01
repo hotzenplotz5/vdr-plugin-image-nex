@@ -146,7 +146,7 @@ cMenuSetupPage *cPluginImage::SetupMenu(void)
   return new cMenuSetupImage;
 }
 
-bool cPluginImage::Service(const char *Id, void *Data = NULL)
+bool cPluginImage::Service(const char *Id, void *Data)
 {
   if (Id && strcmp(Id, "Image-ShowImage-v1.0") == 0) {
     if (Data == NULL)

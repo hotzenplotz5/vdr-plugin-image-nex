@@ -91,6 +91,7 @@ const char *cImageCommand::Execute(const char *szFileName)
     else {
       /// Replace Mode, replace any %s with filename
       /// e.g. :    
+      char *szF = NULL;
       asprintf(&szF, "\'%s\'", szFileName);
       if(szF) {
         szCmdBuf = (char*)calloc(PATH_MAX,1);

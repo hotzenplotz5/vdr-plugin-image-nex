@@ -62,7 +62,7 @@ public:
                 cMutexLock lock(&mutex);
                 if (tasks.empty()) {
                     cond.Wait(mutex, 1000);
-                    if (tasks.empty()) break;
+                    if (tasks.empty()) continue;
                 }
                 task = tasks.front();
                 tasks.pop();
