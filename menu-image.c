@@ -61,8 +61,14 @@ public:
                 int newHeight = newWidth * aspect;
                 if (newHeight > maxHeight) {
                     newHeight = maxHeight;
-                    newWidth = newHeight / aspect;
+                    if (aspect > 0.0)
+                        newWidth = newHeight / aspect;
                 }
+                
+                // Prevent VDR scaling crashes with corrupted aspect ratios or extreme sizes
+                if (newWidth <= 0) newWidth = 1;
+                if (newHeight <= 0) newHeight = 1;
+                
                 thumb->Scale(cSize(newWidth, newHeight));
             }
             cImage* ret = thumb.get();
@@ -306,6 +312,7 @@ void cMenuImageGrid::DrawGrid()
             // Draw the name at the bottom with a semi-transparent bar
             int textBarHeight = font->Height() + 4;
             int textY = y + kachelHoehe - textBarHeight;
+            if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
             tColor textBg = 0xA0000000; // Semi-transparent black
             osd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
             osd->DrawText(x + 5, textY + 2, item->Name, textColor, textBg, font);
