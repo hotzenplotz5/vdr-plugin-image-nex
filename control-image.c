@@ -878,9 +878,9 @@ void cImageControl::SetAspectRatioEnv(void) {
         double aspectRatio = (double)osdWidth / osdHeight;
 
         if (aspectRatio > 1.55) { // Wenn das Verhältnis größer als 1.55 ist, gehen wir von 16:9 aus.
-            Setenv("ASPECT_RATIO", "16:9");
+            setenv("ASPECT_RATIO", "16:9", 1);
         } else { // Andernfalls wird 4:3 als Standard angenommen.
-            Setenv("ASPECT_RATIO", "4:3");
+            setenv("ASPECT_RATIO", "4:3", 1);
         }
     }
 }

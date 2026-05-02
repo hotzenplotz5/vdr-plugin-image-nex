@@ -83,15 +83,10 @@ public:
             }
             return ret;
         }
-        Cache[key] = nullptr; // Fehler vermerken, um Endlos-Neuladen zu verhindern
-        lruList.push_front(key);
         
-        // Auch bei fehlerhaften Bildern das Limit respektieren
-        if (Cache.size() > MAX_CACHE_SIZE) {
-            std::string last = lruList.back();
-            lruList.pop_back();
-            Cache.erase(last);
-        }
+        // Do NOT cache nullptrs. If the background thread is currently writing the EXIF thumbnail,
+        // a premature load will fail. By not caching the failure, the UI will automatically retry 
+        // and succeed once the background thread finishes writing the file.
         return nullptr;
     }
     static void Clear() {
