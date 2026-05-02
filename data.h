@@ -51,6 +51,7 @@ public:
   cFileSource *Source;
   char *Subdir;
   char *Name;
+  char *DisplayName;
   eItemType Type;
   bool HasFolderJpg;
   };

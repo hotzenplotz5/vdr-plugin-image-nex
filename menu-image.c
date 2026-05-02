@@ -310,7 +310,7 @@ void cMenuImageGrid::DrawGrid()
             if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
             tColor textBg = 0xA0000000; // Semi-transparent black
             osd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
-            osd->DrawText(x + 5, textY + 2, item->Name, textColor, textBg, font);
+            osd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font);
         }
     }
 }

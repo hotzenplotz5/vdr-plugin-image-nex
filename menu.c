@@ -45,7 +45,7 @@ cMenuBrowseItem::cMenuBrowseItem(cDirItem * Item)
 void cMenuBrowseItem::Set(void)
 {
   char *buffer = 0;
-  asprintf(&buffer, item->Type == itFile ? "%s" : "[%s]", item->Name);
+  asprintf(&buffer, item->Type == itFile ? "%s" : "[%s]", item->DisplayName);
   SetText(buffer, false);
 }
 

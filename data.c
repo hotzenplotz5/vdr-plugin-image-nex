@@ -353,12 +353,14 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
       free(dirPath);
   }
 
-  Name = aliasName ? aliasName : (name ? strdup(name) : 0);
+  Name = name ? strdup(name) : 0;
+  DisplayName = aliasName ? aliasName : (name ? strdup(name) : 0);
 }
 
 cDirItem::~cDirItem()
 {
   free(Name);
+  free(DisplayName);
   free(Subdir);
 }
 
