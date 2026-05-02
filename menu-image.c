@@ -184,9 +184,20 @@ cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
-    free(parent);
 
     LoadDir(currentdir);
+
+    // Restore cursor position in Grid-View
+    if (parent) {
+        for (int i = 0; i < list->Count(); i++) {
+            cDirItem *item = list->Get(i);
+            if (item && item->Name && strcmp(item->Name, parent) == 0) {
+                currentIndex = i;
+                break;
+            }
+        }
+        free(parent);
+    }
 }
 
 cMenuImageGrid::~cMenuImageGrid()
@@ -355,8 +366,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             Display();
             return osContinue;
         case kUp:
-            if (currentIndex - columns >= 0) currentIndex -= columns;
-            else currentIndex = 0;
+            if (currentIndex >= columns) currentIndex -= columns;
             Display();
             return osContinue;
         case kOk:
@@ -381,9 +391,23 @@ eOSState cMenuImageGrid::Parent(void)
             *ss = 0;
             parentDir = strdup(currentdir);
         }
+        // Remember the directory we just left to restore cursor position
+        char* lastDirName = ss ? strdup(ss + 1) : strdup(currentdir);
+
         free(currentdir);
         currentdir = parentDir;
         LoadDir(currentdir);
+
+        // Automatically place cursor on the folder we just exited
+        for (int i = 0; i < list->Count(); i++) {
+            cDirItem *item = list->Get(i);
+            if (item && item->Name && strcmp(item->Name, lastDirName) == 0) {
+                currentIndex = i;
+                break;
+            }
+        }
+        free(lastDirName);
+
         Display();
     } else {
         return osEnd;

@@ -80,6 +80,24 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow)
   m_nRealImageWidth = 0;
   m_nRealImageHeight = 0;
 
+  // Restore the selected image from the directory playlist. 
+  // Without this, the slideshow always starts at the first image of the folder.
+  if (pNewSlideShow && pNewSlideShow->FirstImage()) {
+      int index = 0;
+      for (cImageData *img = pNewSlideShow->First(); img; img = pNewSlideShow->Next(img)) {
+          if (img->Name()) {
+              const char *name = img->Name();
+              const char *bname = strrchr(name, '/');
+              bname = bname ? bname + 1 : name;
+              if (strcmp(bname, pNewSlideShow->FirstImage()) == 0) {
+                  player->GotoImage(index);
+                  break;
+              }
+          }
+          index++;
+      }
+  }
+
   OriginalImage(false);
 }
 
