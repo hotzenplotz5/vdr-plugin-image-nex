@@ -27,6 +27,7 @@
 #include <vdr/tools.h>
 #include <vdr/plugin.h>
 #include <vdr/eitscan.h>
+#include <vdr/device.h>
 
 // --- cImageControl ---------------------------------------------------------
 
@@ -864,13 +865,11 @@ bool cImageControl::IsConvertRunning() const
 }
 
 void cImageControl::SetAspectRatioEnv(void) {
-    if (!osd) {
-        dsyslog("imageplugin: OSD not available, cannot set ASPECT_RATIO.");
-        return;
-    }
-
-    int osdWidth = osd->OsdWidth();
-    int osdHeight = osd->OsdHeight();
+    int osdWidth = 0;
+    int osdHeight = 0;
+    double aspect = 0.0;
+    
+    cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
 
     if (osdHeight > 0) {
         // Calculate aspect ratio.

@@ -310,7 +310,8 @@ void cMenuImageGrid::DrawGrid()
             if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
             tColor textBg = 0xA0000000; // Semi-transparent black
             osd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
-            osd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font);
+            // Limit the drawing width to prevent long names from bleeding into adjacent grid tiles
+            osd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font, kachelBreite - 10);
         }
     }
 }
@@ -338,8 +339,12 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             Display();
             return osContinue;
         case kDown:
-            if (currentIndex + columns < totalItems) currentIndex += columns;
-            else currentIndex = totalItems - 1;
+            if (currentIndex + columns < totalItems) {
+                currentIndex += columns;
+            } else if ((currentIndex / columns) < ((totalItems - 1) / columns)) {
+                // Jump to the last item only if there is a row below us, preventing horizontal jumps in the last row
+                currentIndex = totalItems - 1;
+            }
             Display();
             return osContinue;
         case kUp:
