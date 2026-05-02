@@ -35,7 +35,7 @@
 #include <vdr/thread.h>
 
 struct ExifTask {
-    std::string firstJpgPath;
+    std::string folderPath;
     std::string folderJpgPath;
 };
 
@@ -46,18 +46,24 @@ class cExifExtractorThread : public cThread {
 public:
     cExifExtractorThread() : cThread("ImageExifExtractor") {}
     
-    void AddTask(const std::string& jpg, const std::string& folder) {
+    void AddTask(const std::string& folder, const std::string& folderJpg) {
         bool bStart = false;
         {
             cMutexLock lock(&mutex);
             ExifTask t;
-            t.firstJpgPath = jpg;
-            t.folderJpgPath = folder;
+            t.folderPath = folder;
+            t.folderJpgPath = folderJpg;
             tasks.push(t);
             bStart = !Active();
         }
         cond.Broadcast();
         if (bStart) Start();
+    }
+    
+    void ClearTasks() {
+        cMutexLock lock(&mutex);
+        std::queue<ExifTask> empty;
+        std::swap(tasks, empty); // Schnellste Methode, um eine Queue in C++ zu leeren
     }
     
     virtual void Action() {
@@ -72,8 +78,21 @@ public:
                 task = tasks.front();
                 tasks.pop();
             }
-            if (!task.firstJpgPath.empty() && !task.folderJpgPath.empty()) {
-                ExtractExifThumbnail(task.firstJpgPath.c_str(), task.folderJpgPath.c_str());
+            if (!task.folderPath.empty() && !task.folderJpgPath.empty()) {
+                DIR *dp = opendir(task.folderPath.c_str());
+                if (dp) {
+                    struct dirent *ep;
+                    while ((ep = readdir(dp)) != NULL && Running()) {
+                        const char *ext = strrchr(ep->d_name, '.');
+                        if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
+                            char *firstJpgPath = AddPath(task.folderPath.c_str(), ep->d_name);
+                            ExtractExifThumbnail(firstJpgPath, task.folderJpgPath.c_str());
+                            free(firstJpgPath);
+                            break;
+                        }
+                    }
+                    closedir(dp);
+                }
             }
         }
     }
@@ -83,6 +102,10 @@ static cExifExtractorThread ExifThread;
 
 void StopExifExtractor() {
     ExifThread.Cancel(3);
+}
+
+void ClearExifExtractorTasks() {
+    ExifThread.ClearTasks();
 }
 #endif
 
@@ -314,22 +337,8 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
       }
 #ifdef HAVE_LIBEXIF
       else {
-          // Lazy-Loading: Extract EXIF thumbnail from the first JPEG in the folder
-          DIR *dp = opendir(fullDirPath);
-          if (dp) {
-              struct dirent *ep;
-              while ((ep = readdir(dp)) != NULL) {
-                  const char *ext = strrchr(ep->d_name, '.');
-                  if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-                      char *firstJpgPath = AddPath(fullDirPath, ep->d_name);
-                      // Asynchrone Extraktion, UI wird nicht blockiert
-                      ExifThread.AddTask(firstJpgPath, folderJpgPath);
-                      free(firstJpgPath);
-                      break;
-                  }
-              }
-              closedir(dp);
-          }
+          // Asynchrone Extraktion, UI wird nicht blockiert, opendir passiert nun sicher im Thread!
+          ExifThread.AddTask(fullDirPath, folderJpgPath);
       }
 #endif
 

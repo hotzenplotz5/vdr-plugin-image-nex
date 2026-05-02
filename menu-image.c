@@ -199,16 +199,26 @@ cMenuImageGrid::~cMenuImageGrid()
 
     // Thumbnail-Cache leeren, um ein unbegrenztes Anwachsen des RAMs zu verhindern
     cThumbCache::Clear();
+#ifdef HAVE_LIBEXIF
+    ClearExifExtractorTasks();
+#endif
 }
 
 bool cMenuImageGrid::LoadDir(const char *dir)
 {
+#ifdef HAVE_LIBEXIF
+    ClearExifExtractorTasks();
+#endif
     currentIndex = 0;
     return list->Load(source, dir);
 }
 
 void cMenuImageGrid::Display(void)
 {
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    SetTitle(titleBuf); // Titel an VDR übergeben, BEVOR die Basisklasse ihn zeichnet
+
     // Die Basisklasse cOsdMenu zeichnet den Titel und die Hilfs-Buttons.
     cOsdMenu::Display();
     // Wir zeichnen unseren Kachel-Inhalt darüber.
@@ -233,22 +243,19 @@ void cMenuImageGrid::DrawGrid()
         if (osdWidth >= 3840) columns = 8; // 4K Support
     }
 
-    // Den Menübereich mit der Hintergrundfarbe des Skins leeren
-    osd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, Theme.Color(clrMenuBg));
-
     int margin = 50;
     int padding = 20;
     int kachelBreite = (osdWidth - (2 * margin) - ((columns - 1) * padding)) / columns;
     if (kachelBreite < 10) kachelBreite = 10; // Prevent negative/zero sizes on exotic skins
     int kachelHoehe = kachelBreite * 3 / 4;
 
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    SetTitle(titleBuf); // Titel an cOsdMenu übergeben, damit der Skin ihn zeichnet
-
     int totalItems = list->Count();
     const cFont *font = cFont::GetFont(fontMenu);
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
+    int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
+
+    // Nur den Kachelbereich leeren, um den von cOsdMenu gezeichneten Titel und Buttons nicht zu überschreiben
+    osd->DrawRectangle(0, titleHeight, osdWidth - 1, osdHeight - buttonAreaHeight - 1, Theme.Color(clrMenuBg));
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;

@@ -118,6 +118,7 @@ public:
 
 #ifdef HAVE_LIBEXIF
 void StopExifExtractor();
+void ClearExifExtractorTasks();
 #endif
 
 #endif //___DATA_H
