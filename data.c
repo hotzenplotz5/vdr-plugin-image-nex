@@ -40,12 +40,18 @@ struct ExifTask {
 };
 
 class cExifExtractorThread : public cThread {
+private:
     std::queue<ExifTask> tasks;
     cMutex mutex;
     cCondVar cond;
 public:
     cExifExtractorThread() : cThread("ImageExifExtractor") {}
     
+    void StopThread() {
+        cond.Broadcast();
+        Cancel(3);
+    }
+
     void AddTask(const std::string& folder, const std::string& folderJpg) {
         bool bStart = false;
         {
@@ -72,7 +78,7 @@ public:
             {
                 cMutexLock lock(&mutex);
                 if (tasks.empty()) {
-                    cond.Wait(mutex, 1000);
+                    cond.TimedWait(mutex, 1000);
                     if (tasks.empty()) continue;
                 }
                 task = tasks.front();
@@ -101,7 +107,7 @@ public:
 static cExifExtractorThread ExifThread;
 
 void StopExifExtractor() {
-    ExifThread.Cancel(3);
+    ExifThread.StopThread();
 }
 
 void ClearExifExtractorTasks() {
@@ -207,10 +213,13 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
     tc = 'd';
     break;
 	}
-  if(subdir)
-  	asprintf(&dir, "%s/%s", src->BaseDir(), subdir);
-  else
-	  asprintf(&dir, "%s", src->BaseDir());
+  if(subdir) {
+  	if (asprintf(&dir, "%s/%s", src->BaseDir(), subdir) < 0)
+        dir = 0;
+  } else {
+	if (asprintf(&dir, "%s", src->BaseDir()) < 0)
+        dir = 0;
+  }
   // If is'nt set a filter use this a default
 	if(stFile == type && (0 == spec || 0>= strlen(spec)))	
 		spec = "*.jpg *.jpeg *.jif *.jiff *.tif *.tiff *.gif *.bmp *.png *.pnm *.mps";
@@ -253,13 +262,15 @@ bool cScanDir::ScanDir(cFileSource * src, const char *subdir, eScanType type,
 	}
 #if 0
   char *quotedDir = QuoteString(dir);
-  asprintf(&cmd, "find \"%s\" -follow -type %c %s %s %s 2>/dev/null | sort -df",
-             quotedDir, tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1");
+  if (asprintf(&cmd, "find \"%s\" -follow -type %c %s %s %s 2>/dev/null | sort -df",
+             quotedDir, tc, s?s:"", e?e:"", recursiv?"":"-maxdepth 1") < 0)
+      cmd = 0;
   free(quotedDir);
 #else
   char *quotedDir = QuoteString(dir);
-  asprintf(&cmd, "find \"%s\" -follow -not -path '*/.*' -type %c %s %s %s 2>/dev/null | sort -df",
-             quotedDir, tc, s_str.c_str(), e_str.c_str(), recursiv?"":"-maxdepth 1");
+  if (asprintf(&cmd, "find \"%s\" -follow -not -path '*/.*' -type %c %s %s %s 2>/dev/null | sort -df",
+             quotedDir, tc, s_str.c_str(), e_str.c_str(), recursiv?"":"-maxdepth 1") < 0)
+      cmd = 0;
   free(quotedDir);
 #endif
   //fprintf(stderr,"%s\n",cmd);
@@ -520,9 +531,13 @@ bool cFileSource::Action(eAction act)
   static const char *str[] = { "mount", "unmount", "eject", "status" };
 
   char *cmd = 0;
-  asprintf(&cmd, "%s %s %s", g_szMountScript, str[act], basedir);
-  bool res = (system(cmd) == 0);
-  free(cmd);
+  if (asprintf(&cmd, "%s %s %s", g_szMountScript, str[act], basedir) < 0)
+      cmd = 0;
+  bool res = false;
+  if (cmd) {
+      res = (system(cmd) == 0);
+      free(cmd);
+  }
   return res;
 }
 

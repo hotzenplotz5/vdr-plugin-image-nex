@@ -61,14 +61,16 @@ const char *cPluginImage::CommandLineHelp(void)
   static char *help_str=0;
   
   free(help_str);    //                                     for easier orientation, this is column 80|
-  asprintf(&help_str,"  -m CMD,   --mount=CMD    use CMD to mount/unmount/eject image sources\n"
-                     "                           (default: \"%s\")\n"
-                     "  -c PATH,  --config=PATH  to specify directory of configuration data\n"
-                     "                           relative to VDR Plugin configuration directory\n"
-                     "                           (default: \"%s\")\n",
-                    g_szMountScript,
-                    g_szConfigDirectory?g_szConfigDirectory:""
-                    );
+  if (asprintf(&help_str,"  -m CMD,   --mount=CMD    use CMD to mount/unmount/eject image sources\n"
+                         "                           (default: \"%s\")\n"
+                         "  -c PATH,  --config=PATH  to specify directory of configuration data\n"
+                         "                           relative to VDR Plugin configuration directory\n"
+                         "                           (default: \"%s\")\n",
+                        g_szMountScript,
+                        g_szConfigDirectory?g_szConfigDirectory:""
+                        ) < 0) {
+      help_str = 0;
+  }
   return help_str;
 }
 
