@@ -45,7 +45,8 @@ cMenuBrowseItem::cMenuBrowseItem(cDirItem * Item)
 void cMenuBrowseItem::Set(void)
 {
   char *buffer = 0;
-  asprintf(&buffer, item->Type == itFile ? "%s" : "[%s]", item->DisplayName);
+  if (asprintf(&buffer, item->Type == itFile ? "%s" : "[%s]", item->DisplayName) < 0)
+      buffer = 0;
   SetText(buffer, false);
 }
 
@@ -247,9 +248,10 @@ cMenuSourceItem::cMenuSourceItem(cFileSource * Source)
 void cMenuSourceItem::Set(void)
 {
     char *buffer = 0;
-    asprintf(&buffer, "%s\t%s\t%s",
-	     source->NeedsMount()? (source->Status()? "*" : ">") : "",
-	     source->Description(), source->BaseDir());
+    if (asprintf(&buffer, "%s\t%s\t%s",
+	         source->NeedsMount()? (source->Status()? "*" : ">") : "",
+	         source->Description(), source->BaseDir()) < 0)
+        buffer = 0;
     SetText(buffer, false);
 }
 
