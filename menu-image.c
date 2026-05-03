@@ -28,7 +28,6 @@
 #include "menu-image.h"
 #include "control-image.h"
 #include <vdr/i18n.h>
-#include <vdr/image.h>
 
 #include <vdr/osd.h>
 #include <vdr/font.h>
