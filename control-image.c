@@ -165,17 +165,20 @@ void cImageControl::ShowStatusMsg()
   char* sz = 0;
   if(IsConvertRunning())  // Display that convert is running
   {
-    asprintf(&sz,"%s",tr("Convert..."));
+    if (asprintf(&sz,"%s",tr("Convert...")) < 0)
+        sz = 0;
   }
   else 
   {
     switch(m_ePlayMode)
     {
       case ePlayModeNormal: 
-        if (FileName()) asprintf(&sz,"%s",FileName());
+        if (FileName()) {
+            if (asprintf(&sz,"%s",FileName()) < 0) sz = 0;
+        }
         break;
-      case ePlayModeJump:   asprintf(&sz,"%s",tr("Select picture via key 1..9!"));break;
-      case ePlayModeZoom:   asprintf(&sz,"%s %dx",tr("Zoom"),m_nZoomFactor);break;
+      case ePlayModeJump:   if (asprintf(&sz,"%s",tr("Select picture via key 1..9!")) < 0) sz = 0; break;
+      case ePlayModeZoom:   if (asprintf(&sz,"%s %dx",tr("Zoom"),m_nZoomFactor) < 0) sz = 0; break;
     }
   }
   if(sz)
@@ -654,7 +657,8 @@ eOSState cImageControl::ProcessKeyCommands(eKeys nKey)
     if (!szFileName)
         return osContinue; // Cannot open commands menu without a file
     char* szTitle; 
-    asprintf(&szTitle,"%s (%s)",tr("Commands"),basename(szFileName));
+    if (asprintf(&szTitle,"%s (%s)",tr("Commands"),basename(szFileName)) < 0)
+        szTitle = 0;
     m_pCmdMenu = new cImageMenuCommands(szTitle,pCmd,szFileName);
     free(szTitle);
   
@@ -782,7 +786,8 @@ void cImageControl::PictureZoomInitial(void)
       m_nRealImageHeight = nMaxHeight;
   }
 
-  strncpy(m_szZoomRotation, szRotation[m_nRotation],sizeof(m_szZoomRotation));
+  strncpy(m_szZoomRotation, szRotation[m_nRotation], sizeof(m_szZoomRotation) - 1);
+  m_szZoomRotation[sizeof(m_szZoomRotation) - 1] = '\0';
 
   if(m_nRealImageWidth > nMaxWidth 
     || m_nRealImageHeight > nMaxHeight )

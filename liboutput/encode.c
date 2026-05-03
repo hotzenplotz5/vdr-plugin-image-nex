@@ -241,8 +241,8 @@ bool cEncode::EncodeFrames(AVCodecContext *context, AVFrame *frame)
     frame->width  = context->width;
     frame->height = context->height;
 
-    int frames_sent = 0;
-    int packets_received = 0;
+    unsigned int frames_sent = 0;
+    unsigned int packets_received = 0;
 
     // Send frames and receive packets correctly handling EAGAIN flushing
     while (packets_received < m_nNumberOfFramesToEncode && m_nMPEGSize < m_nMaxMPEGSize) {

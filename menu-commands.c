@@ -55,14 +55,16 @@ eOSState cImageMenuCommands::Execute(void)
   {    
      bool bConfirmed = true;
      if (p->Confirm()) {
-        asprintf(&sz, "%s?", p->Title());
-        bConfirmed = Interface->Confirm(sz);
-        free(sz);
+        if (asprintf(&sz, "%s?", p->Title()) >= 0) {
+            bConfirmed = Interface->Confirm(sz);
+            free(sz);
+        }
         }
      if (bConfirmed) {
-        asprintf(&sz, "%s...", p->Title());
-        OSD_InfoMsg(sz);
-        free(sz);
+        if (asprintf(&sz, "%s...", p->Title()) >= 0) {
+            OSD_InfoMsg(sz);
+            free(sz);
+        }
         const char *szResult = p->Execute(m_szFileName);
         if(0 == stat(m_szFileName, &stChanged))
         {
@@ -75,9 +77,10 @@ eOSState cImageMenuCommands::Execute(void)
     return osContinue;
   }
   const char* szErr = errno?strerror(errno):tr("Operation failed");
-  asprintf(&sz, "%s (%s)", szErr,m_szFileName);
-  OSD_ErrorMsg(sz);
-  free(sz);
+  if (asprintf(&sz, "%s (%s)", szErr, m_szFileName) >= 0) {
+      OSD_ErrorMsg(sz);
+      free(sz);
+  }
   return osContinue;
 }
 

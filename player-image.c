@@ -135,7 +135,7 @@ bool cImagePlayer::Convert(const char *szChange)
 
 bool cImagePlayer::ConvertJump(int nOffset)
 {
-  register unsigned int w,h;
+  unsigned int w,h;
   const unsigned int MAX_BILDER = 9;
   // Moderne C++11 Initialisierung (verhindert Speicherfehler)
   cImageData* pImage[MAX_BILDER] = { nullptr };
@@ -145,23 +145,24 @@ bool cImagePlayer::ConvertJump(int nOffset)
       
     unsigned int nMatrix = (nBilder < 5) ? 2 : 3;
   
-    for (h = 0; h < nMatrix; ++h) 
-      for (w = 0; w < nMatrix && pImage[(h*nMatrix)+w]; ++w) 
-      {
-        std::unique_ptr<cDecodeRequest> pCmd(new cDecodeRequest);
-      
-        pCmd->bClearBackground = (w == 0 && h == 0);  
-        pCmd->nTargetWidth = UseWidth() / nMatrix;
-        pCmd->nTargetHeight = UseHeight() / nMatrix;
-        pCmd->nOffLeft = (pCmd->nTargetWidth * w); // Border wird in DecodeNative addiert
-        pCmd->nOffTop =  (pCmd->nTargetHeight * h); // Border wird in DecodeNative addiert
-      
-        pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
-        pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
-
-        Exec(std::move(pCmd));
-      }
-      return true;
+    for (h = 0; h < nMatrix; ++h) {
+        for (w = 0; w < nMatrix && pImage[(h*nMatrix)+w]; ++w) 
+        {
+          std::unique_ptr<cDecodeRequest> pCmd(new cDecodeRequest);
+        
+          pCmd->bClearBackground = (w == 0 && h == 0);  
+          pCmd->nTargetWidth = UseWidth() / nMatrix;
+          pCmd->nTargetHeight = UseHeight() / nMatrix;
+          pCmd->nOffLeft = (pCmd->nTargetWidth * w); // Border wird in DecodeNative addiert
+          pCmd->nOffTop =  (pCmd->nTargetHeight * h); // Border wird in DecodeNative addiert
+        
+          pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
+          pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
+  
+          Exec(std::move(pCmd));
+        }
+    }
+    return true;
   }
   return false;
 }
@@ -254,7 +255,7 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
     // Decode fully native from source into AVFrame
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_idx) {
-            int ret = avcodec_send_packet(codec_ctx, pkt);
+            avcodec_send_packet(codec_ctx, pkt);
             // The official FFmpeg standard requires an unconditional inner loop here
             while (true) {
                 int recv_ret = avcodec_receive_frame(codec_ctx, frame);
