@@ -127,12 +127,34 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_idx) {
             avcodec_send_packet(codec_ctx, pkt);
-            if (avcodec_receive_frame(codec_ctx, frame) == 0) {
-                decoded = true;
-                break;
+            while (true) {
+                int ret = avcodec_receive_frame(codec_ctx, frame);
+                if (ret == 0) {
+                    decoded = true;
+                    break;
+                }
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF || ret < 0) {
+                    break;
+                }
             }
         }
         av_packet_unref(pkt);
+        if (decoded) break;
+    }
+
+    // FFmpeg Decoder Flush: Zwingend nötig, sonst gibt FFmpeg das decodierte Bild nicht heraus!
+    if (!decoded) {
+        avcodec_send_packet(codec_ctx, nullptr);
+        while (true) {
+            int ret = avcodec_receive_frame(codec_ctx, frame);
+            if (ret == 0) {
+                decoded = true;
+                break;
+            }
+            if (ret == AVERROR_EOF || ret < 0) {
+                break;
+            }
+        }
     }
     av_packet_free(&pkt);
 
