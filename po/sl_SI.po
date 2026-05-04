@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2007-08-18 08:13+0200\n"
 "Last-Translator: FULL NAME <EMAIL at ADDRESS>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -68,11 +68,32 @@ msgstr ""
 msgid "Images"
 msgstr ""
 
-msgid "Select"
-msgstr "Izberi"
+msgid "Execute"
+msgstr ""
+
+msgid "Image browser"
+msgstr "Image navigator"
+
+msgid "Play"
+msgstr "Predvajaj"
+
+msgid "Data medium"
+msgstr "Izvor"
 
 msgid "Parent"
 msgstr "Nazaj"
+
+msgid "Image source"
+msgstr "Image izvor"
+
+msgid "No files!"
+msgstr ""
+
+msgid "Image Grid"
+msgstr ""
+
+msgid "Select"
+msgstr "Izberi"
 
 msgid "Error scanning directory!"
 msgstr "Napaka pri pregledovanju direktorija!"
@@ -104,28 +125,19 @@ msgstr "Napaka pri izklopu!"
 msgid "Eject failed!"
 msgstr "Napaka pri izmetu!"
 
-msgid "Execute"
-msgstr ""
-
-msgid "Image browser"
-msgstr "Image navigator"
-
-msgid "Play"
-msgstr "Predvajaj"
-
-msgid "Data medium"
-msgstr "Izvor"
-
-msgid "Image source"
-msgstr "Image izvor"
-
-msgid "No files!"
-msgstr ""
-
 msgid "Image couldn't load"
 msgstr ""
 
-msgid "Script execution failed"
+msgid "Display Mode"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Grid columns (0=auto)"
 msgstr ""
 
 msgid "Slide show"
@@ -143,19 +155,10 @@ msgstr ""
 msgid "Hide main menu entry"
 msgstr ""
 
-msgid "Send encoded frame several times"
+msgid "Output via DeviceStillPicture"
 msgstr ""
 
 msgid "Live Audio from primary Device"
-msgstr ""
-
-msgid "Directory with temporary files"
-msgstr ""
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
 msgstr ""
 
 msgid "Border for Underscan (Height)"
@@ -163,4 +166,3 @@ msgstr ""
 
 msgid "Border for Underscan (Width)"
 msgstr ""
-

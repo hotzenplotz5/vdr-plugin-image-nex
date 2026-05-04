@@ -3,7 +3,7 @@ Section: video
 Priority: extra
 Maintainer: Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>
 Uploaders: Tobias Grimm <etobi@debian.org>, Thomas Günther <tom@toms-cafe.de>
-Build-Depends: debhelper (>= 5), cdbs, vdr-dev (>= 2.2.0-1), gettext, pkg-config,
+Build-Depends: debhelper-compat (= 13), cdbs, vdr-dev (>= 2.2.0-1), gettext, pkg-config,
  libavcodec-dev, libavformat-dev, libswscale-dev, libavutil-dev, libmp3lame-dev | liblame-dev, libexif-dev (>= 0.6.12), libxvidcore-dev
 Standards-Version: 3.9.1
 Vcs-Svn: svn://svn.debian.org/pkg-vdr-dvb/vdr/vdr-plugin-image-next/trunk/

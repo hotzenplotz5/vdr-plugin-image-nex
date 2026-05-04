@@ -24,7 +24,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.6.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2026-04-28 04:10+0200\n"
 "Last-Translator: Holger Schvestka <hotzenplotz5@gmx.de>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -69,11 +69,32 @@ msgstr "Un plugin para visualizar imágenes"
 msgid "Images"
 msgstr "Imágenes"
 
-msgid "Select"
-msgstr "Seleccionar"
+msgid "Execute"
+msgstr "Ejecutar"
+
+msgid "Image browser"
+msgstr "Examinador de imágenes"
+
+msgid "Play"
+msgstr "Play"
+
+msgid "Data medium"
+msgstr "Medio de datos"
 
 msgid "Parent"
 msgstr "Superior"
+
+msgid "Image source"
+msgstr "Fuente de imágenes"
+
+msgid "No files!"
+msgstr "¡No hay ficheros!"
+
+msgid "Image Grid"
+msgstr "Vista de cuadrícula"
+
+msgid "Select"
+msgstr "Seleccionar"
 
 msgid "Error scanning directory!"
 msgstr "¡Error al leer la carpeta!"
@@ -105,29 +126,20 @@ msgstr "¡Fallo al desmontar!"
 msgid "Eject failed!"
 msgstr "¡No se puede expulsar!"
 
-msgid "Execute"
-msgstr "Ejecutar"
-
-msgid "Image browser"
-msgstr "Examinador de imágenes"
-
-msgid "Play"
-msgstr "Play"
-
-msgid "Data medium"
-msgstr "Medio de datos"
-
-msgid "Image source"
-msgstr "Fuente de imágenes"
-
-msgid "No files!"
-msgstr "¡No hay ficheros!"
-
 msgid "Image couldn't load"
 msgstr "No se pudo cargar la imagen"
 
-msgid "Script execution failed"
-msgstr "Fallo al ejecutar el script"
+msgid "Display Mode"
+msgstr "Modo de visualización"
+
+msgid "List"
+msgstr "Lista"
+
+msgid "Grid"
+msgstr "Cuadrícula"
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Presentación de imágenes"
@@ -144,20 +156,11 @@ msgstr "Mostrar números en la imagen índice"
 msgid "Hide main menu entry"
 msgstr ""
 
-msgid "Send encoded frame several times"
+msgid "Output via DeviceStillPicture"
 msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Usar audio del dispositivo primario"
-
-msgid "Directory with temporary files"
-msgstr "Directorio para ficheros temporales"
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
-msgstr "Borrar los ficheros temporales"
 
 msgid "Border for Underscan (Height)"
 msgstr "Margen para underscan (altura)"
@@ -165,14 +168,11 @@ msgstr "Margen para underscan (altura)"
 msgid "Border for Underscan (Width)"
 msgstr "Margen para underscan (anchura)"
 
-msgid "Image Grid"
-msgstr "Vista de cuadrícula"
+#~ msgid "Script execution failed"
+#~ msgstr "Fallo al ejecutar el script"
 
-msgid "Display Mode"
-msgstr "Modo de visualización"
+#~ msgid "Directory with temporary files"
+#~ msgstr "Directorio para ficheros temporales"
 
-msgid "List"
-msgstr "Lista"
-
-msgid "Grid"
-msgstr "Cuadrícula"
+#~ msgid "Remove temporary files"
+#~ msgstr "Borrar los ficheros temporales"

@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2007-08-18 08:13+0200\n"
 "Last-Translator: FULL NAME <EMAIL at ADDRESS>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -68,11 +68,32 @@ msgstr "Um visor da imagem plugin"
 msgid "Images"
 msgstr "Imagens"
 
-msgid "Select"
-msgstr "Seleto"
+msgid "Execute"
+msgstr "Execute"
+
+msgid "Image browser"
+msgstr "Browser da imagem"
+
+msgid "Play"
+msgstr "Play"
+
+msgid "Data medium"
+msgstr "Meio de dados"
 
 msgid "Parent"
 msgstr "precursor"
+
+msgid "Image source"
+msgstr "Fonte da imagem"
+
+msgid "No files!"
+msgstr "Nenhumas Limas!"
+
+msgid "Image Grid"
+msgstr ""
+
+msgid "Select"
+msgstr "Seleto"
 
 msgid "Error scanning directory!"
 msgstr "Diretório da exploração do erro!"
@@ -104,29 +125,20 @@ msgstr "Unmount falhado!"
 msgid "Eject failed!"
 msgstr "Ejete falhado!"
 
-msgid "Execute"
-msgstr "Execute"
-
-msgid "Image browser"
-msgstr "Browser da imagem"
-
-msgid "Play"
-msgstr "Play"
-
-msgid "Data medium"
-msgstr "Meio de dados"
-
-msgid "Image source"
-msgstr "Fonte da imagem"
-
-msgid "No files!"
-msgstr "Nenhumas Limas!"
-
 msgid "Image couldn't load"
 msgstr "A imagem não podia carregar"
 
-msgid "Script execution failed"
-msgstr "A execução do certificado falhou"
+msgid "Display Mode"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Mostra de corrediça"
@@ -143,20 +155,11 @@ msgstr "Mostre números na imagem do índice"
 msgid "Hide main menu entry"
 msgstr ""
 
-msgid "Send encoded frame several times"
+msgid "Output via DeviceStillPicture"
 msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Áudio vivo do dispositivo preliminar"
-
-msgid "Directory with temporary files"
-msgstr "Diretório com limas provisórias"
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
-msgstr "Remova as limas provisórias"
 
 msgid "Border for Underscan (Height)"
 msgstr "Beira para Underscan (altura)"
@@ -164,3 +167,11 @@ msgstr "Beira para Underscan (altura)"
 msgid "Border for Underscan (Width)"
 msgstr "Beira para Underscan (largura)"
 
+#~ msgid "Script execution failed"
+#~ msgstr "A execução do certificado falhou"
+
+#~ msgid "Directory with temporary files"
+#~ msgstr "Diretório com limas provisórias"
+
+#~ msgid "Remove temporary files"
+#~ msgstr "Remova as limas provisórias"

@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-13 16:48+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2013-02-12 23:02+0100\n"
 "Last-Translator: Yarema aka Knedlyk <yupadmin@gmail.com>\n"
 "Language-Team:  <vdr at linuxtv.org>\n"
@@ -69,11 +69,32 @@ msgstr "Додаток для перегляду малюнків"
 msgid "Images"
 msgstr "Малюнки"
 
-msgid "Select"
-msgstr "Вибрати"
+msgid "Execute"
+msgstr "Виконати"
+
+msgid "Image browser"
+msgstr "Переглядач малюнків"
+
+msgid "Play"
+msgstr "Програвання"
+
+msgid "Data medium"
+msgstr "Пристрій з даними"
 
 msgid "Parent"
 msgstr "Наверх"
+
+msgid "Image source"
+msgstr "Джерело малюнків"
+
+msgid "No files!"
+msgstr "Немає файлів!"
+
+msgid "Image Grid"
+msgstr ""
+
+msgid "Select"
+msgstr "Вибрати"
 
 msgid "Error scanning directory!"
 msgstr "Помилка сканування теки"
@@ -105,29 +126,20 @@ msgstr "Відмонтування не вдалося!"
 msgid "Eject failed!"
 msgstr "Витягнення не вдалося!"
 
-msgid "Execute"
-msgstr "Виконати"
-
-msgid "Image browser"
-msgstr "Переглядач малюнків"
-
-msgid "Play"
-msgstr "Програвання"
-
-msgid "Data medium"
-msgstr "Пристрій з даними"
-
-msgid "Image source"
-msgstr "Джерело малюнків"
-
-msgid "No files!"
-msgstr "Немає файлів!"
-
 msgid "Image couldn't load"
 msgstr "Неможливо завантажити малюнок"
 
-msgid "Script execution failed"
-msgstr "Не вдалося запустити скрипт"
+msgid "Display Mode"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Показ слайдів"
@@ -144,23 +156,29 @@ msgstr "Показати номери на малюнку індексів"
 msgid "Hide main menu entry"
 msgstr "Приховати пункт меню"
 
-msgid "Send encoded frame several times"
-msgstr "Вислати розкодовану рамку кілька разів"
+msgid "Output via DeviceStillPicture"
+msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Живе аудіо з головного пристрою"
-
-msgid "Directory with temporary files"
-msgstr "Тека з тимчасовими файлами"
-
-msgid "Remove temporary files immediately"
-msgstr "Негайно вилучити тимчасові файли"
-
-msgid "Remove temporary files"
-msgstr "Вилучити тимчасові файли"
 
 msgid "Border for Underscan (Height)"
 msgstr "Границя для сканування (Висота)"
 
 msgid "Border for Underscan (Width)"
 msgstr "Границя для сканування (Ширина)"
+
+#~ msgid "Script execution failed"
+#~ msgstr "Не вдалося запустити скрипт"
+
+#~ msgid "Send encoded frame several times"
+#~ msgstr "Вислати розкодовану рамку кілька разів"
+
+#~ msgid "Directory with temporary files"
+#~ msgstr "Тека з тимчасовими файлами"
+
+#~ msgid "Remove temporary files immediately"
+#~ msgstr "Негайно вилучити тимчасові файли"
+
+#~ msgid "Remove temporary files"
+#~ msgstr "Вилучити тимчасові файли"

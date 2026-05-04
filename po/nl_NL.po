@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.6.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2026-04-28 04:10+0200\n"
 "Last-Translator: Holger Schvestka <hotzenplotz5@gmx.de>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -68,11 +68,32 @@ msgstr "Een afbeeldingen-viewer plugin"
 msgid "Images"
 msgstr "Afbeeldingen"
 
-msgid "Select"
-msgstr "Selecteer"
+msgid "Execute"
+msgstr "Voer uit"
+
+msgid "Image browser"
+msgstr "Afbeeldingenbrowser"
+
+msgid "Play"
+msgstr "Afspelen"
+
+msgid "Data medium"
+msgstr "Gegevensmedium"
 
 msgid "Parent"
 msgstr "Bovenliggend"
+
+msgid "Image source"
+msgstr "Afbeeldingsbron"
+
+msgid "No files!"
+msgstr "Geen bestanden!"
+
+msgid "Image Grid"
+msgstr "Rasterweergave"
+
+msgid "Select"
+msgstr "Selecteer"
 
 msgid "Error scanning directory!"
 msgstr "Fout bij het scannen van de map!"
@@ -104,29 +125,20 @@ msgstr "Ontkoppelen mislukt!"
 msgid "Eject failed!"
 msgstr "Uitwerpen mislukt!"
 
-msgid "Execute"
-msgstr "Voer uit"
-
-msgid "Image browser"
-msgstr "Afbeeldingenbrowser"
-
-msgid "Play"
-msgstr "Afspelen"
-
-msgid "Data medium"
-msgstr "Gegevensmedium"
-
-msgid "Image source"
-msgstr "Afbeeldingsbron"
-
-msgid "No files!"
-msgstr "Geen bestanden!"
-
 msgid "Image couldn't load"
 msgstr "De afbeelding kon niet worden geladen"
 
-msgid "Script execution failed"
-msgstr "Uitvoeren van script mislukt"
+msgid "Display Mode"
+msgstr "Weergavemodus"
+
+msgid "List"
+msgstr "Lijst"
+
+msgid "Grid"
+msgstr "Raster"
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Diashow"
@@ -143,20 +155,11 @@ msgstr "Toon nummers op indexafbeelding"
 msgid "Hide main menu entry"
 msgstr ""
 
-msgid "Send encoded frame several times"
+msgid "Output via DeviceStillPicture"
 msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Live audio van primair apparaat"
-
-msgid "Directory with temporary files"
-msgstr "Map voor tijdelijke bestanden"
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
-msgstr "Verwijder tijdelijke bestanden"
 
 msgid "Border for Underscan (Height)"
 msgstr "Rand voor underscan (hoogte)"
@@ -164,14 +167,11 @@ msgstr "Rand voor underscan (hoogte)"
 msgid "Border for Underscan (Width)"
 msgstr "Rand voor underscan (breedte)"
 
-msgid "Image Grid"
-msgstr "Rasterweergave"
+#~ msgid "Script execution failed"
+#~ msgstr "Uitvoeren van script mislukt"
 
-msgid "Display Mode"
-msgstr "Weergavemodus"
+#~ msgid "Directory with temporary files"
+#~ msgstr "Map voor tijdelijke bestanden"
 
-msgid "List"
-msgstr "Lijst"
-
-msgid "Grid"
-msgstr "Raster"
+#~ msgid "Remove temporary files"
+#~ msgstr "Verwijder tijdelijke bestanden"

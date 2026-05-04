@@ -21,12 +21,11 @@
 # *
 # Michaël NIVAL  <mnival at club-internet.fr>, 2006.
 # Bernard Jaulin <bernard.jaulin@gmail.com>, 2013.
-
 msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.6.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2026-04-28 04:10+0200\n"
 "Last-Translator: Holger Schvestka <hotzenplotz5@gmx.de>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -71,11 +70,32 @@ msgstr "Module de visualisation d'images"
 msgid "Images"
 msgstr "Images"
 
-msgid "Select"
-msgstr "Sélectionner"
+msgid "Execute"
+msgstr "Exécuter"
+
+msgid "Image browser"
+msgstr "Navigateur d'image"
+
+msgid "Play"
+msgstr "Lire"
+
+msgid "Data medium"
+msgstr "Source"
 
 msgid "Parent"
 msgstr "Parent"
+
+msgid "Image source"
+msgstr "Source image"
+
+msgid "No files!"
+msgstr "Pas de fichiers !"
+
+msgid "Image Grid"
+msgstr "Vue en grille"
+
+msgid "Select"
+msgstr "Sélectionner"
 
 msgid "Error scanning directory!"
 msgstr "Erreur en parcourant le répertoire !"
@@ -107,29 +127,20 @@ msgstr "Le démontage a échoué !"
 msgid "Eject failed!"
 msgstr "L'éjection a échoué !"
 
-msgid "Execute"
-msgstr "Exécuter"
-
-msgid "Image browser"
-msgstr "Navigateur d'image"
-
-msgid "Play"
-msgstr "Lire"
-
-msgid "Data medium"
-msgstr "Source"
-
-msgid "Image source"
-msgstr "Source image"
-
-msgid "No files!"
-msgstr "Pas de fichiers !"
-
 msgid "Image couldn't load"
 msgstr "Impossible de charger l'image"
 
-msgid "Script execution failed"
-msgstr "Impossible d'exécuter le script"
+msgid "Display Mode"
+msgstr "Mode d'affichage"
+
+msgid "List"
+msgstr "Liste"
+
+msgid "Grid"
+msgstr "Grille"
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Diaporama"
@@ -146,20 +157,11 @@ msgstr "Numéroter les images sur la page d'index"
 msgid "Hide main menu entry"
 msgstr "Masquer dans le menu principal"
 
-msgid "Send encoded frame several times"
-msgstr "Diffuse plusieurs fois l'image encodée"
+msgid "Output via DeviceStillPicture"
+msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Direct audio sur périphérique primaire"
-
-msgid "Directory with temporary files"
-msgstr "Répertoire temporaire"
-
-msgid "Remove temporary files immediately"
-msgstr "Supprimer immédiatement les fichiers temporaires"
-
-msgid "Remove temporary files"
-msgstr "Effacer les fichiers temporaires"
 
 msgid "Border for Underscan (Height)"
 msgstr "Bordure pour l'Underscan (Hauteur)"
@@ -167,14 +169,17 @@ msgstr "Bordure pour l'Underscan (Hauteur)"
 msgid "Border for Underscan (Width)"
 msgstr "Bordure pour l'Underscan (Largeur)"
 
-msgid "Image Grid"
-msgstr "Vue en grille"
+#~ msgid "Script execution failed"
+#~ msgstr "Impossible d'exécuter le script"
 
-msgid "Display Mode"
-msgstr "Mode d'affichage"
+#~ msgid "Send encoded frame several times"
+#~ msgstr "Diffuse plusieurs fois l'image encodée"
 
-msgid "List"
-msgstr "Liste"
+#~ msgid "Directory with temporary files"
+#~ msgstr "Répertoire temporaire"
 
-msgid "Grid"
-msgstr "Grille"
+#~ msgid "Remove temporary files immediately"
+#~ msgstr "Supprimer immédiatement les fichiers temporaires"
+
+#~ msgid "Remove temporary files"
+#~ msgstr "Effacer les fichiers temporaires"

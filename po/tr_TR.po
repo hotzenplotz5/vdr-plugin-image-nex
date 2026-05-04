@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2007-08-18 08:13+0200\n"
 "Last-Translator: Oktay Yolgeçen <oktay_73 at yahoo.de>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -68,11 +68,32 @@ msgstr "Resim gösterme eklentisi"
 msgid "Images"
 msgstr "Resimler"
 
-msgid "Select"
-msgstr "Seç"
+msgid "Execute"
+msgstr "Çalýþtýr"
+
+msgid "Image browser"
+msgstr "Resim browseri"
+
+msgid "Play"
+msgstr "Göster"
+
+msgid "Data medium"
+msgstr "Data medyum"
 
 msgid "Parent"
 msgstr "Üste"
+
+msgid "Image source"
+msgstr "Resim kaynaðý"
+
+msgid "No files!"
+msgstr "Dosya yok!"
+
+msgid "Image Grid"
+msgstr ""
+
+msgid "Select"
+msgstr "Seç"
 
 msgid "Error scanning directory!"
 msgstr "Klasör tarama hatasý!"
@@ -104,29 +125,20 @@ msgstr "Baðlantý kaldýrma hatasý!"
 msgid "Eject failed!"
 msgstr "Çýkartma hatasý!"
 
-msgid "Execute"
-msgstr "Çalýþtýr"
-
-msgid "Image browser"
-msgstr "Resim browseri"
-
-msgid "Play"
-msgstr "Göster"
-
-msgid "Data medium"
-msgstr "Data medyum"
-
-msgid "Image source"
-msgstr "Resim kaynaðý"
-
-msgid "No files!"
-msgstr "Dosya yok!"
-
 msgid "Image couldn't load"
 msgstr "Resim yüklenemedi"
 
-msgid "Script execution failed"
-msgstr "Not uygulama hatasý"
+msgid "Display Mode"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Slideshow"
@@ -143,23 +155,26 @@ msgstr "Ýndeks resimlerde numara göster"
 msgid "Hide main menu entry"
 msgstr "Ana menüde sakla"
 
-msgid "Send encoded frame several times"
-msgstr "Kodlanmýþ frame'i birkaç defa gönder"
+msgid "Output via DeviceStillPicture"
+msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Primer aygýtdan naklen audio"
-
-msgid "Directory with temporary files"
-msgstr "Geçici dosyalý klasör"
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
-msgstr "Geçici dosyalarý sil"
 
 msgid "Border for Underscan (Height)"
 msgstr "Alt tarama sýnýrý (Yükseklik)"
 
 msgid "Border for Underscan (Width)"
 msgstr "Alt tarama sýnýrý (Geniþlik)"
+
+#~ msgid "Script execution failed"
+#~ msgstr "Not uygulama hatasý"
+
+#~ msgid "Send encoded frame several times"
+#~ msgstr "Kodlanmýþ frame'i birkaç defa gönder"
+
+#~ msgid "Directory with temporary files"
+#~ msgstr "Geçici dosyalý klasör"
+
+#~ msgid "Remove temporary files"
+#~ msgstr "Geçici dosyalarý sil"

@@ -23,7 +23,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2007-08-18 08:13+0200\n"
 "Last-Translator: FULL NAME <EMAIL at ADDRESS>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -68,11 +68,32 @@ msgstr "Плагин для просмотра изображений"
 msgid "Images"
 msgstr "Изображения"
 
-msgid "Select"
-msgstr "Выбрать"
+msgid "Execute"
+msgstr "Выполнить"
+
+msgid "Image browser"
+msgstr "Показать папку с изображениями"
+
+msgid "Play"
+msgstr "Воспроизвести"
+
+msgid "Data medium"
+msgstr "Носитель"
 
 msgid "Parent"
 msgstr "Назад"
+
+msgid "Image source"
+msgstr "Носитель(source)"
+
+msgid "No files!"
+msgstr "Ничего не найдено!"
+
+msgid "Image Grid"
+msgstr ""
+
+msgid "Select"
+msgstr "Выбрать"
 
 msgid "Error scanning directory!"
 msgstr "Ошибка чтения выбранной директории!"
@@ -104,29 +125,20 @@ msgstr "Ошибка отключения!"
 msgid "Eject failed!"
 msgstr "Ошибка выброса диска!"
 
-msgid "Execute"
-msgstr "Выполнить"
-
-msgid "Image browser"
-msgstr "Показать папку с изображениями"
-
-msgid "Play"
-msgstr "Воспроизвести"
-
-msgid "Data medium"
-msgstr "Носитель"
-
-msgid "Image source"
-msgstr "Носитель(source)"
-
-msgid "No files!"
-msgstr "Ничего не найдено!"
-
 msgid "Image couldn't load"
 msgstr "Ошибка чтения файла"
 
-msgid "Script execution failed"
-msgstr "Ошибка выполнения скрипта!"
+msgid "Display Mode"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Диафильм?"
@@ -143,20 +155,11 @@ msgstr "Показать номера в индексе"
 msgid "Hide main menu entry"
 msgstr "Скрыть команду в главном меню"
 
-msgid "Send encoded frame several times"
+msgid "Output via DeviceStillPicture"
 msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Использовать активное(Live) звуковое сопровождение"
-
-msgid "Directory with temporary files"
-msgstr "ТМР директория"
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
-msgstr "стирание tmp файлов"
 
 msgid "Border for Underscan (Height)"
 msgstr ""
@@ -164,3 +167,11 @@ msgstr ""
 msgid "Border for Underscan (Width)"
 msgstr ""
 
+#~ msgid "Script execution failed"
+#~ msgstr "Ошибка выполнения скрипта!"
+
+#~ msgid "Directory with temporary files"
+#~ msgstr "ТМР директория"
+
+#~ msgid "Remove temporary files"
+#~ msgstr "стирание tmp файлов"

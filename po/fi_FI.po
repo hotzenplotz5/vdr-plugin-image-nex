@@ -24,7 +24,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-image 0.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-02-12 18:44+0100\n"
+"POT-Creation-Date: 2026-05-04 09:13+0200\n"
 "PO-Revision-Date: 2007-08-18 08:13+0200\n"
 "Last-Translator: Rolf Ahrenberg <rahrenbe at cc.hut.fi>\n"
 "Language-Team: <vdr at linuxtv.org>\n"
@@ -69,11 +69,32 @@ msgstr "Katso valokuvia ruudullasi"
 msgid "Images"
 msgstr "Kuvat"
 
-msgid "Select"
-msgstr "Valitse"
+msgid "Execute"
+msgstr "Suorita"
+
+msgid "Image browser"
+msgstr "Kuvat - selain"
+
+msgid "Play"
+msgstr "Toista"
+
+msgid "Data medium"
+msgstr "Lähde"
 
 msgid "Parent"
 msgstr "Takaisin"
+
+msgid "Image source"
+msgstr "Kuvat - lähteet"
+
+msgid "No files!"
+msgstr "Ei tiedostoja!"
+
+msgid "Image Grid"
+msgstr ""
+
+msgid "Select"
+msgstr "Valitse"
 
 msgid "Error scanning directory!"
 msgstr "Hakemiston selaus epäonnistui!"
@@ -105,29 +126,20 @@ msgstr "Irrottaminen epäonnistui!"
 msgid "Eject failed!"
 msgstr "Avaaminen epäonnistui!"
 
-msgid "Execute"
-msgstr "Suorita"
-
-msgid "Image browser"
-msgstr "Kuvat - selain"
-
-msgid "Play"
-msgstr "Toista"
-
-msgid "Data medium"
-msgstr "Lähde"
-
-msgid "Image source"
-msgstr "Kuvat - lähteet"
-
-msgid "No files!"
-msgstr "Ei tiedostoja!"
-
 msgid "Image couldn't load"
 msgstr "Kuvan lukeminen epäonnistui"
 
-msgid "Script execution failed"
-msgstr "Skriptin suoritus epäonnistui"
+msgid "Display Mode"
+msgstr ""
+
+msgid "List"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Grid columns (0=auto)"
+msgstr ""
 
 msgid "Slide show"
 msgstr "Käytä diaesitystä"
@@ -144,20 +156,11 @@ msgstr "Näytä numerot indeksikuvassa"
 msgid "Hide main menu entry"
 msgstr "Piilota valinta päävalikosta"
 
-msgid "Send encoded frame several times"
+msgid "Output via DeviceStillPicture"
 msgstr ""
 
 msgid "Live Audio from primary Device"
 msgstr "Live-ääni ensisijaiselta sovittimelta"
-
-msgid "Directory with temporary files"
-msgstr "Väliaikaistiedostot"
-
-msgid "Remove temporary files immediately"
-msgstr ""
-
-msgid "Remove temporary files"
-msgstr "Tyhjennä väliaikaistiedostot"
 
 msgid "Border for Underscan (Height)"
 msgstr "Reunuksen korkeus keskitykselle"
@@ -165,3 +168,11 @@ msgstr "Reunuksen korkeus keskitykselle"
 msgid "Border for Underscan (Width)"
 msgstr "Reunuksen leveys keskitykselle"
 
+#~ msgid "Script execution failed"
+#~ msgstr "Skriptin suoritus epäonnistui"
+
+#~ msgid "Directory with temporary files"
+#~ msgstr "Väliaikaistiedostot"
+
+#~ msgid "Remove temporary files"
+#~ msgstr "Tyhjennä väliaikaistiedostot"
