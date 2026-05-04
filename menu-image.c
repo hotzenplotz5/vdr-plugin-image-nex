@@ -68,6 +68,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     
     AVDictionary *opts = nullptr;
     av_dict_set(&opts, "probesize", "32768", 0);
+    av_dict_set(&opts, "analyzeduration", "0", 0);
     if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
         if (opts) av_dict_free(&opts);
         if (useTempThumb) unlink(tempThumbPath);
@@ -75,6 +76,15 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     }
     if (opts) av_dict_free(&opts);
     
+    // Radikaler Stopp: FFmpeg darf das OSD nicht durch tiefes Scannen einfrieren!
+    fmt_ctx->probesize = 32768;
+    fmt_ctx->max_analyze_duration = 0;
+    
+    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
+        avformat_close_input(&fmt_ctx); 
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr; 
+    }
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -84,22 +94,10 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         }
     }
     
-    // Nur tief analysieren (was das OSD einfrieren lässt), wenn der Stream nicht schon im Header stand
     if (video_stream_idx == -1) {
-        fmt_ctx->probesize = 32768;
-        if (avformat_find_stream_info(fmt_ctx, nullptr) >= 0) {
-            for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
-                if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    video_stream_idx = i;
-                    break;
-                }
-            }
-        }
-        if (video_stream_idx == -1) {
-            avformat_close_input(&fmt_ctx); 
-            if (useTempThumb) unlink(tempThumbPath);
-            return nullptr; 
-        }
+        avformat_close_input(&fmt_ctx); 
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr; 
     }
 
     AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_idx]->codecpar;
