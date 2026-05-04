@@ -96,7 +96,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         if (newWidth <= 0) newWidth = 1;
         if (newHeight <= 0) newHeight = 1;
 
-        retImage = new cImage(newWidth, newHeight);
+        retImage = new cImage(cSize(newWidth, newHeight));
 
         SwsContext *sws_ctx = sws_getContext(
             frame->width, frame->height, (AVPixelFormat)frame->format,
@@ -448,12 +448,12 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     int pageItems = columns * visibleRows;
 
     switch (Key & ~k_Repeat) {
-        case kChannelPlus:
+        case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
             Display();
             return osContinue;
-        case kChannelMinus:
+        case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
             Display();
