@@ -33,6 +33,7 @@
 #include <vdr/font.h>
 #include <vdr/status.h>
 #include <vdr/themes.h>
+#include <vdr/device.h>
 #include "setup-image.h"
 #include <memory>
 
@@ -74,14 +75,6 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     }
     if (opts) av_dict_free(&opts);
     
-    fmt_ctx->probesize = 32768;
-    fmt_ctx->max_analyze_duration = 0;
-    
-    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
-        avformat_close_input(&fmt_ctx); 
-        if (useTempThumb) unlink(tempThumbPath);
-        return nullptr; 
-    }
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -90,10 +83,23 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
             break;
         }
     }
-    if (video_stream_idx == -1) { 
-        avformat_close_input(&fmt_ctx); 
-        if (useTempThumb) unlink(tempThumbPath);
-        return nullptr; 
+    
+    // Nur tief analysieren (was das OSD einfrieren lässt), wenn der Stream nicht schon im Header stand
+    if (video_stream_idx == -1) {
+        fmt_ctx->probesize = 32768;
+        if (avformat_find_stream_info(fmt_ctx, nullptr) >= 0) {
+            for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
+                if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    video_stream_idx = i;
+                    break;
+                }
+            }
+        }
+        if (video_stream_idx == -1) {
+            avformat_close_input(&fmt_ctx); 
+            if (useTempThumb) unlink(tempThumbPath);
+            return nullptr; 
+        }
     }
 
     AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_idx]->codecpar;
@@ -353,20 +359,19 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 
 void cMenuImageGrid::Display(void)
 {
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    SetTitle(titleBuf);
-    SetHelp(tr("Select"), "", "", tr("Back"));
-
-    // WICHTIG: Das eigentliche Menü zeichnen lassen (erstellt Skin-Hintergrund!)
-    cOsdMenu::Display();
-
     if (!myOsd) {
-        // Unser OSD als Overlay auf Level 1 (über dem Skin) erstellen
-        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 1);
+        int osdWidth = 0, osdHeight = 0;
+        double aspect = 0;
+        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
+
+        // Level 0: Wir verwalten das komplette OSD selbst, keine Kollision mit VDR-Skins!
+        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 0);
         if (myOsd) {
-            tArea Area = { 0, 0, cOsd::OsdWidth() - 1, cOsd::OsdHeight() - 1, 32 };
-            myOsd->SetAreas(&Area, 1);
+            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
+            if (myOsd->SetAreas(&Area, 1) != oeOk) {
+                Area.bpp = 8; // Fallback falls die Grafikkarte/das Ausgabe-Plugin kein 32-Bit unterstützt
+                myOsd->SetAreas(&Area, 1);
+            }
         }
     }
     if (myOsd) {
@@ -401,9 +406,17 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // OSD komplett transparent machen, damit das VDR-Skin durchscheint
-    tColor bgClear = 0x00000000;
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgClear);
+    // Eigenen abgedunkelten Hintergrund zeichnen
+    tColor bgFull = 0xDD000000;
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
+
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    myOsd->DrawText(margin, 10, titleBuf, 0xFFFFFFFF, bgFull, font);
+
+    int btnY = osdHeight - buttonAreaHeight + 10;
+    myOsd->DrawText(margin, btnY, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
+    myOsd->DrawText(margin + 200, btnY, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
