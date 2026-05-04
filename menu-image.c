@@ -55,7 +55,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     // EXIF Thumbnails are instantly loaded compared to 24 Megapixel JPEGs
     const char *ext = strrchr(path, '.');
     if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u.jpg", (unsigned int)getpid());
+        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u_%p.jpg", (unsigned int)getpid(), path);
         if (ExtractExifThumbnail(path, tempThumbPath)) {
             loadPath = tempThumbPath;
             useTempThumb = true;
@@ -64,13 +64,18 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
 #endif
 
     AVFormatContext *fmt_ctx = nullptr;
-    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
+    
+    AVDictionary *opts = nullptr;
+    av_dict_set(&opts, "probesize", "32768", 0);
+    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
+        if (opts) av_dict_free(&opts);
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
+    if (opts) av_dict_free(&opts);
     
-    // Speed up probe phase significantly
     fmt_ctx->probesize = 32768;
+    fmt_ctx->max_analyze_duration = 0;
     
     if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
         avformat_close_input(&fmt_ctx); 
@@ -348,16 +353,20 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 
 void cMenuImageGrid::Display(void)
 {
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    SetTitle(titleBuf);
+    SetHelp(tr("Select"), "", "", tr("Back"));
+
+    // WICHTIG: Das eigentliche Menü zeichnen lassen (erstellt Skin-Hintergrund!)
+    cOsdMenu::Display();
+
     if (!myOsd) {
-        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 0);
+        // Unser OSD als Overlay auf Level 1 (über dem Skin) erstellen
+        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 1);
         if (myOsd) {
             tArea Area = { 0, 0, cOsd::OsdWidth() - 1, cOsd::OsdHeight() - 1, 32 };
-            eOsdError err = myOsd->SetAreas(&Area, 1);
-            if (err != oeOk) {
-                esyslog("imageplugin: OSD SetAreas failed with code %d! Width: %d, Height: %d", err, cOsd::OsdWidth(), cOsd::OsdHeight());
-            }
-        } else {
-            esyslog("imageplugin: Failed to create new OSD provider!");
+            myOsd->SetAreas(&Area, 1);
         }
     }
     if (myOsd) {
@@ -392,16 +401,9 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    tColor bgFull = 0xDD000000;
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
-
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, 0xFFFFFFFF, bgFull, font);
-
-    int btnY = osdHeight - buttonAreaHeight + 10;
-    myOsd->DrawText(margin, btnY, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
-    myOsd->DrawText(margin + 200, btnY, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
+    // OSD komplett transparent machen, damit das VDR-Skin durchscheint
+    tColor bgClear = 0x00000000;
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgClear);
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
