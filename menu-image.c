@@ -65,15 +65,10 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
 #endif
 
     AVFormatContext *fmt_ctx = nullptr;
-    AVDictionary *opts = nullptr;
-    av_dict_set(&opts, "probesize", "8192", 0);
-    av_dict_set(&opts, "analyzeduration", "0", 0);
-    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
-        if (opts) av_dict_free(&opts);
+    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
-    if (opts) av_dict_free(&opts);
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -83,16 +78,11 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         }
     }
     
-    // FFmpeg nur scannen lassen, wenn der Stream nicht schon direkt im JPEG-Header gefunden wurde
-    if (video_stream_idx == -1) {
-        fmt_ctx->probesize = 16384;
-        fmt_ctx->max_analyze_duration = 0;
-        if (avformat_find_stream_info(fmt_ctx, nullptr) >= 0) {
-            for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
-                if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    video_stream_idx = i;
-                    break;
-                }
+    if (video_stream_idx == -1 && avformat_find_stream_info(fmt_ctx, nullptr) >= 0) {
+        for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
+            if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                video_stream_idx = i;
+                break;
             }
         }
     }
@@ -477,7 +467,8 @@ void cMenuImageGrid::DrawGrid()
         int x = margin + col * (kachelBreite + padding);
         int y = titleHeight + row * (kachelHoehe + padding);
 
-        tColor bgColor = (i == currentIndex) ? 0xCC0055AA : 0xAA222222;
+        // Vollständig deckende Farben (0xFF...) erzwingen, um unsichtbare Kacheln durch Alpha-Blending-Fehler zu vermeiden!
+        tColor bgColor = (i == currentIndex) ? 0xFF0055AA : 0xFF333333;
         tColor textColor = (i == currentIndex) ? 0xFFFFFFFF : 0xFFDDDDDD;
 
         myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Draw tile background
