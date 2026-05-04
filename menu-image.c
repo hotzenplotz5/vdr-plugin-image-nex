@@ -64,21 +64,19 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     }
 #endif
 
-    AVFormatContext *fmt_ctx = nullptr;
-    
-    AVDictionary *opts = nullptr;
-    av_dict_set(&opts, "probesize", "32768", 0);
-    av_dict_set(&opts, "analyzeduration", "0", 0);
-    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
-        if (opts) av_dict_free(&opts);
+    // Sicherheitsnetz gegen OSD-Freezes: Lade im Menü-Thread *nur* Dateien < 1MB (Thumbnails).
+    // Niemals riesige 24MP Originalbilder scannen, das blockiert sofort das VDR-Menü!
+    struct stat st;
+    if (stat(loadPath, &st) != 0 || st.st_size > 1000000) {
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
-    if (opts) av_dict_free(&opts);
-    
-    // Radikaler Stopp: FFmpeg darf das OSD nicht durch tiefes Scannen einfrieren!
-    fmt_ctx->probesize = 32768;
-    fmt_ctx->max_analyze_duration = 0;
+
+    AVFormatContext *fmt_ctx = nullptr;
+    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr;
+    }
     
     if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
         avformat_close_input(&fmt_ctx); 
@@ -357,13 +355,21 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 
 void cMenuImageGrid::Display(void)
 {
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    SetTitle(titleBuf);
+    SetHelp(tr("Select"), "", "", tr("Back"));
+
+    // WICHTIG: Den Skindesigner / VDR sein Basis-Menü ganz normal aufbauen lassen!
+    cOsdMenu::Display();
+
     if (!myOsd) {
         int osdWidth = 0, osdHeight = 0;
         double aspect = 0;
         cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
 
-        // Level 0: Wir verwalten das komplette OSD selbst, keine Kollision mit VDR-Skins!
-        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 0);
+        // Unser Grid als Overlay auf Level 1 (schwebt transparent über dem Skindesigner-Menü)
+        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 1);
         if (myOsd) {
             tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
@@ -404,17 +410,9 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // Eigenen abgedunkelten Hintergrund zeichnen
-    tColor bgFull = 0xDD000000;
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
-
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, 0xFFFFFFFF, bgFull, font);
-
-    int btnY = osdHeight - buttonAreaHeight + 10;
-    myOsd->DrawText(margin, btnY, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
-    myOsd->DrawText(margin + 200, btnY, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
+    // OSD komplett transparent machen, damit das Skindesigner Theme ungestört sichtbar bleibt!
+    tColor bgClear = 0x00000000;
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgClear);
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
