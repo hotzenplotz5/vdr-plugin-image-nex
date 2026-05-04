@@ -32,8 +32,71 @@
 #include <vdr/osd.h>
 #include <vdr/font.h>
 #include <vdr/status.h>
+#include <vdr/themes.h>
+#include "setup-image.h"
 #include <memory>
 
+class cThumbCache {
+private:
+    static const size_t MAX_CACHE_SIZE = 100;
+    static std::list<std::string> lruList;
+public:
+    static std::map<std::string, std::unique_ptr<cImage>> Cache;
+    static cImage* Get(const char* path, int maxWidth, int maxHeight) {
+        char keyBuf[1024];
+        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
+        std::string key = keyBuf;
+        
+        // Wenn gefunden, Key in der LRU-Liste ganz nach vorne schieben
+        if (Cache.find(key) != Cache.end()) {
+            lruList.remove(key);
+            lruList.push_front(key);
+            return Cache[key].get();
+        }
+        
+        auto thumb = std::unique_ptr<cImage>(new cImage);
+        if (thumb->Load(path)) {
+            if (thumb->Width() > 0 && thumb->Height() > 0) {
+                double aspect = (double)thumb->Height() / thumb->Width();
+                int newWidth = maxWidth;
+                int newHeight = newWidth * aspect;
+                if (newHeight > maxHeight) {
+                    newHeight = maxHeight;
+                    if (aspect > 0.0)
+                        newWidth = newHeight / aspect;
+                }
+                
+                // Prevent VDR scaling crashes with corrupted aspect ratios or extreme sizes
+                if (newWidth <= 0) newWidth = 1;
+                if (newHeight <= 0) newHeight = 1;
+                
+                thumb->Scale(cSize(newWidth, newHeight));
+            }
+            cImage* ret = thumb.get();
+            Cache[key] = std::move(thumb);
+            lruList.push_front(key);
+            
+            // Cache-Größenlimit erzwingen
+            if (Cache.size() > MAX_CACHE_SIZE) {
+                std::string last = lruList.back();
+                lruList.pop_back();
+                Cache.erase(last);
+            }
+            return ret;
+        }
+        
+        // Do NOT cache nullptrs. If the background thread is currently writing the EXIF thumbnail,
+        // a premature load will fail. By not caching the failure, the UI will automatically retry 
+        // and succeed once the background thread finishes writing the file.
+        return nullptr;
+    }
+    static void Clear() {
+        Cache.clear();
+        lruList.clear();
+    }
+};
+std::list<std::string> cThumbCache::lruList;
+std::map<std::string, std::unique_ptr<cImage>> cThumbCache::Cache;
 
 // --- cMenuImageBrowse ---------------------------------------------------------
 
@@ -130,7 +193,6 @@ cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
             cDirItem *item = list->Get(i);
             if (item && item->Name && strcmp(item->Name, parent) == 0) {
                 currentIndex = i;
-                DrawGrid();
                 break;
             }
         }
@@ -146,6 +208,8 @@ cMenuImageGrid::~cMenuImageGrid()
     delete list;
     free(currentdir);
 
+    // Thumbnail-Cache leeren, um ein unbegrenztes Anwachsen des RAMs zu verhindern
+    cThumbCache::Clear();
 #ifdef HAVE_LIBEXIF
     ClearExifExtractorTasks();
 #endif
@@ -157,11 +221,7 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     ClearExifExtractorTasks();
 #endif
     currentIndex = 0;
-    bool res = list->Load(source, dir);
-
-    Clear();
-    DrawGrid();
-    return res;
+    return list->Load(source, dir);
 }
 
 void cMenuImageGrid::Display(void)
@@ -172,49 +232,106 @@ void cMenuImageGrid::Display(void)
 
     // Die Basisklasse cOsdMenu zeichnet den Titel und die Hilfs-Buttons.
     cOsdMenu::Display();
+
+    // Wir zeichnen unseren Kachel-Inhalt darüber.
+    DrawGrid();
+
+    // Wichtig: Die Änderungen auf dem Bildschirm sichtbar machen.
+    if (osd)
+       osd->Flush();
 }
 
 void cMenuImageGrid::DrawGrid()
 {
-    int cols = 3;
-    int colWidth = 22; // Feste Zeichenbreite pro Spalte
-    Clear();
+    if (!osd) return; // 'osd' aus der Basisklasse cOsdMenu verwenden
+    int osdWidth = osd->Width();
+    int osdHeight = osd->Height();
+
+    int columns = 4;
+    if (ImageSetup.m_nGridColumns > 0) {
+        columns = ImageSetup.m_nGridColumns;
+    } else {
+        // Auto-calculation based on resolution
+        columns = (osdWidth >= 1920) ? 6 : 4;
+        if (osdWidth >= 3840) columns = 8; // 4K Support
+    }
+
+    int margin = 50;
+    int padding = 20;
+    int kachelBreite = (osdWidth - (2 * margin) - ((columns - 1) * padding)) / columns;
+    if (kachelBreite < 10) kachelBreite = 10; // Prevent negative/zero sizes on exotic skins
+    int kachelHoehe = kachelBreite * 3 / 4;
+
     int totalItems = list->Count();
+    const cFont *font = cFont::GetFont(fontMenu);
+    int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
+    int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    for (int row = 0; row < (totalItems + cols - 1) / cols; row++) {
-        std::string rowText = "";
-        for (int col = 0; col < cols; col++) {
-            int idx = row * cols + col;
-            if (idx < totalItems) {
-                cDirItem *item = list->Get(idx);
-                if (item) {
-                    bool isSelected = (idx == currentIndex);
-                    std::string name = item->DisplayName ? item->DisplayName : "";
-                    if (item->Type == itDir || item->Type == itParent) {
-                        name = "[" + name + "]";
-                    }
+    // Nur den Kachelbereich leeren, um den von cOsdMenu gezeichneten Titel und Buttons nicht zu überschreiben
+    osd->DrawRectangle(0, titleHeight, osdWidth - 1, osdHeight - buttonAreaHeight - 1, Theme.Color(clrMenuBg));
 
-                    // Kürze den Namen, falls er für die Spalte zu lang ist
-                    if (name.length() > (size_t)(colWidth - 4)) {
-                        name = name.substr(0, colWidth - 7) + "...";
-                    }
+    int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
+    if (visibleRows < 1) visibleRows = 1;
+    int startRow = (currentIndex / columns / visibleRows) * visibleRows;
 
-                    char buffer[64];
-                    if (isSelected) {
-                        snprintf(buffer, sizeof(buffer), " >%-*s< ", colWidth - 4, name.c_str());
-                    } else {
-                        snprintf(buffer, sizeof(buffer), "  %-*s  ", colWidth - 4, name.c_str());
-                    }
-                    rowText += buffer;
+    for (int i = 0; i < totalItems; i++) {
+        int row = (i / columns) - startRow;
+        if (row < 0 || row >= visibleRows) continue;
+        int col = i % columns;
+        int x = margin + col * (kachelBreite + padding);
+        int y = titleHeight + row * (kachelHoehe + padding);
+
+        tColor bgColor = (i == currentIndex) ? Theme.Color(clrMenuHighlight) : Theme.Color(clrMenuBg);
+        tColor textColor = (i == currentIndex) ? Theme.Color(clrMenuHighlightFg) : Theme.Color(clrMenuFg);
+
+        osd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Draw tile background
+
+        cDirItem *item = list->Get(i);
+        if (item) {
+            bool thumbDrawn = false;
+            char *dirPath = item->Path();
+            char *fullDirPath = source->BuildName(dirPath);
+            char *thumbPath = NULL;
+
+            if (item->Type == itDir) {
+                thumbPath = AddPath(fullDirPath, "folder.jpg");
+            } else if (item->Type == itFile) {
+                thumbPath = strdup(fullDirPath);
+            }
+            if (thumbPath && !item->HasFolderJpg && access(thumbPath, R_OK) == 0) {
+                item->HasFolderJpg = true;
+            }
+            if (thumbPath && item->HasFolderJpg) {
+                cImage* thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
+                if (thumb) {
+                    // Center the image in the tile
+                    int thumbX = x + (kachelBreite - thumb->Width()) / 2;
+                    int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
+                    osd->DrawImage(cPoint(thumbX, thumbY), *thumb);
+                    thumbDrawn = true;
                 }
             }
-            if (col < cols - 1) {
-                rowText += "\t";
+
+            if (thumbPath) free(thumbPath);
+            free(fullDirPath);
+            free(dirPath);
+
+            // If no thumbnail was drawn, draw the text icon
+            if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
+                osd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, font);
             }
+
+            // Draw the name at the bottom with a semi-transparent bar
+            int textBarHeight = font->Height() + 4;
+            int textY = y + kachelHoehe - textBarHeight;
+            if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
+            tColor textBg = 0xA0000000; // Semi-transparent black
+            osd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
+
+            // Limit the drawing width to prevent long names from bleeding into adjacent grid tiles
+            osd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font, kachelBreite - 10);
         }
-        Add(new cOsdItem(rowText.c_str()));
     }
-    SetCurrent(Get(currentIndex / cols));
 }
 
 cDirItem *cMenuImageGrid::CurrentItem()
@@ -230,37 +347,37 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
         return osContinue;
     }
 
-    int cols = 3;
+    int columns = 4;
+    if (ImageSetup.m_nGridColumns > 0) {
+        columns = ImageSetup.m_nGridColumns;
+    } else {
+        if (osd) {
+            columns = (osd->Width() >= 1920) ? 6 : 4;
+            if (osd->Width() >= 3840) columns = 8;
+        }
+    }
+
     switch (Key & ~k_Repeat) {
-        case kUp:
-            if (currentIndex >= cols) {
-                currentIndex -= cols;
-                DrawGrid();
-                Display();
-            }
-            return osContinue;
-        case kDown:
-            if (currentIndex + cols < totalItems) {
-                currentIndex += cols;
-            } else {
-                currentIndex = totalItems - 1; // springe zum letzten Element
-            }
-            DrawGrid();
+        case kRight:
+            if (currentIndex < totalItems - 1) currentIndex++;
             Display();
             return osContinue;
         case kLeft:
-            if (currentIndex > 0) {
-                currentIndex--;
-                DrawGrid();
-                Display();
-            }
+            if (currentIndex > 0) currentIndex--;
+            Display();
             return osContinue;
-        case kRight:
-            if (currentIndex < totalItems - 1) {
-                currentIndex++;
-                DrawGrid();
-                Display();
+        case kDown:
+            if (currentIndex + columns < totalItems) {
+                currentIndex += columns;
+            } else if ((currentIndex / columns) < ((totalItems - 1) / columns)) {
+                // Jump to the last item only if there is a row below us, preventing horizontal jumps in the last row
+                currentIndex = totalItems - 1;
             }
+            Display();
+            return osContinue;
+        case kUp:
+            if (currentIndex >= columns) currentIndex -= columns;
+            Display();
             return osContinue;
         case kOk:
         case kRed:
@@ -296,7 +413,6 @@ eOSState cMenuImageGrid::Parent(void)
             cDirItem *item = list->Get(i);
             if (item && item->Name && strcmp(item->Name, lastDirName) == 0) {
                 currentIndex = i;
-                DrawGrid();
                 break;
             }
         }
