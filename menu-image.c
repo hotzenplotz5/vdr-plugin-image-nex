@@ -65,10 +65,14 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
 #endif
 
     AVFormatContext *fmt_ctx = nullptr;
-    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
+    AVDictionary *opts = nullptr;
+    av_dict_set(&opts, "probesize", "8192", 0);
+    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
+        if (opts) av_dict_free(&opts);
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
+    if (opts) av_dict_free(&opts);
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -485,6 +489,8 @@ void cMenuImageGrid::DrawGrid()
             // If no thumbnail was drawn, draw the text icon
             if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
                 myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, font);
+            } else if (!thumbDrawn && item->Type == itFile) {
+                myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, font);
             }
 
             // Draw the name at the bottom with a semi-transparent bar
