@@ -64,10 +64,9 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     }
 #endif
 
-    // Sicherheitsnetz gegen OSD-Freezes: Lade im Menü-Thread *nur* Dateien < 1MB (Thumbnails).
-    // Niemals riesige 24MP Originalbilder scannen, das blockiert sofort das VDR-Menü!
     struct stat st;
-    if (stat(loadPath, &st) != 0 || st.st_size > 1000000) {
+    if (!useTempThumb && stat(loadPath, &st) == 0 && st.st_size > 5000000) {
+        // Nur zur Sicherheit: Keine Dateien > 5MB im OSD-Hauptthread scannen, um Freezes zu vermeiden.
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
@@ -77,7 +76,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
-    
+
     if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
         avformat_close_input(&fmt_ctx); 
         if (useTempThumb) unlink(tempThumbPath);
@@ -360,18 +359,13 @@ void cMenuImageGrid::Display(void)
     SetTitle(titleBuf);
     SetHelp(tr("Select"), "", "", tr("Back"));
 
-    // WICHTIG: Den Skindesigner / VDR sein Basis-Menü ganz normal aufbauen lassen!
     cOsdMenu::Display();
 
     if (!myOsd) {
-        int osdWidth = 0, osdHeight = 0;
-        double aspect = 0;
-        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
-
-        // Unser Grid als Overlay auf Level 1 (schwebt transparent über dem Skindesigner-Menü)
+        // Level 1: Wir legen unsere Kacheln als 100% transparentes Overlay ÜBER das Skindesigner-Menü
         myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 1);
         if (myOsd) {
-            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
+            tArea Area = { 0, 0, cOsd::OsdWidth() - 1, cOsd::OsdHeight() - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
                 Area.bpp = 8; // Fallback falls die Grafikkarte/das Ausgabe-Plugin kein 32-Bit unterstützt
                 myOsd->SetAreas(&Area, 1);
