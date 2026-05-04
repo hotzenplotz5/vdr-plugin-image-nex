@@ -150,8 +150,11 @@ public:
                 lruList.pop_back();
                 Cache.erase(last);
             }
+            esyslog("imageplugin: loaded thumb %s", path);
             return thumb;
         }
+        
+        esyslog("imageplugin: failed to load thumb %s", path);
         
         // Do NOT cache nullptrs. If the background thread is currently writing the EXIF thumbnail,
         // a premature load will fail. By not caching the failure, the UI will automatically retry 
@@ -303,7 +306,12 @@ void cMenuImageGrid::Display(void)
         myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 0);
         if (myOsd) {
             tArea Area = { 0, 0, cOsd::OsdWidth() - 1, cOsd::OsdHeight() - 1, 32 };
-            myOsd->SetAreas(&Area, 1);
+            eOsdError err = myOsd->SetAreas(&Area, 1);
+            if (err != oeOk) {
+                esyslog("imageplugin: OSD SetAreas failed with code %d! Width: %d, Height: %d", err, cOsd::OsdWidth(), cOsd::OsdHeight());
+            }
+        } else {
+            esyslog("imageplugin: Failed to create new OSD provider!");
         }
     }
     if (myOsd) {
