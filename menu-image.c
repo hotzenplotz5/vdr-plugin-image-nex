@@ -67,6 +67,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     AVFormatContext *fmt_ctx = nullptr;
     AVDictionary *opts = nullptr;
     av_dict_set(&opts, "probesize", "8192", 0);
+    av_dict_set(&opts, "analyzeduration", "0", 0);
     if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
         if (opts) av_dict_free(&opts);
         if (useTempThumb) unlink(tempThumbPath);
@@ -85,6 +86,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     // FFmpeg nur scannen lassen, wenn der Stream nicht schon direkt im JPEG-Header gefunden wurde
     if (video_stream_idx == -1) {
         fmt_ctx->probesize = 16384;
+        fmt_ctx->max_analyze_duration = 0;
         if (avformat_find_stream_info(fmt_ctx, nullptr) >= 0) {
             for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
                 if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -174,22 +176,25 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         if (newWidth <= 0) newWidth = 1;
         if (newHeight <= 0) newHeight = 1;
 
-        retImage = new cImage(cSize(newWidth, newHeight));
+        // WICHTIGER FIX: VDRs cImage allokiert keinen Speicher, wenn Data=NULL ist!
+        // Wir müssen den Puffer zwingend selbst reservieren, sonst schreibt FFmpeg ins Nichts!
+        tColor* pixelBuffer = (tColor*)malloc(newWidth * newHeight * sizeof(tColor));
+        if (pixelBuffer) {
+            SwsContext *sws_ctx = sws_getContext(
+                frame->width, frame->height, (AVPixelFormat)frame->format,
+                newWidth, newHeight, AV_PIX_FMT_BGRA,
+                SWS_BILINEAR, nullptr, nullptr, nullptr
+            );
 
-        SwsContext *sws_ctx = sws_getContext(
-            frame->width, frame->height, (AVPixelFormat)frame->format,
-            newWidth, newHeight, AV_PIX_FMT_BGRA, // VDR erwartet intern BGRA Format für ARGB32
-            SWS_BILINEAR, nullptr, nullptr, nullptr
-        );
+            if (sws_ctx) {
+                uint8_t *dest[4] = { (uint8_t*)pixelBuffer, nullptr, nullptr, nullptr };
+                int dest_linesize[4] = { newWidth * 4, 0, 0, 0 };
+                sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height, dest, dest_linesize);
+                sws_freeContext(sws_ctx);
 
-        if (sws_ctx) {
-            uint8_t *dest[4] = { (uint8_t*)retImage->Data(), nullptr, nullptr, nullptr };
-            int dest_linesize[4] = { newWidth * 4, 0, 0, 0 };
-            sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height, dest, dest_linesize);
-            sws_freeContext(sws_ctx);
-        } else {
-            delete retImage;
-            retImage = nullptr;
+                retImage = new cImage(cSize(newWidth, newHeight), pixelBuffer);
+            }
+            free(pixelBuffer);
         }
     }
 
@@ -399,8 +404,14 @@ void cMenuImageGrid::Display(void)
         if (myOsd) {
             tArea Area = { 0, 0, width - 1, height - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
-                Area.bpp = 8; // Fallback falls die Grafikkarte/das Ausgabe-Plugin kein 32-Bit unterstützt
-                myOsd->SetAreas(&Area, 1);
+                // FATAL: Level 1 in 32-Bit abgelehnt (meist OSD Memory-Limit durch Skindesigner).
+                // Wenn wir auf 8-Bit fallen, werden ARGB-Farben unsichtbar (keine Kacheln!).
+                // Lösung: Wir übernehmen Level 0, um echtes 32-Bit TrueColor zu erzwingen!
+                delete myOsd;
+                myOsd = cOsdProvider::NewOsd(left, top, 0);
+                if (myOsd) {
+                    myOsd->SetAreas(&Area, 1);
+                }
             }
         }
     }
@@ -436,9 +447,20 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // OSD komplett transparent machen, damit das Skindesigner Theme ungestört sichtbar bleibt!
-    tColor bgClear = 0x00000000;
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgClear);
+    if (myOsd->Level() == 1) {
+        // Overlay-Modus: OSD transparent machen, Skindesigner-Menü im Hintergrund bleibt sichtbar
+        myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, 0x00000000);
+    } else {
+        // Fallback-Modus (Level 0): Skindesigner-Menü fehlt, wir müssen eigenen Hintergrund + Titel zeichnen
+        tColor bgFull = 0xDD151515;
+        myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
+        char titleBuf[256];
+        snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+        myOsd->DrawText(margin, 10, titleBuf, 0xFF00AAFF, bgFull, font);
+        int btnY = osdHeight - buttonAreaHeight;
+        myOsd->DrawText(margin, btnY + 10, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
+        myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
+    }
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
