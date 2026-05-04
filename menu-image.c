@@ -36,6 +36,91 @@
 #include "setup-image.h"
 #include <memory>
 
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+}
+
+static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
+    AVFormatContext *fmt_ctx = nullptr;
+    if (avformat_open_input(&fmt_ctx, path, nullptr, nullptr) < 0) return nullptr;
+    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { avformat_close_input(&fmt_ctx); return nullptr; }
+
+    int video_stream_idx = -1;
+    for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
+        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            video_stream_idx = i;
+            break;
+        }
+    }
+    if (video_stream_idx == -1) { avformat_close_input(&fmt_ctx); return nullptr; }
+
+    AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_idx]->codecpar;
+    const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
+    if (!codec) { avformat_close_input(&fmt_ctx); return nullptr; }
+
+    AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
+    avcodec_parameters_to_context(codec_ctx, codecpar);
+    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        return nullptr;
+    }
+
+    AVFrame *frame = av_frame_alloc();
+    AVPacket *pkt = av_packet_alloc();
+    bool decoded = false;
+
+    while (av_read_frame(fmt_ctx, pkt) >= 0) {
+        if (pkt->stream_index == video_stream_idx) {
+            avcodec_send_packet(codec_ctx, pkt);
+            if (avcodec_receive_frame(codec_ctx, frame) == 0) {
+                decoded = true;
+                break;
+            }
+        }
+        av_packet_unref(pkt);
+    }
+    av_packet_free(&pkt);
+
+    cImage* retImage = nullptr;
+    if (decoded && frame->width > 0 && frame->height > 0) {
+        double aspect = (double)frame->height / frame->width;
+        int newWidth = maxWidth;
+        int newHeight = newWidth * aspect;
+        if (newHeight > maxHeight) {
+            newHeight = maxHeight;
+            if (aspect > 0.0) newWidth = newHeight / aspect;
+        }
+        if (newWidth <= 0) newWidth = 1;
+        if (newHeight <= 0) newHeight = 1;
+
+        retImage = new cImage(newWidth, newHeight);
+
+        SwsContext *sws_ctx = sws_getContext(
+            frame->width, frame->height, (AVPixelFormat)frame->format,
+            newWidth, newHeight, AV_PIX_FMT_BGRA, // VDR erwartet intern BGRA Format für ARGB32
+            SWS_BILINEAR, nullptr, nullptr, nullptr
+        );
+
+        if (sws_ctx) {
+            uint8_t *dest[4] = { (uint8_t*)retImage->Data(), nullptr, nullptr, nullptr };
+            int dest_linesize[4] = { newWidth * 4, 0, 0, 0 };
+            sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height, dest, dest_linesize);
+            sws_freeContext(sws_ctx);
+        } else {
+            delete retImage;
+            retImage = nullptr;
+        }
+    }
+
+    av_frame_free(&frame);
+    avcodec_free_context(&codec_ctx);
+    avformat_close_input(&fmt_ctx);
+    return retImage;
+}
+
 class cThumbCache {
 private:
     static const size_t MAX_CACHE_SIZE = 100;
@@ -54,26 +139,9 @@ public:
             return Cache[key].get();
         }
         
-        auto thumb = std::unique_ptr<cImage>(new cImage);
-        if (thumb->Load(path)) {
-            if (thumb->Width() > 0 && thumb->Height() > 0) {
-                double aspect = (double)thumb->Height() / thumb->Width();
-                int newWidth = maxWidth;
-                int newHeight = newWidth * aspect;
-                if (newHeight > maxHeight) {
-                    newHeight = maxHeight;
-                    if (aspect > 0.0)
-                        newWidth = newHeight / aspect;
-                }
-                
-                // Prevent VDR scaling crashes with corrupted aspect ratios or extreme sizes
-                if (newWidth <= 0) newWidth = 1;
-                if (newHeight <= 0) newHeight = 1;
-                
-                thumb->Scale(cSize(newWidth, newHeight));
-            }
-            cImage* ret = thumb.get();
-            Cache[key] = std::move(thumb);
+        cImage* thumb = LoadThumbnail(path, maxWidth, maxHeight);
+        if (thumb) {
+            Cache[key] = std::unique_ptr<cImage>(thumb);
             lruList.push_front(key);
             
             // Cache-Größenlimit erzwingen
@@ -82,7 +150,7 @@ public:
                 lruList.pop_back();
                 Cache.erase(last);
             }
-            return ret;
+            return thumb;
         }
         
         // Do NOT cache nullptrs. If the background thread is currently writing the EXIF thumbnail,
@@ -181,6 +249,7 @@ cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
     list = new cDirList;
     currentIndex = 0;
     currentdir = NULL;
+    myOsd = NULL;
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
@@ -207,6 +276,10 @@ cMenuImageGrid::~cMenuImageGrid()
 
     delete list;
     free(currentdir);
+    if (myOsd) {
+        delete myOsd;
+        myOsd = NULL;
+    }
 
     // Thumbnail-Cache leeren, um ein unbegrenztes Anwachsen des RAMs zu verhindern
     cThumbCache::Clear();
@@ -226,26 +299,24 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 
 void cMenuImageGrid::Display(void)
 {
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    SetTitle(titleBuf); // Titel an VDR übergeben, BEVOR die Basisklasse ihn zeichnet
-
-    // Die Basisklasse cOsdMenu zeichnet den Titel und die Hilfs-Buttons.
-    cOsdMenu::Display();
-
-    // Wir zeichnen unseren Kachel-Inhalt darüber.
-    DrawGrid();
-
-    // Wichtig: Die Änderungen auf dem Bildschirm sichtbar machen.
-    if (osd)
-       osd->Flush();
+    if (!myOsd) {
+        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 0);
+        if (myOsd) {
+            tArea Area = { 0, 0, cOsd::OsdWidth() - 1, cOsd::OsdHeight() - 1, 32 };
+            myOsd->SetAreas(&Area, 1);
+        }
+    }
+    if (myOsd) {
+        DrawGrid();
+        myOsd->Flush();
+    }
 }
 
 void cMenuImageGrid::DrawGrid()
 {
-    if (!osd) return; // 'osd' aus der Basisklasse cOsdMenu verwenden
-    int osdWidth = osd->Width();
-    int osdHeight = osd->Height();
+    if (!myOsd) return;
+    int osdWidth = myOsd->Width();
+    int osdHeight = myOsd->Height();
 
     int columns = 4;
     if (ImageSetup.m_nGridColumns > 0) {
@@ -263,12 +334,20 @@ void cMenuImageGrid::DrawGrid()
     int kachelHoehe = kachelBreite * 3 / 4;
 
     int totalItems = list->Count();
-    const cFont *font = cFont::GetFont(fontMenu);
+    const cFont *font = cFont::GetFont(fontOsd);
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // Nur den Kachelbereich leeren, um den von cOsdMenu gezeichneten Titel und Buttons nicht zu überschreiben
-    osd->DrawRectangle(0, titleHeight, osdWidth - 1, osdHeight - buttonAreaHeight - 1, Theme.Color(clrMenuBg));
+    tColor bgFull = 0xDD000000;
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
+
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    myOsd->DrawText(margin, 10, titleBuf, 0xFFFFFFFF, bgFull, font);
+
+    int btnY = osdHeight - buttonAreaHeight + 10;
+    myOsd->DrawText(margin, btnY, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
+    myOsd->DrawText(margin + 200, btnY, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
@@ -281,10 +360,10 @@ void cMenuImageGrid::DrawGrid()
         int x = margin + col * (kachelBreite + padding);
         int y = titleHeight + row * (kachelHoehe + padding);
 
-        tColor bgColor = (i == currentIndex) ? Theme.Color(clrMenuHighlight) : Theme.Color(clrMenuBg);
-        tColor textColor = (i == currentIndex) ? Theme.Color(clrMenuHighlightFg) : Theme.Color(clrMenuFg);
+        tColor bgColor = (i == currentIndex) ? 0xCC0055AA : 0xAA222222;
+        tColor textColor = (i == currentIndex) ? 0xFFFFFFFF : 0xFFDDDDDD;
 
-        osd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Draw tile background
+        myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Draw tile background
 
         cDirItem *item = list->Get(i);
         if (item) {
@@ -307,7 +386,7 @@ void cMenuImageGrid::DrawGrid()
                     // Center the image in the tile
                     int thumbX = x + (kachelBreite - thumb->Width()) / 2;
                     int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
-                    osd->DrawImage(cPoint(thumbX, thumbY), *thumb);
+                    myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
                     thumbDrawn = true;
                 }
             }
@@ -318,7 +397,7 @@ void cMenuImageGrid::DrawGrid()
 
             // If no thumbnail was drawn, draw the text icon
             if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
-                osd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, font);
+                myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, font);
             }
 
             // Draw the name at the bottom with a semi-transparent bar
@@ -326,10 +405,10 @@ void cMenuImageGrid::DrawGrid()
             int textY = y + kachelHoehe - textBarHeight;
             if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
             tColor textBg = 0xA0000000; // Semi-transparent black
-            osd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
+            myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
 
             // Limit the drawing width to prevent long names from bleeding into adjacent grid tiles
-            osd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font, kachelBreite - 10);
+            myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font, kachelBreite - 10);
         }
     }
 }
@@ -351,19 +430,42 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     if (ImageSetup.m_nGridColumns > 0) {
         columns = ImageSetup.m_nGridColumns;
     } else {
-        if (osd) {
-            columns = (osd->Width() >= 1920) ? 6 : 4;
-            if (osd->Width() >= 3840) columns = 8;
+        if (myOsd) {
+            columns = (myOsd->Width() >= 1920) ? 6 : 4;
+            if (myOsd->Width() >= 3840) columns = 8;
         }
     }
 
+    int visibleRows = 1;
+    if (myOsd) {
+        int kachelBreite = (myOsd->Width() - 100 - ((columns - 1) * 20)) / columns;
+        if (kachelBreite < 10) kachelBreite = 10;
+        int kachelHoehe = kachelBreite * 3 / 4;
+        const cFont *font = cFont::GetFont(fontOsd);
+        visibleRows = (myOsd->Height() - font->Height() - 70) / (kachelHoehe + 20);
+        if (visibleRows < 1) visibleRows = 1;
+    }
+    int pageItems = columns * visibleRows;
+
     switch (Key & ~k_Repeat) {
+        case kChannelPlus:
+            if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
+            else currentIndex = totalItems - 1;
+            Display();
+            return osContinue;
+        case kChannelMinus:
+            if (currentIndex >= pageItems) currentIndex -= pageItems;
+            else currentIndex = 0;
+            Display();
+            return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
+            else currentIndex = 0;
             Display();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
+            else currentIndex = totalItems - 1;
             Display();
             return osContinue;
         case kDown:
