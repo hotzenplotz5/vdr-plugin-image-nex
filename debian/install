@@ -1,0 +1,11 @@
+#libvdr-image.so.* usr/lib/vdr/plugins/
+
+#debian/imagesources.conf etc/vdr/plugins/
+#examples/imagecmds.conf etc/vdr/plugins/
+
+#scripts/*.sh usr/lib/vdr-plugin-image/
+
+#debian/tmp/usr/share/locale
+debian/imagesources.conf etc/vdr/plugins/image/
+examples/imagecmds.conf etc/vdr/plugins/image/
+scripts/*.sh usr/lib/vdr-plugin-image/

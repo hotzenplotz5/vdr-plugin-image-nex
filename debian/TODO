@@ -1,0 +1,4 @@
+- Remove Build-dependency to libavutilcvs-dev, liblame-dev, libxvidcore-dev,
+  as soon as Etch support gets droped or Christian Marillat fixes the Etch
+  version of libavcodeccvs51-dev
+

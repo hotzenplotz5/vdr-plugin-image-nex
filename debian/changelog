@@ -1,0 +1,1152 @@
+vdr-plugin-image-next (0.6.0+git2026) resolute; urgency=medium
+
+  [ Holger Schvestka ]
+  * Eigene Anpassungen für yavdr
+  * Patches-Ordner entfernt
+  * C++ Thread-Fehler (Wait -> TimedWait, Cancel -> Stop) behoben
+  * Include-Fehler in menu-image.c korrigiert
+  * Fix: Syntax in imagesources.conf auf das erforderliche 4-Parameter-
+    Format korrigiert
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Mon, 04 May 2026 08:54:33 +0200
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr11~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 02 Mar 2026 18:31:23 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr10~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 08 Feb 2026 12:51:42 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr9~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 08 Feb 2026 02:15:36 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr8~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 08 Feb 2026 02:06:25 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr7~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 06 Feb 2026 12:31:46 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr6~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 22 Jan 2026 17:15:01 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr5~resolute) resolute; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 16 Nov 2025 12:53:04 +0100
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr3~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 25 Jul 2025 00:31:26 +0200
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr2~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 21 Jun 2025 19:30:47 +0200
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr1~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 17 Apr 2025 22:43:24 +0200
+
+vdr-plugin-image (0.5.0+git20250329-9-4b69d48-0yavdr0~noble) noble; urgency=medium
+
+  * new upstream snapshot
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 29 Mar 2025 14:35:43 +0100
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr6~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 26 Feb 2025 16:24:40 +0100
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr5~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 01 Nov 2024 19:48:26 +0100
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr4~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 31 Oct 2024 08:50:48 +0100
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr3~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 12 Oct 2024 22:12:07 +0200
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr2~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 06 Oct 2024 20:42:07 +0200
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr1~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 27 Sep 2024 17:42:04 +0200
+
+vdr-plugin-image (0.5.0+git20240924-7-1ba2174-0yavdr0~noble) noble; urgency=medium
+
+  * new upstream snapshot
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 25 Sep 2024 19:09:52 +0200
+
+vdr-plugin-image (0.5.0+git20220801-5-78618fb-0yavdr4~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 15 Jul 2024 20:16:35 +0200
+
+vdr-plugin-image (0.5.0+git20220801-5-78618fb-0yavdr3~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 26 Apr 2024 08:40:24 +0200
+
+vdr-plugin-image (0.5.0+git20220801-5-78618fb-0yavdr2~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 25 Apr 2024 21:50:08 +0200
+
+vdr-plugin-image (0.5.0+git20220801-5-78618fb-0yavdr1~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Tue, 02 Apr 2024 16:05:25 +0200
+
+vdr-plugin-image (0.5.0+git20220801-5-78618fb-0yavdr0~noble) noble; urgency=medium
+
+  * new upstream version
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 23 Mar 2024 00:55:30 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-4yavdr0~noble) noble; urgency=medium
+
+  * fix FTBS, make m_pacCodec const
+  * fix FTBS, make register (which is obsolete in C++17) a macro is necessary
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 26 Jan 2024 20:36:54 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr7~noble) noble; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 26 Jan 2024 12:19:12 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr6~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 01 Jan 2024 08:02:23 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr5~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 18 Feb 2023 15:03:39 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr4~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 14 Dec 2022 20:37:21 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr3~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 30 Nov 2022 22:08:47 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr2~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 19 Nov 2022 23:14:26 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr1~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 17 Apr 2022 08:26:10 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-3yavdr0~jammy) jammy; urgency=medium
+
+  * fix FTBS 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 19 Feb 2022 20:20:49 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr15~jammy) jammy; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 19 Feb 2022 13:33:52 +0000
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr14~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 02 Feb 2022 16:10:35 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr13~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 31 Dec 2021 17:27:52 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr12~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 30 Dec 2021 14:42:22 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr11~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 22 Dec 2021 20:01:30 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr10~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 02 Jul 2021 13:12:11 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr9~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 14 Jun 2021 14:42:40 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr8~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 03 Jun 2021 23:08:45 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr7~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 21 May 2021 23:58:50 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr6~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Tue, 20 Apr 2021 22:00:03 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr5~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 18 Apr 2021 00:09:12 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr4~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 07 Apr 2021 17:55:46 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr3~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 12 Feb 2021 23:55:41 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr3~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 27 Dec 2020 20:37:46 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr2~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Tue, 20 Oct 2020 17:24:57 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr1~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Tue, 04 Aug 2020 09:34:11 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-2yavdr0~focal) focal; urgency=medium
+
+  * add patch by lnj to improve compatibility with newer ffmpeg versions (https://www.vdr-portal.de/forum/index.php?thread/132196-image-plugin-patch/&postID=1327610#post1327610) 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 04 Jul 2020 08:03:19 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-1yavdr4~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 15 Jun 2020 14:19:27 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-1yavdr3~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 25 May 2020 18:36:54 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-1yavdr2~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 04 May 2020 20:39:12 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-1yavdr1~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 26 Apr 2020 07:47:28 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-1yavdr1~focal) focal; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 28 Nov 2019 00:02:33 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-1yavdr0~bionic) bionic; urgency=medium
+
+  * add patch by lnj https://www.vdr-portal.de/forum/index.php?thread/132196-image-plugin-patch/&postID=1316645#post1316645
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 30 Jun 2019 20:00:34 +0200
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-0yavdr3~bionic) bionic; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Tue, 19 Mar 2019 20:57:35 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-0yavdr2~bionic) bionic; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 16 Mar 2019 09:36:28 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-0yavdr1~bionic) bionic; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 10 Mar 2019 12:34:51 +0100
+
+vdr-plugin-image (0.4.0+git20170327-3-e108a33-0yavdr0~bionic) bionic; urgency=medium
+
+  * add patch for ffmpeg > 3.x compatibility
+    (https://www.vdr-portal.de/forum/index.php?thread/132196-image-plugin-patch/)
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 24 Oct 2018 15:48:50 +0200
+
+vdr-plugin-image (0.4.0-4yavdr2~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Tue, 22 Dec 2015 23:21:59 +0100
+
+vdr-plugin-image (0.4.0-4yavdr2~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Tue, 22 Dec 2015 18:44:37 +0100
+
+vdr-plugin-image (0.4.0-4yavdr1~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Mon, 21 Dec 2015 20:21:19 +0100
+
+vdr-plugin-image (0.4.0-4yavdr0~trusty) trusty; urgency=medium
+
+  * rebuild 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 25 May 2015 18:40:59 +0200
+
+vdr-plugin-image (0.4.0-3yavdr0~trusty) trusty; urgency=medium
+
+  * rework debian dir 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Fri, 24 Apr 2015 14:16:19 +0200
+
+vdr-plugin-image (0.4.0-2yavdr7~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Fri, 03 Apr 2015 15:17:48 +0200
+
+vdr-plugin-image (0.4.0-2yavdr6~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Fri, 20 Feb 2015 11:14:07 +0100
+
+vdr-plugin-image (0.4.0-2yavdr5~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Thu, 12 Feb 2015 00:34:10 +0100
+
+vdr-plugin-image (0.4.0-2yavdr4~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 08 Feb 2015 16:18:16 +0100
+
+vdr-plugin-image (0.4.0-2yavdr3~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- Alexander Grothe <seahawk1986@hotmail.com>  Sun, 08 Feb 2015 13:18:44 +0100
+
+vdr-plugin-image (0.4.0-2yavdr2~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 01 Feb 2015 16:16:45 +0100
+
+vdr-plugin-image (0.4.0-2yavdr1~trusty) trusty; urgency=medium
+
+  * automatic rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 18 Jan 2015 16:35:08 +0100
+
+vdr-plugin-image (0.4.0-2yavdr0~trusty) trusty; urgency=medium
+
+  * rebuild for ffmpeg 2.5 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Wed, 17 Dec 2014 22:37:25 +0100
+
+vdr-plugin-image (0.4.0-1yavdr1~trusty) trusty; urgency=medium
+
+  * rebuild
+
+ -- Alexander Grothe <seahawk1986@hotmail.com>  Wed, 14 May 2014 20:56:58 +0200
+
+vdr-plugin-image (0.4.0-1yavdr0~trusty) trusty; urgency=medium
+
+  * dependencies? 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 05 Apr 2014 16:24:17 +0200
+
+vdr-plugin-image (0.4.0-0yavdr0~trusty) trusty; urgency=medium
+
+  * new upstream version 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 05 Apr 2014 16:05:44 +0200
+
+vdr-plugin-image (0.3.1-1yavdr31~trusty) trusty; urgency=medium
+
+  * build for trusty thar
+
+ -- Alexander Grothe <seahawk1986@hotmail.com>  Fri, 04 Apr 2014 23:26:59 +0200
+
+vdr-plugin-image (0.3.1-1yavdr30~precise) precise; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Wed, 02 Apr 2014 22:04:47 +0200
+
+vdr-plugin-image (0.3.1-1yavdr28~precise) precise; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Sun, 23 Mar 2014 15:58:29 +0100
+
+vdr-plugin-image (0.3.1-1yavdr27~precise) precise; urgency=medium
+
+  * automatic rebuild
+
+ -- yavdr package builder <release@yavdr.org>  Sat, 26 Oct 2013 10:36:34 +0200
+
+vdr-plugin-image (0.3.1-1yavdr26~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Thu, 12 Sep 2013 13:05:16 +0200
+
+vdr-plugin-image (0.3.1-1yavdr25~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Fri, 12 Jul 2013 00:59:13 +0200
+
+vdr-plugin-image (0.3.1-1yavdr24~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 23 Jun 2013 10:23:09 +0200
+
+vdr-plugin-image (0.3.1-1yavdr23~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Tue, 02 Apr 2013 19:48:15 +0200
+
+vdr-plugin-image (0.3.1-1yavdr22~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 17 Mar 2013 15:48:47 +0100
+
+vdr-plugin-image (0.3.1-1yavdr21~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Thu, 14 Mar 2013 00:59:46 +0100
+
+vdr-plugin-image (0.3.1-1yavdr19~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Wed, 13 Mar 2013 21:49:41 +0100
+
+vdr-plugin-image (0.3.1-1yavdr18~precise) precise; urgency=high
+
+  * Rebuild for yaVDR64 0.6.0alpha
+
+ -- Frank Neumann <fnu@yavdr.org>  Sun, 10 Mar 2013 21:21:57 +0100
+
+vdr-plugin-image (0.3.1-1yavdr17~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 09 Dec 2012 19:25:12 +0100
+
+vdr-plugin-image (0.3.1-1yavdr16~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Wed, 05 Dec 2012 21:06:10 +0100
+
+vdr-plugin-image (0.3.1-1yavdr15~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Sat, 01 Dec 2012 15:53:04 +0100
+
+vdr-plugin-image (0.3.1-1yavdr14~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Wed, 21 Nov 2012 20:04:37 +0100
+
+vdr-plugin-image (0.3.1-1yavdr13~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 21 Nov 2012 07:35:38 +0100
+
+vdr-plugin-image (0.3.1-1yavdr12~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Thu, 11 Oct 2012 11:15:53 +0200
+
+vdr-plugin-image (0.3.1-1yavdr11~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Sun, 25 Mar 2012 22:23:10 +0200
+
+vdr-plugin-image (0.3.1-1yavdr10~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Thu, 15 Mar 2012 10:15:09 +0100
+
+vdr-plugin-image (0.3.1-1yavdr9~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Tue, 13 Mar 2012 19:13:46 +0100
+
+vdr-plugin-image (0.3.1-1yavdr8~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Thu, 23 Feb 2012 08:57:49 +0100
+
+vdr-plugin-image (0.3.1-1yavdr7~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Mon, 13 Feb 2012 20:04:30 +0100
+
+vdr-plugin-image (0.3.1-1yavdr7~oneiric) oneiric; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Thu, 29 Dec 2011 11:08:32 +0100
+
+vdr-plugin-image (0.3.1-1yavdr6~oneiric) oneiric; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Sun, 25 Dec 2011 11:36:46 +0100
+
+vdr-plugin-image (0.3.1-1yavdr5~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Sat, 24 Dec 2011 11:24:01 +0100
+
+vdr-plugin-image (0.3.1-1yavdr4~precise) precise; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Mon, 17 Oct 2011 15:17:41 +0200
+
+vdr-plugin-image (0.3.1-1yavdr3~natty) natty; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Mon, 05 Sep 2011 18:13:05 +0200
+
+vdr-plugin-image (0.3.1-1yavdr2~natty) natty; urgency=medium
+
+  * rebuild
+
+ -- Marco Scholl <develop@marco-scholl.de>  Thu, 25 Aug 2011 17:52:53 +0200
+
+vdr-plugin-image (0.3.1-1yavdr1~natty) natty; urgency=low
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Thu, 18 Aug 2011 20:02:59 +0200
+
+vdr-plugin-image (0.3.1-1yavdr0~natty) natty; urgency=low
+
+  * dpkg-trigger
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 15 Jun 2011 13:44:00 +0200
+
+vdr-plugin-image (0.3.1-0yavdr0~natty) natty; urgency=low
+
+  * New upstream release
+  * Bumped standards version to 3.9.1
+  * Removed debian/patches
+  * Using COMPAT=7 now
+  * Removed Build-Depend on dpatch
+  * Switch to dpkg-source 3.0 (quilt) format
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Sat, 19 Mar 2011 11:40:59 +0200
+
+vdr-plugin-image (0.3.0-16yavdr1) lucid; urgency=low
+
+  * Added 02_ffmpeg-20100426.dpatch
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 16 Jun 2010 01:56:54 +0200
+
+vdr-plugin-image (0.3.0-5) experimental; urgency=low
+
+  * Added 01_fix-PLUGIN-definition.dpatch
+  * Removed DVBDIR from debian/rules
+  * Added installation of locale files
+
+ -- Thomas Günther <tom@toms-cafe.de>  Mon, 01 Mar 2010 00:21:47 +0100
+
+vdr-plugin-image (0.3.0-4) experimental; urgency=low
+
+  * Removed non-standard shebang line from debian/rules
+  * Standards-Version: 3.8.3
+
+ -- Tobias Grimm <etobi@debian.org>  Mon, 09 Nov 2009 19:36:26 +0100
+
+vdr-plugin-image (0.3.0-3) experimental; urgency=low
+
+  * Release for vdrdevel 1.7.6
+  * Changed Maintainer to Debian VDR Team
+  * Added Tobias Grimm and myself to Uploaders
+  * Updated debian/copyright to our new format
+  * Added ${misc:Depends}
+  * Bumped standards version to 3.8.1
+  * Changed section to "video"
+
+ -- Thomas Günther <tom@toms-cafe.de>  Wed, 29 Apr 2009 23:10:55 +0200
+
+vdr-plugin-image (0.3.0-2) experimental; urgency=low
+
+  * Dropped libavcodeccvs, libavformatcvs and libswscalecvs build dependencies
+    (no more support for these old ffmpeg versions!)
+
+ -- Tobias Grimm <etobi@debian.org>  Sun, 22 Feb 2009 16:51:10 +0100
+
+vdr-plugin-image (0.3.0-1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Tobias Grimm <etobi@debian.org>  Sat, 21 Feb 2009 18:51:08 +0100
+
+vdr-plugin-image (0.2.7-16) experimental; urgency=low
+
+  * Christian once more changed the package naming of the ffmpeg libs,
+    so the build dependencies needed to be changed again
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun, 27 Jul 2008 13:08:20 +0200
+
+vdr-plugin-image (0.2.7-15) experimental; urgency=low
+
+  * Dropped patchlevel control field
+  * Build-Depend on vdr-dev (>=1.6.0-5)
+  * Bumped Standards-Version to 3.8.0
+
+ -- Tobias Grimm <tg@e-tobi.net>  Fri, 25 Jul 2008 19:25:13 +0200
+
+vdr-plugin-image (0.2.7-14) experimental; urgency=low
+
+  * Removed 01_link_libavcodec.dpatch
+  * Added 01_new-ffmpeg.dpatch
+  * Build-depend on libavcodeccvs-dev | libavcodec-dev,
+    libavformatcvs-dev | libavformat-dev, libswscalecvs-dev | libswscale-dev
+    (See README.Debian)
+  * Now really switched Build-System to cdbs
+  * Build-depend on libavutilcvs-dev, liblame-dev and libxvidcore-dev because
+    of a bug in libavcodeccvs51 (20070329-0.0etch1)
+  * Added 02_new-ffmpeg-header-location.dpatch
+
+ -- Tobias Grimm <tg@e-tobi.net>  Wed, 21 May 2008 20:39:02 +0200
+
+vdr-plugin-image (0.2.7-13) experimental; urgency=low
+
+  * Increased package version to force rebuild for vdr 1.6.0-1ctvdr7
+
+ -- Tobias Grimm <tg@e-tobi.net>  Mon, 12 May 2008 12:59:06 +0200
+
+vdr-plugin-image (0.2.7-12) experimental; urgency=low
+
+  * Build-depend on vdr-dev (>= 1.6.0)
+  * Switched Build-System to cdbs, Build-Depend on cdbs
+  * Renamed XS-Vcs-* fields to Vcs-* in debian/control
+  * Bumped Standards-Version to 3.7.3
+  * Using COMPAT=5 now
+
+ -- Tobias Grimm <tg@e-tobi.net>  Fri, 04 Apr 2008 00:25:02 +0200
+
+vdr-plugin-image (0.2.7-11) experimental; urgency=low
+
+  * Force rebuild for vdr 1.5.15
+
+ -- Tobias Grimm <tg@e-tobi.net>  Mon, 18 Feb 2008 21:08:07 +0100
+
+vdr-plugin-image (0.2.7-10) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.13
+
+ -- Thomas Günther <tom@toms-cafe.de>  Wed, 16 Jan 2008 10:31:33 +0100
+
+vdr-plugin-image (0.2.7-9) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.12
+
+ -- Thomas Günther <tom@toms-cafe.de>  Tue, 20 Nov 2007 23:46:19 +0100
+
+vdr-plugin-image (0.2.7-8) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.11
+
+ -- Thomas Günther <tom@toms-cafe.de>  Tue,  6 Nov 2007 23:34:13 +0100
+
+vdr-plugin-image (0.2.7-7) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.10
+
+ -- Thomas Günther <tom@toms-cafe.de>  Tue, 16 Oct 2007 23:50:54 +0200
+
+vdr-plugin-image (0.2.7-6) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.9
+
+ -- Thomas Günther <tom@toms-cafe.de>  Tue, 28 Aug 2007 01:01:05 +0200
+
+vdr-plugin-image (0.2.7-5) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.8
+
+ -- Thomas Günther <tom@toms-cafe.de>  Thu, 23 Aug 2007 01:09:00 +0200
+
+vdr-plugin-image (0.2.7-4) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.6
+
+ -- Thomas Günther <tom@toms-cafe.de>  Tue, 14 Aug 2007 01:46:14 +0200
+
+vdr-plugin-image (0.2.7-3) unstable; urgency=low
+
+  [ Thomas Schmidt ]
+  * Added XS-Vcs-Svn and XS-Vcs-Browser fields to debian/control
+  * Removed version from Build-Dependancy to dpatch - even Sarge has the
+    required version
+
+  [ Thomas Günther ]
+  * Release for vdrdevel 1.5.5
+
+ -- Thomas Günther <tom@toms-cafe.de>  Wed, 27 Jun 2007 23:02:35 +0200
+
+vdr-plugin-image (0.2.7-2) unstable; urgency=low
+
+  * Release for vdrdevel 1.5.2
+
+ -- Thomas Günther <tom@toms-cafe.de>  Sat, 28 Apr 2007 00:00:28 +0200
+
+vdr-plugin-image (0.2.7-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sat, 10 Mar 2007 20:42:20 +0100
+
+vdr-plugin-image (0.2.6-9) experimental; urgency=low
+
+  * Release for vdrdevel 1.5.1
+
+ -- Thomas Günther <tom@toms-cafe.de>  Tue, 27 Feb 2007 19:59:15 +0100
+
+vdr-plugin-image (0.2.6-8) experimental; urgency=low
+
+  [ Thomas Günther ]
+  * Replaced VDRdevel adaptions in debian/rules with make-special-vdr
+  * Adapted call of dependencies.sh and patchlevel.sh to the new location
+    in /usr/share/vdr-dev/
+
+  [ Tobias Grimm ]
+  * Build-Depend on vdr-dev (>=1.4.5-1)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun, 14 Jan 2007 20:23:05 +0100
+
+vdr-plugin-image (0.2.6-7) unstable; urgency=low
+
+  * Build-Depend on vdr-dev (>=1.4.4-1)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun,  5 Nov 2006 11:45:40 +0100
+
+vdr-plugin-image (0.2.6-6) unstable; urgency=low
+
+  * Build-Depend on vdr-dev (>=1.4.3-1)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sat, 23 Sep 2006 20:32:57 +0200
+
+vdr-plugin-image (0.2.6-5) unstable; urgency=low
+
+  * Build-Depend on vdr-dev (>=1.4.2-1)
+  * Bumped Standards-Version to 3.7.2
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun, 27 Aug 2006 14:39:32 +0200
+
+vdr-plugin-image (0.2.6-4) unstable; urgency=low
+
+  * Added 01_Makefile-fPIC-fix.dpatch
+
+ -- Tobias Grimm <tg@e-tobi.net>  Wed, 26 Jul 2006 18:56:27 +0200
+
+vdr-plugin-image (0.2.6-3) unstable; urgency=low
+
+  * Thomas Schmidt <tschmidt@debian.org>
+    - Build-Depend on vdr-dev (>=1.4.1-1)
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Fri, 16 Jun 2006 22:02:57 +0200
+
+vdr-plugin-image (0.2.6-2) unstable; urgency=low
+
+  * Thomas Schmidt <tschmidt@debian.org>
+    - Build-Depend on vdr-dev (>=1.4.0-1)
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Wed,  3 May 2006 23:07:28 +0200
+
+vdr-plugin-image (0.2.6-1) unstable; urgency=low
+
+  * Tobias Grimm <tg@e-tobi.net>
+    - New upstream release
+    - Modified debian/watch to use new downloadurlmangle option of uscan
+    - Build-Depend on vdr (>=1.3.48-1)
+    - Removed DVBDIR from debian/rules
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Mon, 24 Apr 2006 23:04:40 +0200
+
+vdr-plugin-image (0.2.5-4) unstable; urgency=low
+
+  * Tobias Grimm <tg@e-tobi.net>
+    - Build-Depend on vdr (>=1.3.46-1)
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Wed, 12 Apr 2006 22:14:04 +0200
+
+vdr-plugin-image (0.2.5-3) unstable; urgency=low
+
+  * Tobias Grimm <tg@e-tobi.net>
+    - Build-Depend on vdr (>=1.3.45-1)
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Mon, 27 Mar 2006 21:16:27 +0200
+
+vdr-plugin-image (0.2.5-2) unstable; urgency=low
+
+  * Tobias Grimm <tg@e-tobi.net>
+    - Build-Depend on vdr (>=1.3.41-1)
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Tue, 31 Jan 2006 01:28:59 +0100
+
+vdr-plugin-image (0.2.5-1) unstable; urgency=low
+
+  * Tobias Grimm <tg@e-tobi.net>
+    - Build-Depend on vdr-dev (>=1.3.40-1)
+    - libexif-dev (>= 0.6.12)
+  * Thomas Schmidt <tschmidt@debian.org>
+    - New upstream release
+      + Updated 01_link_libavcodec.dpatch
+
+ -- Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>  Wed, 25 Jan 2006 23:51:26 +0100
+
+vdr-plugin-image (0.2.4-2) unstable; urgency=low
+
+  * Build-Depend on vdr (>=1.3.37-1)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sat,  3 Dec 2005 20:56:25 +0100
+
+vdr-plugin-image (0.2.4-1) unstable; urgency=low
+
+  * Thomas Günther <tom@toms-cafe.de>
+    - New upstream release
+    - Adapted 01_link_libavcodec.dpatch
+    - Removed 02_encode.dpatch
+    - Added Suggests: imagemagick, libjpeg-progs for commands in imagecmds.conf
+      (Thx to wilderigel at vdrportal.de)
+
+ -- Thomas Günther <tom@toms-cafe.de>  Fri, 25 Nov 2005 15:46:14 +0100
+
+vdr-plugin-image (0.2.3-9) unstable; urgency=low
+
+  * Build-Depend on vdr (>=1.3.33-1)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun,  2 Oct 2005 10:33:41 +0200
+
+vdr-plugin-image (0.2.3-8) unstable; urgency=low
+
+  * Build-Depend on vdr (>=1.3.32-1)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Wed, 14 Sep 2005 19:17:58 +0200
+
+vdr-plugin-image (0.2.3-7) unstable; urgency=low
+
+  * Depend/Build-Depend on vdr (>=1.3.31-1)
+  * Conflict with vdr (>=1.3.31.99)
+  * Use dependencies.sh from vdr-dev to set vdr dependencies and
+    conflicts
+
+ -- Tobias Grimm <tg@e-tobi.net>  Tue, 30 Aug 2005 23:07:02 +0200
+
+vdr-plugin-image (0.2.3-6) unstable; urgency=low
+
+  * Depend/Build-Depend on vdr (>=1.3.30-1)
+  * Conflict with vdr (>=1.3.30.99)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Mon, 22 Aug 2005 17:28:40 +0200
+
+vdr-plugin-image (0.2.3-5) unstable; urgency=low
+
+  * Depend/Build-Depend on vdr (>=1.3.29-1)
+  * Conflict with vdr (>=1.3.30)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Mon, 15 Aug 2005 21:12:21 +0200
+
+vdr-plugin-image (0.2.3-4) unstable; urgency=low
+
+  * Depend/Build-Depend on vdr (>=1.3.28-1)
+  * Conflict with vdr (>=1.3.29)
+  * Bumped Standards-Version to 3.6.2
+  * Updated debian/watch and project homepage
+
+ -- Tobias Grimm <tg@e-tobi.net>  Mon,  8 Aug 2005 20:25:10 +0200
+
+vdr-plugin-image (0.2.3-3) unstable; urgency=low
+
+  * Fixed bug in encode patch
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun, 17 Jul 2005 21:57:15 +0200
+
+vdr-plugin-image (0.2.3-2) unstable; urgency=low
+
+  * Use statically linked libavcodec from official Debian ffmpeg package
+  * Added patch that rewrites major parts of the encoder to fix some
+    bugs, increase readability and make it compatible with newer ffmpeg
+    versions
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun, 17 Jul 2005 16:43:11 +0200
+
+vdr-plugin-image (0.2.3-1) unstable; urgency=low
+
+  * Tobias Grimm <tg@e-tobi.net> 
+    - New upstream release
+    - Depend/Build-Depend on vdr (>=1.3.27-1)
+    - Conflict with vdr (>=1.3.28)
+    - Made debian/rules svn-buildpackage-save
+  * Thomas Günther <tom@toms-cafe.de>
+    - Adapted link_libavcodec patch to new upstream
+    - Removed Makefile-fPIC-fix and fix_imagecmds patch (integrated in upstream)
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun, 26 Jun 2005 17:19:10 +0200
+
+vdr-plugin-image (0.2.2-4) unstable; urgency=low
+
+  * Make sure cache dir is owned by vdr:vdr
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sat,  2 Apr 2005 21:34:24 +0200
+
+vdr-plugin-image (0.2.2-3) unstable; urgency=low
+
+  * Converted changelog to UTF-8
+  * Set CONVERT_TEMPDIR for commands in imagecmds.conf
+  * Adapted patches for new dpatch >= 2.0.9
+  * Using debian/compat now
+
+ -- Thomas Günther <tom@toms-cafe.de>  Mon,  6 Dec 2004 01:56:46 +0100
+
+vdr-plugin-image (0.2.2-2) unstable; urgency=low
+
+  * adapted for vdr 1.2.6-27
+  * Added Makefile-fPIC-fix patch to fix potential FTBFS
+  * Adapted control file to alioth packages
+  * Using patchlevel.sh and custom control field "vdr-patchlevel"
+ 
+ -- Tobias Grimm <tg@e-tobi.net>  Tue,  28 Sep 2004 00:05:00 +0200
+
+vdr-plugin-image (0.2.2-1) unstable; urgency=low
+
+  * New upstream release
+  
+ -- Tobias Grimm <tg@e-tobi.net>  Wed,  01 Sep 2004 23:40:00 +0200
+
+vdr-plugin-image (0.2.1-1) unstable; urgency=low
+
+  * New upstream release
+  
+ -- Tobias Grimm <tg@e-tobi.net>  Sat,  29 Aug 2004 13:00:00 +0200
+
+vdr-plugin-image (0.1.1-1) unstable; urgency=low
+
+  * New upstream release
+  * added imagecmds.conf
+  
+ -- Tobias Grimm <tg@e-tobi.net>  Sun,  1 Aug 2004 21:00:00 +0200
+
+vdr-plugin-image (0.1.0-1) unstable; urgency=low
+
+  * New upstream release
+  * ImageMagick not needed anymore
+  * Converted images are not stored under /var/cache anymore by default, but
+    in /tmp/images. Users upgrading from an older version should change
+    this in the plugin settings manually.
+  * Some general improvements to unify the plugins, as suggested by
+    Thomas Günther
+  * Added watch file
+  
+ -- Tobias Grimm <tg@e-tobi.net>  Mon,  5 Jul 2004 22:55:12 +0200
+
+vdr-plugin-image (0.0.8-1) unstable; urgency=low
+
+  * New upstream release
+  * default image cache path set to /var/cache/vdr-plugin-image
+
+ -- Tobias Grimm <tg@e-tobi.net>  Tue, 16 Mar 2004 20:15:00 +0100
+
+vdr-plugin-image (0.0.7+0.0.8rc2-1) unstable; urgency=low
+
+  * New upstream release
+  * removed sharutils dependency, uudecode isn't used anymore 
+  * renamed mount.sh to vdrimagemount.sh and installed into /usr/sbin,
+    changed interpreter to /bin/sh and converted some DOS line endings
+  * added plugin.image.conf with comments about the command line options
+    (requires now vdr 1.2.6-14)
+  * changed defaults in imagesources.conf and added comments
+  * renamed convert.sh, convert_jump.sh and convert_zoom-sh to
+    vdrimageconvert.sh, vdrimagejumpconvert.sh and vdrimagezoomconvert.sh
+  * fixed small bug in debian/rules
+  * missing directory /tmp/image added
+
+ -- Tobias Grimm <tg@e-tobi.net>  Sun,  7 Mar 2004 17:54:08 +0100
+
+vdr-plugin-image (0.0.7+0.0.8rc1-1) unstable; urgency=low
+
+  * New upstream release
+  * added sharurils dependency, because convert script uses uudecode
+    now
+
+ -- Tobias Grimm <tg@e-tobi.net>  Wed,  3 Mar 2004 23:14:12 +0100
+
+vdr-plugin-image (0.0.7+0.0.8pre5-1) unstable; urgency=low
+
+  * complete rework of the debianization 
+
+ -- Tobias Grimm <tg@e-tobi.net>  Thu, 26 Feb 2004 00:30:00 +0200
+
+vdr-plugin-image (0.0.8-pre-5) unstable; urgency=low
+   
+  * Added other File-Filterimplemation with more feature 
+    see examples/imagesources.conf.example
+
+ -- A.Brachold <vdr04-at-deltab.de>  Tue, 23 Feb 2004 23:00:00 +0200
+
+vdr-plugin-image (0.0.8-pre-4) unstable; urgency=low
+
+  * Reworked convert* scripts for better aspect scaling
+  * Started to optionally replace ImageMagick by netpbm tools, check README.SCRIPTS
+  * Cleanup obsolete code from scripts 
+  * Added image_pregen.sh to pre generate a file or folder (cron/at/..)
+
+ -- Onno <kreuzinger.biz>  Tue, 22 Feb 2004 18:30:00 +0200
+  
+vdr-plugin-image (0.0.8-pre-3) unstable; urgency=low
+
+  * Add Filter for filetype (by Onno Kreuzinger)
+  * Implement Interface to Statusmonitor (this use e.g. GLCD-Plugin)
+  * Fix "Error: unknow config paramater ..."
+  * Make the most text translatable
+  * Change setupmenu form Integer 0/1 to yes/no Selection
+  * Remove some old file form mp3-plugins, and reformated the source with indent
+  * Fix Header with correct copyright
+  * Cleanup errorlog (esyslog)
+  * Remove some possible bufferoverflows throw sprint() 
+
+ -- A.Brachold <vdr04-at-deltab.de>  Tue, 22 Feb 2004 18:00:00 +0200
+
+vdr-plugin-image (0.0.7-1) unstable; urgency=low
+
+  * Reworks on Jumpmenu
+
+ -- Interpohl <vdr-portal.de>  Tue, 31 Jan 2004 18:00:00 +0200
+
+vdr-plugin-image (0.0.7-0) unstable; urgency=low
+
+  * Reworks on Jumpmenu
+
+ -- Interpohl <vdr-portal.de>  Tue, 30 Jan 2004 22:00:00 +0200
+
+vdr-plugin-image (0.0.6-0) unstable; urgency=low
+
+  * debianized
+
+ -- Interpohl <vdr-portal.de>  Tue, 30 Jan 2004 00:45:00 +0200

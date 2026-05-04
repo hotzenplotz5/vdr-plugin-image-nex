@@ -54,7 +54,7 @@ bool cPluginImage::SetupParse(const char *szName, const char *szValue)
 	return ImageSetup.SetupParse(szName,szValue);
 }
 
-const char *g_szConfigDirectory = "image";
+const char *g_szConfigDirectory = "image_next";
 
 const char *cPluginImage::CommandLineHelp(void)
 {

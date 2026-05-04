@@ -1,0 +1,26 @@
+Source: vdr-plugin-image-next
+Section: video
+Priority: extra
+Maintainer: Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>
+Uploaders: Tobias Grimm <etobi@debian.org>, Thomas Günther <tom@toms-cafe.de>
+Build-Depends: debhelper (>= 5), cdbs, vdr-dev (>= 2.2.0-1), gettext, pkg-config,
+ libavcodec-dev, libavformat-dev, libswscale-dev, libavutil-dev, libmp3lame-dev | liblame-dev, libexif-dev (>= 0.6.12), libxvidcore-dev
+Standards-Version: 3.9.1
+Vcs-Svn: svn://svn.debian.org/pkg-vdr-dvb/vdr/vdr-plugin-image-next/trunk/
+Vcs-Browser: http://svn.debian.org/wsvn/pkg-vdr-dvb/vdr/vdr-plugin-image-next/trunk/
+
+Package: vdr-plugin-image-next
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${vdr:Depends}, netpbm, file
+Suggests: imagemagick, libjpeg-progs
+Description: Image plugin for vdr
+ This plugin implements a image viewer for vdr.
+
+Package: vdr-plugin-image-next-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: vdr-plugin-image-next (= ${binary:Version}), ${misc:Depends}
+Description: debugging symbols for vdr-plugin-image-next
+ .
+ This package contains only the debugging symbols for vdr-plugin-image-next

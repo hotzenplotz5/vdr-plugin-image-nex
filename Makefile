@@ -21,11 +21,11 @@
 # This name will be used in the '-P...' option of VDR to load the plugin.
 # By default the main source file also carries this name.
 #
-PLUGIN = image
+PLUGIN = image_next
 
 #### The version number of this plugin (taken from the main source file):
 
-VERSION = $(shell grep 'static const char \*VERSION *=' $(PLUGIN).c | awk '{ print $$6 }' | sed -e 's/[";]//g')
+VERSION = $(shell grep 'static const char \*VERSION *=' image.c | awk '{ print $$6 }' | sed -e 's/[";]//g')
 
 ### The directory environment:
 
@@ -108,7 +108,7 @@ endif
 
 ### The object files (add further files here):
 
-OBJS = ${PLUGIN}.o data.o menu.o data-image.o menu-image.o \
+OBJS = image.o data.o menu.o data-image.o menu-image.o \
  setup-image.o player-image.o control-image.o commands.o menu-commands.o \
  list.o \
  liboutput/encode.o liboutput/stillimage.o liboutput/stillimage-player.o \

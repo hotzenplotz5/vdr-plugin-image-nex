@@ -1,0 +1,22 @@
+ffmpeg-usage
+------------
+
+The image plugin compiles with Debian's ffmpeg-free version, but it won't work,
+because an MPEG2 encoder is required, which has been removed from ffmpeg-free.
+
+Therefore, this plug-in should use the ffmpeg-Version (libav*cvs) from 
+Cristian Marillats Dbeian Multimedia Repository
+
+    http://debian-multimedia.org/
+
+It's technically possible to use MPEG1 (which is available in ffmpeg-free)
+instead of MPEG2, but the image quality then seems to be really bad
+on some pictures (flickering in the MPEG-still image loop).
+
+Maybe with some more tweaking, MPEG1 / ffmpeg-free can be used, but
+for know I decided to stay with the non-free ffmpeg.
+
+The build-dependencies to libavutilcvs-dev, liblame-dev and libxvidcore-dev
+are required because of a bug in libavcodeccvs51-dev (20070329-0.0etch1).
+
+ -- Tobias Grimm <tg@e-tobi.net>  Wed, 21 May 2008 20:16:44 +0200

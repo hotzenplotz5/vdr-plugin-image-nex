@@ -63,7 +63,7 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow)
  , m_pDisplayReplay(NULL)
 {
   // Notity all cStatusMonitor
-  cStatus::MsgReplaying(this, "image", NULL, true );
+  cStatus::MsgReplaying(this, "image_next", NULL, true );
   
   m_tStarted = time(NULL);
   
@@ -108,7 +108,7 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow)
 cImageControl::~cImageControl()
 {
   // Notity cleanup all cStatusMonitor
-  cStatus::MsgReplaying(this, "image", NULL, false);
+  cStatus::MsgReplaying(this, "image_next", NULL, false);
   // Free OSD Data
   Hide();
   // Stop Playback
@@ -189,7 +189,7 @@ void cImageControl::ShowStatusMsg()
       if(m_szLastShowStatusMsg)
         free(m_szLastShowStatusMsg);
       m_szLastShowStatusMsg = sz;
-      cStatus::MsgReplaying(this, "image" , m_szLastShowStatusMsg, true );
+      cStatus::MsgReplaying(this, "image_next" , m_szLastShowStatusMsg, true );
     }
     else 
       free(sz);
