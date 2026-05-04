@@ -64,23 +64,10 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     }
 #endif
 
-    struct stat st;
-    if (!useTempThumb && stat(loadPath, &st) == 0 && st.st_size > 5000000) {
-        // Nur zur Sicherheit: Keine Dateien > 5MB im OSD-Hauptthread scannen, um Freezes zu vermeiden.
-        if (useTempThumb) unlink(tempThumbPath);
-        return nullptr;
-    }
-
     AVFormatContext *fmt_ctx = nullptr;
     if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
-    }
-
-    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
-        avformat_close_input(&fmt_ctx); 
-        if (useTempThumb) unlink(tempThumbPath);
-        return nullptr; 
     }
 
     int video_stream_idx = -1;
@@ -91,6 +78,19 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         }
     }
     
+    // FFmpeg nur scannen lassen, wenn der Stream nicht schon direkt im JPEG-Header gefunden wurde
+    if (video_stream_idx == -1) {
+        fmt_ctx->probesize = 16384;
+        if (avformat_find_stream_info(fmt_ctx, nullptr) >= 0) {
+            for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
+                if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    video_stream_idx = i;
+                    break;
+                }
+            }
+        }
+    }
+
     if (video_stream_idx == -1) {
         avformat_close_input(&fmt_ctx); 
         if (useTempThumb) unlink(tempThumbPath);
@@ -362,10 +362,16 @@ void cMenuImageGrid::Display(void)
     cOsdMenu::Display();
 
     if (!myOsd) {
+        // Exakte VDR-Maße abrufen, damit das Overlay nicht "Out-of-Bounds" vom OSD-Provider abgelehnt wird!
+        int left = cOsd::OsdLeft();
+        int top = cOsd::OsdTop();
+        int width = cOsd::OsdWidth();
+        int height = cOsd::OsdHeight();
+
         // Level 1: Wir legen unsere Kacheln als 100% transparentes Overlay ÜBER das Skindesigner-Menü
-        myOsd = cOsdProvider::NewOsd(cOsd::OsdLeft(), cOsd::OsdTop(), 1);
+        myOsd = cOsdProvider::NewOsd(left, top, 1);
         if (myOsd) {
-            tArea Area = { 0, 0, cOsd::OsdWidth() - 1, cOsd::OsdHeight() - 1, 32 };
+            tArea Area = { 0, 0, width - 1, height - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
                 Area.bpp = 8; // Fallback falls die Grafikkarte/das Ausgabe-Plugin kein 32-Bit unterstützt
                 myOsd->SetAreas(&Area, 1);
