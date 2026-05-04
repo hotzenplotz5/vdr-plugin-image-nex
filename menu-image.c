@@ -36,6 +36,10 @@
 #include "setup-image.h"
 #include <memory>
 
+#ifdef HAVE_LIBEXIF
+#include "exif.h"
+#endif
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -43,9 +47,36 @@ extern "C" {
 }
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
+    char tempThumbPath[256];
+    bool useTempThumb = false;
+    const char* loadPath = path;
+
+#ifdef HAVE_LIBEXIF
+    // EXIF Thumbnails are instantly loaded compared to 24 Megapixel JPEGs
+    const char *ext = strrchr(path, '.');
+    if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
+        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u.jpg", (unsigned int)getpid());
+        if (ExtractExifThumbnail(path, tempThumbPath)) {
+            loadPath = tempThumbPath;
+            useTempThumb = true;
+        }
+    }
+#endif
+
     AVFormatContext *fmt_ctx = nullptr;
-    if (avformat_open_input(&fmt_ctx, path, nullptr, nullptr) < 0) return nullptr;
-    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { avformat_close_input(&fmt_ctx); return nullptr; }
+    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr;
+    }
+    
+    // Speed up probe phase significantly
+    fmt_ctx->probesize = 32768;
+    
+    if (avformat_find_stream_info(fmt_ctx, nullptr) < 0) { 
+        avformat_close_input(&fmt_ctx); 
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr; 
+    }
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -54,17 +85,32 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
             break;
         }
     }
-    if (video_stream_idx == -1) { avformat_close_input(&fmt_ctx); return nullptr; }
+    if (video_stream_idx == -1) { 
+        avformat_close_input(&fmt_ctx); 
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr; 
+    }
 
     AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_idx]->codecpar;
     const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
-    if (!codec) { avformat_close_input(&fmt_ctx); return nullptr; }
+    if (!codec) { 
+        avformat_close_input(&fmt_ctx); 
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr; 
+    }
 
     AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(codec_ctx, codecpar);
+
+    // Speed up decoding for full JPEGs by rendering at lower resolution (1/8)
+    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
+        codec_ctx->lowres = codec->max_lowres < 3 ? codec->max_lowres : 3; 
+    }
+
     if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
+        if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
 
@@ -118,6 +164,8 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     av_frame_free(&frame);
     avcodec_free_context(&codec_ctx);
     avformat_close_input(&fmt_ctx);
+
+    if (useTempThumb) unlink(tempThumbPath);
     return retImage;
 }
 
@@ -150,11 +198,9 @@ public:
                 lruList.pop_back();
                 Cache.erase(last);
             }
-            esyslog("imageplugin: loaded thumb %s", path);
             return thumb;
         }
         
-        esyslog("imageplugin: failed to load thumb %s", path);
         
         // Do NOT cache nullptrs. If the background thread is currently writing the EXIF thumbnail,
         // a premature load will fail. By not caching the failure, the UI will automatically retry 
