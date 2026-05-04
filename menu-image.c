@@ -383,6 +383,8 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     return list->Load(source, dir);
 }
 
+static int g_GridOsdLevel = 1;
+
 void cMenuImageGrid::Display(void)
 {
     char titleBuf[256];
@@ -400,7 +402,8 @@ void cMenuImageGrid::Display(void)
         int height = cOsd::OsdHeight();
 
         // Level 1: Wir legen unsere Kacheln als 100% transparentes Overlay ÜBER das Skindesigner-Menü
-        myOsd = cOsdProvider::NewOsd(left, top, 1);
+        g_GridOsdLevel = 1;
+        myOsd = cOsdProvider::NewOsd(left, top, g_GridOsdLevel);
         if (myOsd) {
             tArea Area = { 0, 0, width - 1, height - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
@@ -408,7 +411,8 @@ void cMenuImageGrid::Display(void)
                 // Wenn wir auf 8-Bit fallen, werden ARGB-Farben unsichtbar (keine Kacheln!).
                 // Lösung: Wir übernehmen Level 0, um echtes 32-Bit TrueColor zu erzwingen!
                 delete myOsd;
-                myOsd = cOsdProvider::NewOsd(left, top, 0);
+                g_GridOsdLevel = 0;
+                myOsd = cOsdProvider::NewOsd(left, top, g_GridOsdLevel);
                 if (myOsd) {
                     myOsd->SetAreas(&Area, 1);
                 }
@@ -447,7 +451,7 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    if (myOsd->Level() == 1) {
+    if (g_GridOsdLevel == 1) {
         // Overlay-Modus: OSD transparent machen, Skindesigner-Menü im Hintergrund bleibt sichtbar
         myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, 0x00000000);
     } else {
