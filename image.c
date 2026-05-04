@@ -101,11 +101,20 @@ bool cPluginImage::Start(void)
   
   cString szConfSource = AddDirectory(ConfigDirectory(g_szConfigDirectory),  "imagesources.conf");
   ImageSources.Load(szConfSource);
+
+  // Fallback 1: Lade aus altem Ordner "image", falls der neue leer ist
+  if(ImageSources.Count() < 1) {
+    cString szOldConfSource = AddDirectory(ConfigDirectory("image"), "imagesources.conf");
+    ImageSources.Load(szOldConfSource);
+  }
+
+  // Fallback 2: Notfall-Quelle anlegen, damit der VDR NICHT mehr abstürzt!
   if(ImageSources.Count()<1) {
     const char* sz = szConfSource;
-    esyslog("imageplugin: you must have defined at least one source in %s",sz);
-    return false;
-    }
+    esyslog("imageplugin: no sources defined in %s, adding default Root source", sz);
+    ImageSources.Add(new cFileSource("/", "Root", false, ""));
+    ImageSources.SetSource(ImageSources.First());
+  }
   
   return true;
 }

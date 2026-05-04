@@ -130,7 +130,7 @@ cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
             cDirItem *item = list->Get(i);
             if (item && item->Name && strcmp(item->Name, parent) == 0) {
                 currentIndex = i;
-                SetCurrent(Get(i));
+                DrawGrid();
                 break;
             }
         }
@@ -160,16 +160,7 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     bool res = list->Load(source, dir);
 
     Clear();
-    for (int i = 0; i < list->Count(); i++) {
-        cDirItem *item = list->Get(i);
-        if (item) {
-            char *buffer = 0;
-            if (asprintf(&buffer, item->Type == itFile ? "%s" : "[%s]", item->DisplayName) > 0) {
-                Add(new cOsdItem(buffer));
-                free(buffer);
-            }
-        }
-    }
+    DrawGrid();
     return res;
 }
 
@@ -185,12 +176,49 @@ void cMenuImageGrid::Display(void)
 
 void cMenuImageGrid::DrawGrid()
 {
-    // OSD drawing is currently removed to fix compilation errors
+    int cols = 3;
+    int colWidth = 22; // Feste Zeichenbreite pro Spalte
+    Clear();
+    int totalItems = list->Count();
+
+    for (int row = 0; row < (totalItems + cols - 1) / cols; row++) {
+        std::string rowText = "";
+        for (int col = 0; col < cols; col++) {
+            int idx = row * cols + col;
+            if (idx < totalItems) {
+                cDirItem *item = list->Get(idx);
+                if (item) {
+                    bool isSelected = (idx == currentIndex);
+                    std::string name = item->DisplayName ? item->DisplayName : "";
+                    if (item->Type == itDir || item->Type == itParent) {
+                        name = "[" + name + "]";
+                    }
+
+                    // Kürze den Namen, falls er für die Spalte zu lang ist
+                    if (name.length() > (size_t)(colWidth - 4)) {
+                        name = name.substr(0, colWidth - 7) + "...";
+                    }
+
+                    char buffer[64];
+                    if (isSelected) {
+                        snprintf(buffer, sizeof(buffer), " >%-*s< ", colWidth - 4, name.c_str());
+                    } else {
+                        snprintf(buffer, sizeof(buffer), "  %-*s  ", colWidth - 4, name.c_str());
+                    }
+                    rowText += buffer;
+                }
+            }
+            if (col < cols - 1) {
+                rowText += "\t";
+            }
+        }
+        Add(new cOsdItem(rowText.c_str()));
+    }
+    SetCurrent(Get(currentIndex / cols));
 }
 
 cDirItem *cMenuImageGrid::CurrentItem()
 {
-    currentIndex = Current();
     return list->Get(currentIndex);
 }
 
@@ -202,12 +230,38 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
         return osContinue;
     }
 
+    int cols = 3;
     switch (Key & ~k_Repeat) {
         case kUp:
+            if (currentIndex >= cols) {
+                currentIndex -= cols;
+                DrawGrid();
+                Display();
+            }
+            return osContinue;
         case kDown:
+            if (currentIndex + cols < totalItems) {
+                currentIndex += cols;
+            } else {
+                currentIndex = totalItems - 1; // springe zum letzten Element
+            }
+            DrawGrid();
+            Display();
+            return osContinue;
         case kLeft:
+            if (currentIndex > 0) {
+                currentIndex--;
+                DrawGrid();
+                Display();
+            }
+            return osContinue;
         case kRight:
-            return cOsdMenu::ProcessKey(Key);
+            if (currentIndex < totalItems - 1) {
+                currentIndex++;
+                DrawGrid();
+                Display();
+            }
+            return osContinue;
         case kOk:
         case kRed:
             return Select(Key == kRed);
@@ -242,7 +296,7 @@ eOSState cMenuImageGrid::Parent(void)
             cDirItem *item = list->Get(i);
             if (item && item->Name && strcmp(item->Name, lastDirName) == 0) {
                 currentIndex = i;
-                SetCurrent(Get(i));
+                DrawGrid();
                 break;
             }
         }

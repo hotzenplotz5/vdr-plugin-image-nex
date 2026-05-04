@@ -643,8 +643,12 @@ eOSState cImageControl::ProcessKeyCommands(eKeys nKey)
     if(!pCmd)
       return osContinue;
       
-    // Load additional Commands
-    pCmd->Load(AddDirectory(cPlugin::ConfigDirectory(g_szConfigDirectory), "imagecmds.conf"));
+    // Load additional Commands (mit automatischem Fallback auf alte Config)
+    cString szCmdSource = AddDirectory(cPlugin::ConfigDirectory(g_szConfigDirectory), "imagecmds.conf");
+    if (!pCmd->Load(szCmdSource) || pCmd->Count() <= 0) {
+        cString szOldCmdSource = AddDirectory(cPlugin::ConfigDirectory("image"), "imagecmds.conf");
+        pCmd->Load(szOldCmdSource);
+    }
   
     if(pCmd->Count() <= 0)  {
       delete pCmd;
