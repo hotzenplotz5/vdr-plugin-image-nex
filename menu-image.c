@@ -488,8 +488,6 @@ void cMenuImageGrid::Show(void)
 
 void cMenuImageGrid::DrawGrid()
 {
-    uint64_t tGridStart = cTimeMs::Now();
-
     if (!myOsd) return;
     int osdWidth = myOsd->Width();
     int osdHeight = myOsd->Height();
