@@ -217,6 +217,9 @@ struct ThumbRequest {
     int w, h;
 };
 
+static bool g_ThumbnailsUpdated = false;
+static bool g_NeedsRedraw = true;
+
 // Hintergrund-Thread: Lädt langsame JPEGs ruckelfrei im Hintergrund!
 class cThumbLoaderThread : public cThread {
 private:
@@ -336,6 +339,7 @@ void cThumbLoaderThread::Action() {
                 cMutexLock cacheLock(&ThumbCacheMutex);
                 cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
             }
+            g_ThumbnailsUpdated = true;
             cRemote::Put(kNone); // Force VDR to trigger ProcessKey and refresh OSD
         }
     }
@@ -425,6 +429,7 @@ cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
     currentIndex = 0;
     currentdir = NULL;
     myOsd = NULL;
+    g_NeedsRedraw = true;
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
@@ -485,29 +490,27 @@ void cMenuImageGrid::Show(void)
             osdHeight = 1080;
         }
 
-        // Skindesigner blockiert Level 0 kurzzeitig für seine Fade-Out-Animationen.
-        // Ein sofortiges Anfordern von Level 0 führt zur Ablehnung und einem unsichtbaren 8-Bit OSD.
-        // Wir suchen dynamisch die Hardware-Layer 0 bis 3 ab, um eine garantierte 32-Bit Ebene zu finden!
-        for (int level = 0; level < 4; level++) {
-            myOsd = cOsdProvider::NewOsd(left, top, level);
-            if (myOsd) {
-                tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-                if (myOsd->SetAreas(&Area, 1) == oeOk) {
-                    break; // 32-Bit TrueColor OSD erfolgreich zugewiesen!
-                }
+        // Try to grab exclusively Level 0! If Skindesigner is fading out, this fails.
+        // We don't force it, we just gracefully retry on the next frame (kNone).
+        myOsd = cOsdProvider::NewOsd(left, top, 0);
+        if (myOsd) {
+            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
+            if (myOsd->SetAreas(&Area, 1) != oeOk) {
                 delete myOsd;
                 myOsd = NULL;
             }
         }
-        
+
         if (!myOsd) {
-            esyslog("imageplugin: FATAL ERROR - Could not allocate 32-bit OSD on any hardware layer!");
+            g_NeedsRedraw = true;
+            return; // Hardware Layer noch blockiert. Warten auf nächsten Frame!
         }
     }
 
-    if (myOsd) {
+    if (myOsd && g_NeedsRedraw) {
         DrawGrid();
         myOsd->Flush();
+        g_NeedsRedraw = false;
     }
 }
 
@@ -655,26 +658,34 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
-            Show();
+            if (g_ThumbnailsUpdated || !myOsd || g_NeedsRedraw) {
+                g_ThumbnailsUpdated = false;
+                g_NeedsRedraw = true;
+                Show();
+            }
             return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
+            g_NeedsRedraw = true;
             Show();
             return osContinue;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
+            g_NeedsRedraw = true;
             Show();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
+            g_NeedsRedraw = true;
             Show();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
+            g_NeedsRedraw = true;
             Show();
             return osContinue;
         case kDown:
@@ -684,10 +695,12 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
                 // Jump to the last item only if there is a row below us, preventing horizontal jumps in the last row
                 currentIndex = totalItems - 1;
             }
+            g_NeedsRedraw = true;
             Show();
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
+            g_NeedsRedraw = true;
             Show();
             return osContinue;
         case kOk:
@@ -729,6 +742,7 @@ eOSState cMenuImageGrid::Parent(void)
         }
         free(lastDirName);
 
+        g_NeedsRedraw = true;
         Show();
     } else {
         return osEnd;
@@ -748,6 +762,7 @@ eOSState cMenuImageGrid::Select(bool isred)
         free(currentdir);
         currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
+        g_NeedsRedraw = true;
         Show();
         return osContinue;
     } else if (item->Type == itFile) {
