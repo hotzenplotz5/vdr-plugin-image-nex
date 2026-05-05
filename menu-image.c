@@ -422,7 +422,7 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 // --- cMenuImageGrid ---------------------------------------------------------
 
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
-: cOsdObject(true)
+: cOsdMenu(tr("Image Grid"))
 {
     source = Source;
     list = new cDirList;
@@ -477,23 +477,34 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     return list->Load(source, dir);
 }
 
-void cMenuImageGrid::Show(void)
+void cMenuImageGrid::Display(void)
 {
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    SetTitle(titleBuf);
+    SetHelp(tr("Select"), "", "", tr("Back"));
+
+    cOsdMenu::Display(); // Skindesigner zeichnet das Menu!
+
     if (!myOsd) {
-        int osdWidth = 0;
-        int osdHeight = 0;
-        double aspect = 0.0;
-        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
+        int left = cOsd::OsdLeft();
+        int top = cOsd::OsdTop();
+        int osdWidth = cOsd::OsdWidth();
+        int osdHeight = cOsd::OsdHeight();
 
         if (osdWidth <= 0 || osdHeight <= 0) {
             osdWidth = 1920; 
             osdHeight = 1080;
         }
 
-        myOsd = cOsdProvider::NewOsd(0, 0, 0);
-        if (myOsd) {
-            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-            if (myOsd->SetAreas(&Area, 1) != oeOk) {
+        // Overlay OSD auf Level 1-4 suchen, um TrueColor-Bilder über den Skin zu legen!
+        for (int level = 1; level < 5; level++) {
+            myOsd = cOsdProvider::NewOsd(left, top, level);
+            if (myOsd) {
+                tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
+                if (myOsd->SetAreas(&Area, 1) == oeOk) {
+                    break;
+                }
                 delete myOsd;
                 myOsd = NULL;
             }
@@ -501,7 +512,7 @@ void cMenuImageGrid::Show(void)
 
         if (!myOsd) {
             g_NeedsRedraw = true;
-            return; // Hardware Layer blockiert
+            return; // Hardware Layer aktuell belegt, warten
         }
     }
 
@@ -538,22 +549,8 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() * 2 + 30;  // Genug Platz für große Skin-Header lassen
     int buttonAreaHeight = font->Height() + 60; // Genug Platz für Skin-Buttons lassen
 
-    tColor bgFull = 0xFF151515;   // Edles Dunkelgrau für den Hintergrund
-    tColor textFg = 0xFF00AAFF;   // Hellblau für den Titel
-    tColor btnRed = 0xFFCC0000;   // Klassisches Rot für die Taste
-    tColor btnBlue = 0xFF0000CC;  // Klassisches Blau für die Taste
-    tColor btnFg = 0xFFFFFFFF;    // Weiß für die Tastenschrift
-
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(0, 10, titleBuf, textFg, bgFull, font);
-
-    int btnY = osdHeight - buttonAreaHeight;
-    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + font->Height() + 10, btnRed);
-    myOsd->DrawText(margin, btnY + 10, tr("Select"), btnFg, btnRed, font);
-    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + font->Height() + 10, btnBlue);
-    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnFg, btnBlue, font);
+    // Unsere "Glasplatte" komplett transparent machen, damit Skindesigner sichtbar bleibt!
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, 0x00000000);
 
     int visibleRows = (osdHeight - titleHeight - buttonAreaHeight) / (kachelHoehe + padding);
     if (visibleRows < 1) visibleRows = 1;
@@ -667,32 +664,32 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             if (g_ThumbnailsUpdated || !myOsd || g_NeedsRedraw) {
                 g_ThumbnailsUpdated = false;
                 g_NeedsRedraw = true;
-                Show();
+                Display();
             }
             return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kDown:
             if (currentIndex + columns < totalItems) {
@@ -702,12 +699,12 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
                 currentIndex = totalItems - 1;
             }
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kOk:
         case kRed:
@@ -749,7 +746,7 @@ eOSState cMenuImageGrid::Parent(void)
         free(lastDirName);
 
         g_NeedsRedraw = true;
-        Show();
+        Display();
     } else {
         return osEnd;
     }
@@ -769,7 +766,7 @@ eOSState cMenuImageGrid::Select(bool isred)
         currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
         g_NeedsRedraw = true;
-        Show();
+        Display();
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);
