@@ -763,8 +763,7 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
 cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Image Grid"))
 {
-    SetMenuCategory(mcPlugin);
-    SetId("image_next");
+    SetPlugin("image_next");
     source = Source;
     list = new cDirList;
     currentdir = NULL;
