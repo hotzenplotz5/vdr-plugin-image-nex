@@ -225,45 +225,9 @@ private:
     cCondVar cond;
 public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
-    
-    void Add(const std::string& path, int w, int h) {
-        cMutexLock lock(&queueMutex);
-        for (auto const& req : queue) if (req.path == path) return;
-        queue.push_back({path, w, h});
-        cond.Broadcast();
-        if (!Active()) Start();
-    }
-    
-    void Clear() {
-        cMutexLock lock(&queueMutex);
-        queue.clear();
-    }
-    
-    virtual void Action() {
-        while (Running()) {
-            ThumbRequest req;
-            {
-                cMutexLock lock(&queueMutex);
-                if (queue.empty()) {
-                    cond.TimedWait(queueMutex, 100);
-                    continue;
-                }
-                req = queue.front();
-                queue.pop_front();
-            }
-            if (!Running()) break;
-
-            cImage* img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
-            if (img) {
-                char keyBuf[1024];
-                snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
-                cMutexLock cacheLock(&ThumbCacheMutex);
-                cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
-                cacheLock.Unlock();
-                cRemote::Put(kNone); // Force VDR to trigger ProcessKey and refresh OSD
-            }
-        }
-    }
+    void Add(const std::string& path, int w, int h);
+    void Clear();
+    virtual void Action();
 };
 
 static cThumbLoaderThread ThumbLoader;
@@ -279,13 +243,14 @@ public:
         snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
         std::string key = keyBuf;
         
-        cMutexLock lock(&ThumbCacheMutex);
-        if (Cache.find(key) != Cache.end()) {
-            lruList.remove(key);
-            lruList.push_front(key);
-            return Cache[key].get();
+        {
+            cMutexLock lock(&ThumbCacheMutex);
+            if (Cache.find(key) != Cache.end()) {
+                lruList.remove(key);
+                lruList.push_front(key);
+                return Cache[key].get();
+            }
         }
-        lock.Unlock();
         
         bool hasExif = false;
         const char *ext = strrchr(path, '.');
@@ -296,7 +261,7 @@ public:
         if (hasExif) {
             cImage* thumb = LoadThumbnail(path, maxWidth, maxHeight, true);
             if (thumb) {
-                lock.Lock();
+                cMutexLock lock(&ThumbCacheMutex);
                 Cache[key] = std::unique_ptr<cImage>(thumb);
                 lruList.push_front(key);
                 if (Cache.size() > MAX_CACHE_SIZE) {
@@ -312,12 +277,54 @@ public:
         return nullptr;
     }
     static void Clear() {
+        ThumbLoader.Clear();
+        cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
         lruList.clear();
     }
 };
 std::list<std::string> cThumbCache::lruList;
 std::map<std::string, std::unique_ptr<cImage>> cThumbCache::Cache;
+
+void cThumbLoaderThread::Add(const std::string& path, int w, int h) {
+    cMutexLock lock(&queueMutex);
+    for (auto const& req : queue) if (req.path == path) return;
+    queue.push_back({path, w, h});
+    cond.Broadcast();
+    if (!Active()) Start();
+}
+
+void cThumbLoaderThread::Clear() {
+    cMutexLock lock(&queueMutex);
+    queue.clear();
+}
+
+void cThumbLoaderThread::Action() {
+    while (Running()) {
+        ThumbRequest req;
+        {
+            cMutexLock lock(&queueMutex);
+            if (queue.empty()) {
+                cond.TimedWait(queueMutex, 100);
+                continue;
+            }
+            req = queue.front();
+            queue.pop_front();
+        }
+        if (!Running()) break;
+
+        cImage* img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
+        if (img) {
+            char keyBuf[1024];
+            snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
+            {
+                cMutexLock cacheLock(&ThumbCacheMutex);
+                cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
+            }
+            cRemote::Put(kNone); // Force VDR to trigger ProcessKey and refresh OSD
+        }
+    }
+}
 
 // --- cMenuImageBrowse ---------------------------------------------------------
 
