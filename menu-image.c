@@ -465,20 +465,22 @@ void cMenuImageGrid::Display(void)
     SetHelp(tr("Select"), "", "", tr("Back"));
 
     if (!myOsd) {
-        int osdWidth = 0;
-        int osdHeight = 0;
-        double aspect = 0.0;
-        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
+        int left = cOsd::OsdLeft();
+        int top = cOsd::OsdTop();
+        int osdWidth = cOsd::OsdWidth();
+        int osdHeight = cOsd::OsdHeight();
 
         if (osdWidth <= 0 || osdHeight <= 0) {
             osdWidth = 1920; 
             osdHeight = 1080;
         }
 
-        myOsd = cOsdProvider::NewOsd(0, 0, 0);
+        myOsd = cOsdProvider::NewOsd(left, top, 0);
         if (myOsd) {
             tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-            if (myOsd->SetAreas(&Area, 1) != oeOk) {
+            eOsdError err = myOsd->SetAreas(&Area, 1);
+            if (err != oeOk) {
+                esyslog("imageplugin: FATAL ERROR - SetAreas failed for 32-bit OSD with code %d! Dimensions: %dx%d", err, osdWidth, osdHeight);
                 Area.bpp = 8; // Fallback
                 myOsd->SetAreas(&Area, 1);
             }
