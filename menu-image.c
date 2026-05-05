@@ -368,8 +368,6 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     return list->Load(source, dir);
 }
 
-static int g_GridOsdLevel = 1;
-
 void cMenuImageGrid::Display(void)
 {
     char titleBuf[256];
@@ -384,27 +382,13 @@ void cMenuImageGrid::Display(void)
         int width = cOsd::OsdWidth();
         int height = cOsd::OsdHeight();
 
-        // Z-Level 10: Garantiert, dass die Kacheln ÜBER allen Skindesigner-Layern liegen!
-        g_GridOsdLevel = 10;
-        myOsd = cOsdProvider::NewOsd(left, top, g_GridOsdLevel);
+        // EXTREM WICHTIG: Level 0 erzwingen! Ausgabeplugins (wie softhddevice) ignorieren oft OSD-Level > 1.
+        // Sie akzeptieren sie zwar im Code (daher kein Fehler), rendern sie aber niemals auf den Bildschirm!
+        myOsd = cOsdProvider::NewOsd(left, top, 0);
         if (myOsd) {
             tArea Area = { 0, 0, width - 1, height - 1, 32 };
-            if (myOsd->SetAreas(&Area, 1) != oeOk) {
-                // FATAL: Hardware hat nicht genug Layer/Speicher für ein Overlay.
-                // Lösung: Wir übernehmen Level 0, um echtes 32-Bit TrueColor zu erzwingen!
-                delete myOsd;
-                g_GridOsdLevel = 0;
-                myOsd = cOsdProvider::NewOsd(left, top, g_GridOsdLevel);
-                if (myOsd) {
-                    myOsd->SetAreas(&Area, 1);
-                }
-            }
+            myOsd->SetAreas(&Area, 1);
         }
-    }
-
-    // Skindesigner nur malen lassen, wenn wir nicht auf Level 0 sind (verhindert Kollision)
-    if (g_GridOsdLevel > 0) {
-        cOsdMenu::Display();
     }
 
     if (myOsd) {
@@ -439,20 +423,15 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    if (g_GridOsdLevel > 0) {
-        // Overlay-Modus: OSD transparent machen, Skindesigner-Menü im Hintergrund bleibt sichtbar
-        myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, 0x00000000);
-    } else {
-        // Fallback-Modus (Level 0): Skindesigner-Menü fehlt, wir müssen eigenen Hintergrund + Titel zeichnen
-        tColor bgFull = 0xDD151515;
-        myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
-        char titleBuf[256];
-        snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-        myOsd->DrawText(margin, 10, titleBuf, 0xFF00AAFF, bgFull, font);
-        int btnY = osdHeight - buttonAreaHeight;
-        myOsd->DrawText(margin, btnY + 10, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
-        myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
-    }
+    // Garantierten, eigenen und komplett deckenden Hintergrund zeichnen
+    tColor bgFull = 0xFF151515; // 0xFF = 100% Deckkraft, kein Alpha-Blending-Fehler mehr möglich!
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    myOsd->DrawText(margin, 10, titleBuf, 0xFF00AAFF, bgFull, font);
+    int btnY = osdHeight - buttonAreaHeight;
+    myOsd->DrawText(margin, btnY + 10, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
+    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
