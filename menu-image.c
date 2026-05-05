@@ -540,17 +540,25 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // Eigenen dunklen Hintergrund komplett zeichnen, da das Skin-Menü deaktiviert ist
-    tColor bgFull = 0xFF151515;
+    // Skindesigner/VDR Theme-Farben dynamisch auslesen, damit das Grid optisch zum Skin passt!
+    tColor bgFull = cTheme::CurrentTheme()->Color(clrBackground);
+    tColor textFg = cTheme::CurrentTheme()->Color(clrMenuFontDetail);
+    tColor btnRed = cTheme::CurrentTheme()->Color(clrButtonRedBg);
+    tColor btnBlue = cTheme::CurrentTheme()->Color(clrButtonBlueBg);
+    tColor btnFg = cTheme::CurrentTheme()->Color(clrButtonRedFg);
+
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
 
     char titleBuf[256];
     snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(0, 10, titleBuf, 0xFF00AAFF, bgFull, font);
+    myOsd->DrawText(0, 10, titleBuf, textFg, bgFull, font);
 
     int btnY = osdHeight - buttonAreaHeight;
-    myOsd->DrawText(margin, btnY + 10, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
-    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
+    // Rote und Blaue Farbtasten im Skin-Style zeichnen
+    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + font->Height() + 10, btnRed);
+    myOsd->DrawText(margin, btnY + 10, tr("Select"), btnFg, btnRed, font);
+    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + font->Height() + 10, btnBlue);
+    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnFg, btnBlue, font);
 
     int visibleRows = (osdHeight - titleHeight - 50) / (kachelHoehe + padding); // 50px Platz für untere Buttons
     if (visibleRows < 1) visibleRows = 1;
