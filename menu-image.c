@@ -567,9 +567,10 @@ void cMenuImageGrid::DrawGrid()
         tColor bgColor = (i == currentIndex) ? 0xFF0055AA : 0xFF333333;
         tColor textColor = (i == currentIndex) ? 0xFFFFFFFF : 0xFFDDDDDD;
 
-        // 1-Pixel weißer Rahmen um die Kachel ziehen
-        tColor borderColor = 0xFFFFFFFF; // Weiß
-        myOsd->DrawRectangle(x - 1, y - 1, x + kachelBreite, y + kachelHoehe, borderColor);
+        // Deutliche Markierung für das ausgewählte Bild! (Dickerer, farbiger Rahmen)
+        tColor borderColor = (i == currentIndex) ? 0xFFFFCC00 : 0xFFFFFFFF; // Gelb/Orange für Fokus, sonst Weiß
+        int b = (i == currentIndex) ? 4 : 1; // 4 Pixel dick, wenn ausgewählt, sonst 1 Pixel
+        myOsd->DrawRectangle(x - b, y - b, x + kachelBreite + b - 1, y + kachelHoehe + b - 1, borderColor);
         myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Kachel-Hintergrund zeichnen
 
         cDirItem *item = list->Get(i);
@@ -613,7 +614,7 @@ void cMenuImageGrid::DrawGrid()
             int textBarHeight = font->Height() + 4;
             int textY = y + kachelHoehe - textBarHeight;
             if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
-            tColor textBg = 0xA0000000; // Semi-transparent black
+            tColor textBg = (i == currentIndex) ? 0xDD0055AA : 0xA0000000; // Blau für Fokus, sonst Schwarz
             myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
 
             // Limit the drawing width to prevent long names from bleeding into adjacent grid tiles
