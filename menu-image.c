@@ -48,6 +48,9 @@ extern "C" {
 }
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
+    uint64_t tStart = cTimeMs::Now();
+    esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
+
     char tempThumbPath[256];
     bool useTempThumb = false;
     const char* loadPath = path;
@@ -65,7 +68,12 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
 #endif
 
     AVFormatContext *fmt_ctx = nullptr;
-    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, nullptr) < 0) {
+    AVDictionary *opts = nullptr;
+    // Sicherheitsnetz: Verhindert, dass FFmpeg ewig in großen JPEGs liest
+    av_dict_set(&opts, "probesize", "32768", 0);
+    av_dict_set(&opts, "analyzeduration", "1000000", 0);
+    if (avformat_open_input(&fmt_ctx, loadPath, nullptr, &opts) < 0) {
+        if (opts) av_dict_free(&opts);
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
@@ -166,6 +174,8 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         if (newWidth <= 0) newWidth = 1;
         if (newHeight <= 0) newHeight = 1;
 
+        esyslog("imageplugin: Decoding finished, scaling to %dx%d...", newWidth, newHeight);
+
         retImage = new cImage(cSize(newWidth, newHeight));
         if (retImage && retImage->Data()) {
             SwsContext *sws_ctx = sws_getContext(
@@ -188,6 +198,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     avformat_close_input(&fmt_ctx);
 
     if (useTempThumb) unlink(tempThumbPath);
+    esyslog("imageplugin: <--- Finished thumbnail: %s (took %llu ms)", path, cTimeMs::Now() - tStart);
     return retImage;
 }
 
@@ -406,6 +417,8 @@ void cMenuImageGrid::Display(void)
 
 void cMenuImageGrid::DrawGrid()
 {
+    uint64_t tGridStart = cTimeMs::Now();
+
     if (!myOsd) return;
     int osdWidth = myOsd->Width();
     int osdHeight = myOsd->Height();
@@ -508,6 +521,8 @@ void cMenuImageGrid::DrawGrid()
             myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font, kachelBreite - 10);
         }
     }
+
+    esyslog("imageplugin: ==== DrawGrid complete. Total rendering time: %llu ms ====", cTimeMs::Now() - tGridStart);
 }
 
 cDirItem *cMenuImageGrid::CurrentItem()
