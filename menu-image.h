@@ -29,7 +29,7 @@ class cMenuImageBrowse:public cMenuBrowse {
     virtual eOSState ProcessKey(eKeys Key);
 };
 
-class cMenuImageGrid : public cOsdMenu {
+class cMenuImageGrid : public cOsdObject {
 private:
     cOsd *myOsd;
     cFileSource *source;
@@ -47,7 +47,7 @@ private:
 public:
     cMenuImageGrid(cFileSource *Source);
     virtual ~cMenuImageGrid();
-    virtual void Display(void);
+    virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
 };
 
