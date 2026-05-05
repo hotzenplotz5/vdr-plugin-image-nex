@@ -72,7 +72,7 @@ bool cImageSetup::SetupParse(const char *szName, const char *szValue)
   else ParseInteger("LiveAudio",     m_bLiveAudio,0,1)
   else ParseInteger("HideMainMenu",  m_bHideMenu,0,1)
   else ParseInteger("UseDeviceStillPicture",  m_bUseDeviceStillPicture,0,1)
-  else ParseInteger("DisplayMode",   m_nDisplayMode,0,1)
+  else ParseInteger("DisplayMode",   m_nDisplayMode,0,2)
   else ParseInteger("GridColumns",   m_nGridColumns,0,20)
   else return false;
   return true;
@@ -100,9 +100,8 @@ cMenuSetupImage::cMenuSetupImage(void)
 {
   SetSection(tr("Images"));
 
-  Add(new cMenuEditBoolItem(tr("Display Mode"),                    
-        &m_tmpSetup.m_nDisplayMode,    
-        tr("List"), tr("Grid")));
+  const char *displayModes[] = { tr("List"), "Grid (C++)", "Grid (Skin XML)" };
+  Add(new cMenuEditStraItem(tr("Display Mode"), &m_tmpSetup.m_nDisplayMode, 3, displayModes));
 
   Add(new cMenuEditIntItem(tr("Grid columns (0=auto)"),
         &m_tmpSetup.m_nGridColumns,

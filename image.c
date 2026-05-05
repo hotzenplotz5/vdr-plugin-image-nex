@@ -150,16 +150,10 @@ void cPluginImage::RemoveServiceSource()
 
 cOsdObject *cPluginImage::MainMenuAction(void)
 {
-  if (ImageSetup.m_nDisplayMode == 1) { // 1 = Grid view
-      // Prüfen, ob die Skindesigner-Engine geladen ist und kein VDR-Standard-Skin aktiv ist
-      bool hasSkindesigner = cPluginManager::GetPlugin("skindesigner") != NULL;
-      const char *skinName = Skins.Current() ? Skins.Current()->Name() : "";
-      bool isDefaultSkin = (strcasecmp(skinName, "lcars") == 0 || strcasecmp(skinName, "sttng") == 0 || strcasecmp(skinName, "classic") == 0);
-      
-      if (hasSkindesigner && !isDefaultSkin) {
-          return new cMenuImageSkin(ImageSources.GetSource());
-      }
-      return new cMenuImageGrid(ImageSources.GetSource()); // C++ Fallback (Weg B)
+  if (ImageSetup.m_nDisplayMode == 2) {
+      return new cMenuImageSkin(ImageSources.GetSource()); // Skindesigner XML Mode (Weg A)
+  } else if (ImageSetup.m_nDisplayMode == 1) {
+      return new cMenuImageGrid(ImageSources.GetSource()); // Standalone C++ Fallback (Weg B)
   }
   return new cMenuImageBrowse();
 }
