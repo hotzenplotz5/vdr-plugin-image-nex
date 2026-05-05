@@ -35,6 +35,7 @@
 #include <vdr/themes.h>
 #include <vdr/device.h>
 #include "setup-image.h"
+#include <vdr/remote.h>
 #include <memory>
 
 #ifdef HAVE_LIBEXIF
@@ -47,7 +48,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
+static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
 
@@ -66,6 +67,12 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         }
     }
 #endif
+
+    if (fastOnly && !useTempThumb) {
+        // Haupt-Thread Schutz: Wenn kein EXIF-Bild vorhanden ist, blocken wir das 
+        // langsame FFmpeg-Dekodieren ab, um das VDR-OSD nicht einzufrieren!
+        return nullptr;
+    }
 
     AVFormatContext *fmt_ctx = nullptr;
     AVDictionary *opts = nullptr;
@@ -202,6 +209,65 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     return retImage;
 }
 
+// Globaler Mutex für den Cache
+static cMutex ThumbCacheMutex;
+
+struct ThumbRequest {
+    std::string path;
+    int w, h;
+};
+
+// Hintergrund-Thread: Lädt langsame JPEGs ruckelfrei im Hintergrund!
+class cThumbLoaderThread : public cThread {
+private:
+    std::list<ThumbRequest> queue;
+    cMutex queueMutex;
+    cCondVar cond;
+public:
+    cThumbLoaderThread() : cThread("ImageThumbLoader") {}
+    
+    void Add(const std::string& path, int w, int h) {
+        cMutexLock lock(&queueMutex);
+        for (auto const& req : queue) if (req.path == path) return;
+        queue.push_back({path, w, h});
+        cond.Broadcast();
+        if (!Active()) Start();
+    }
+    
+    void Clear() {
+        cMutexLock lock(&queueMutex);
+        queue.clear();
+    }
+    
+    virtual void Action() {
+        while (Running()) {
+            ThumbRequest req;
+            {
+                cMutexLock lock(&queueMutex);
+                if (queue.empty()) {
+                    cond.TimedWait(queueMutex, 100);
+                    continue;
+                }
+                req = queue.front();
+                queue.pop_front();
+            }
+            if (!Running()) break;
+
+            cImage* img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
+            if (img) {
+                char keyBuf[1024];
+                snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
+                cMutexLock cacheLock(&ThumbCacheMutex);
+                cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
+                cacheLock.Unlock();
+                cRemote::Put(kNone); // Force VDR to trigger ProcessKey and refresh OSD
+            }
+        }
+    }
+};
+
+static cThumbLoaderThread ThumbLoader;
+
 class cThumbCache {
 private:
     static const size_t MAX_CACHE_SIZE = 100;
@@ -213,31 +279,36 @@ public:
         snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
         std::string key = keyBuf;
         
-        // Wenn gefunden, Key in der LRU-Liste ganz nach vorne schieben
+        cMutexLock lock(&ThumbCacheMutex);
         if (Cache.find(key) != Cache.end()) {
             lruList.remove(key);
             lruList.push_front(key);
             return Cache[key].get();
         }
+        lock.Unlock();
         
-        cImage* thumb = LoadThumbnail(path, maxWidth, maxHeight);
-        if (thumb) {
-            Cache[key] = std::unique_ptr<cImage>(thumb);
-            lruList.push_front(key);
-            
-            // Cache-Größenlimit erzwingen
-            if (Cache.size() > MAX_CACHE_SIZE) {
-                std::string last = lruList.back();
-                lruList.pop_back();
-                Cache.erase(last);
-            }
-            return thumb;
+        bool hasExif = false;
+        const char *ext = strrchr(path, '.');
+        if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
+            hasExif = true;
         }
         
+        if (hasExif) {
+            cImage* thumb = LoadThumbnail(path, maxWidth, maxHeight, true);
+            if (thumb) {
+                lock.Lock();
+                Cache[key] = std::unique_ptr<cImage>(thumb);
+                lruList.push_front(key);
+                if (Cache.size() > MAX_CACHE_SIZE) {
+                    std::string last = lruList.back();
+                    lruList.pop_back();
+                    Cache.erase(last);
+                }
+                return thumb;
+            }
+        }
         
-        // Do NOT cache nullptrs. If the background thread is currently writing the EXIF thumbnail,
-        // a premature load will fail. By not caching the failure, the UI will automatically retry 
-        // and succeed once the background thread finishes writing the file.
+        ThumbLoader.Add(path, maxWidth, maxHeight);
         return nullptr;
     }
     static void Clear() {
@@ -387,25 +458,20 @@ void cMenuImageGrid::Display(void)
     SetHelp(tr("Select"), "", "", tr("Back"));
 
     if (!myOsd) {
-        // WAHRE Bildschirmmaße vom Ausgabegerät (z.B. softhddevice) abrufen!
-        // Da das native Skin-Menü umgangen wird, sind die cOsd::OsdWidth() Werte ansonsten 0!
         int osdWidth = 0;
         int osdHeight = 0;
         double aspect = 0.0;
         cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
 
         if (osdWidth <= 0 || osdHeight <= 0) {
-            osdWidth = 1920; // Sicherer Fallback
+            osdWidth = 1920; 
             osdHeight = 1080;
         }
 
-        // Neues OSD auf Ebene 0 bei Koordinaten X=0, Y=0 erstellen
         myOsd = cOsdProvider::NewOsd(0, 0, 0);
         if (myOsd) {
             tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-            if (myOsd->SetAreas(&Area, 1) != oeOk) {
-                esyslog("imageplugin: FATAL ERROR - Could not set 32-bit OSD area!");
-            }
+            myOsd->SetAreas(&Area, 1);
         }
     }
 
@@ -443,12 +509,14 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // Garantierten, eigenen und komplett deckenden Hintergrund zeichnen
-    tColor bgFull = 0xFF151515; // 0xFF = 100% Deckkraft, kein Alpha-Blending-Fehler mehr möglich!
+    // Eigenen dunklen Hintergrund komplett zeichnen, da das Skin-Menü deaktiviert ist
+    tColor bgFull = 0xFF151515;
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
+
     char titleBuf[256];
     snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, 0xFF00AAFF, bgFull, font);
+    myOsd->DrawText(0, 10, titleBuf, 0xFF00AAFF, bgFull, font);
+
     int btnY = osdHeight - buttonAreaHeight;
     myOsd->DrawText(margin, btnY + 10, tr("Select"), 0xFFFFFFFF, 0xFFDD0000, font);
     myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), 0xFFFFFFFF, 0xFF0000DD, font);
@@ -560,6 +628,9 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     int pageItems = columns * visibleRows;
 
     switch (Key & ~k_Repeat) {
+        case kNone:
+            Display();
+            return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
