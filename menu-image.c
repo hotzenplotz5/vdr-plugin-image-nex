@@ -724,6 +724,172 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     return osContinue;
 }
 
+// --- cMenuImageSkinItem ---------------------------------------------------
+
+class cMenuImageSkinItem : public cOsdItem {
+private:
+    cDirItem *item;
+public:
+    cMenuImageSkinItem(cDirItem *Item);
+    cDirItem *Item(void) { return item; }
+};
+
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
+    item = Item;
+    char buffer[2048];
+    char *dirPath = item->Path();
+    char *fullDirPath = item->Source->BuildName(dirPath);
+    char *thumbPath = NULL;
+    
+    if (item->Type == itDir || item->Type == itParent) {
+        thumbPath = AddPath(fullDirPath, "folder.jpg");
+    } else if (item->Type == itFile) {
+        thumbPath = strdup(fullDirPath);
+    }
+    
+    int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
+    
+    // Skindesigner Token Format: image_path \t display_name \t is_dir
+    snprintf(buffer, sizeof(buffer), "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName, is_dir);
+    SetText(buffer, false);
+
+    if (thumbPath) free(thumbPath);
+    free(fullDirPath);
+    free(dirPath);
+}
+
+// --- cMenuImageSkin -------------------------------------------------------
+
+cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
+: cOsdMenu(tr("Image Grid"))
+{
+    source = Source;
+    list = new cDirList;
+    currentdir = NULL;
+
+    char *parent = NULL;
+    source->GetRemember(currentdir, parent);
+
+    LoadDir(currentdir);
+
+    if (parent) {
+        for (int i = 0; i < Count(); i++) {
+            cMenuImageSkinItem *item = (cMenuImageSkinItem *)Get(i);
+            if (item && item->Item() && item->Item()->Name && strcmp(item->Item()->Name, parent) == 0) {
+                SetCurrent(item);
+                break;
+            }
+        }
+        free(parent);
+    }
+    SetHelp(tr("Select"), "", "", tr("Back"));
+    Display();
+}
+
+cMenuImageSkin::~cMenuImageSkin()
+{
+    cDirItem *item = CurrentItem();
+    if (item && source) source->SetRemember(currentdir, item->Name);
+
+    delete list;
+    free(currentdir);
+}
+
+bool cMenuImageSkin::LoadDir(const char *dir)
+{
+    Clear();
+    bool res = list->Load(source, dir);
+    for (int i = 0; i < list->Count(); i++) {
+        cDirItem *item = list->Get(i);
+        if (item) {
+            Add(new cMenuImageSkinItem(item));
+        }
+    }
+    return res;
+}
+
+cDirItem *cMenuImageSkin::CurrentItem()
+{
+    cMenuImageSkinItem *item = (cMenuImageSkinItem *)Get(Current());
+    return item ? item->Item() : NULL;
+}
+
+eOSState cMenuImageSkin::ProcessKey(eKeys Key)
+{
+    eOSState state = cOsdMenu::ProcessKey(Key);
+
+    if (state == osUnknown) {
+        switch (Key) {
+            case kOk:
+            case kRed:
+                return Select(Key == kRed);
+            case kBlue:
+                return Parent();
+            case kBack:
+            case kMenu:
+                return osEnd;
+            default: break;
+        }
+    }
+    return state;
+}
+
+eOSState cMenuImageSkin::Parent(void)
+{
+    if (currentdir) {
+        char *parentDir = NULL;
+        char *ss = strrchr(currentdir, '/');
+        if (ss) {
+            *ss = 0;
+            parentDir = strdup(currentdir);
+        }
+        char* lastDirName = ss ? strdup(ss + 1) : strdup(currentdir);
+
+        free(currentdir);
+        currentdir = parentDir;
+        LoadDir(currentdir);
+
+        for (int i = 0; i < Count(); i++) {
+            cMenuImageSkinItem *item = (cMenuImageSkinItem *)Get(i);
+            if (item && item->Item() && item->Item()->Name && strcmp(item->Item()->Name, lastDirName) == 0) {
+                SetCurrent(item);
+                break;
+            }
+        }
+        free(lastDirName);
+        Display();
+    } else {
+        return osEnd;
+    }
+    return osContinue;
+}
+
+eOSState cMenuImageSkin::Select(bool isred)
+{
+    cDirItem *item = CurrentItem();
+    if (!item) return osContinue;
+
+    if (item->Type == itParent) {
+        return Parent();
+    } else if (item->Type == itDir) {
+        char *path = item->Path();
+        free(currentdir);
+        currentdir = path;
+        LoadDir(currentdir);
+        Display();
+        return osContinue;
+    } else if (item->Type == itFile) {
+        cSlideShow *newss = new cSlideShow(item);
+        if (newss->Load() && newss->Count()) {
+            cImageControl::SetSlideShow(newss);
+            return osEnd;
+        }
+        delete newss;
+        OSD_ErrorMsg(tr("No files!"));
+    }
+    return osContinue;
+}
+
 eOSState cMenuImageGrid::Parent(void)
 {
     if (currentdir) {

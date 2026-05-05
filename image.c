@@ -151,7 +151,11 @@ void cPluginImage::RemoveServiceSource()
 cOsdObject *cPluginImage::MainMenuAction(void)
 {
   if (ImageSetup.m_nDisplayMode == 1) { // 1 = Grid view
-      return new cMenuImageGrid(ImageSources.GetSource());
+      // Skindesigner erkannt? XML-Token Weg (Weg A) aktivieren!
+      if (Skins.Current() && Skins.Current()->Name() && strcasestr(Skins.Current()->Name(), "skindesigner") != NULL) {
+          return new cMenuImageSkin(ImageSources.GetSource());
+      }
+      return new cMenuImageGrid(ImageSources.GetSource()); // C++ Fallback (Weg B)
   }
   return new cMenuImageBrowse();
 }
