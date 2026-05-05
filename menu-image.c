@@ -736,7 +736,6 @@ public:
 
 cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     item = Item;
-    char buffer[2048];
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
     char *thumbPath = NULL;
@@ -749,9 +748,10 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     
     int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
     
-    // Skindesigner Token Format: image_path \t display_name \t is_dir
-    snprintf(buffer, sizeof(buffer), "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName, is_dir);
-    SetText(buffer, false);
+    char *buffer = NULL;
+    if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
+        SetText(buffer, false); // false = cOsdItem übernimmt die Kontrolle über diesen reservierten Speicher
+    }
 
     if (thumbPath) free(thumbPath);
     free(fullDirPath);
