@@ -763,9 +763,6 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
 cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Images"))
 {
-#if APIVERSNUM >= 20301
-    SetPlugin("image_next");
-#endif
     source = Source;
     list = new cDirList;
     currentdir = NULL;
