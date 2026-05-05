@@ -227,10 +227,11 @@ public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
     void Add(const std::string& path, int w, int h);
     void Clear();
+    void StopThread();
     virtual void Action();
 };
 
-static cThumbLoaderThread ThumbLoader;
+static cThumbLoaderThread* ThumbLoader = nullptr;
 
 class cThumbCache {
 private:
@@ -273,11 +274,12 @@ public:
             }
         }
         
-        ThumbLoader.Add(path, maxWidth, maxHeight);
+        if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
+        ThumbLoader->Add(path, maxWidth, maxHeight);
         return nullptr;
     }
     static void Clear() {
-        ThumbLoader.Clear();
+        if (ThumbLoader) ThumbLoader->Clear();
         cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
         lruList.clear();
@@ -297,6 +299,19 @@ void cThumbLoaderThread::Add(const std::string& path, int w, int h) {
 void cThumbLoaderThread::Clear() {
     cMutexLock lock(&queueMutex);
     queue.clear();
+}
+
+void cThumbLoaderThread::StopThread() {
+    cond.Broadcast();
+    Cancel(3);
+}
+
+void StopThumbLoader() {
+    if (ThumbLoader) {
+        ThumbLoader->StopThread();
+        delete ThumbLoader;
+        ThumbLoader = nullptr;
+    }
 }
 
 void cThumbLoaderThread::Action() {
