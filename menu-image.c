@@ -422,7 +422,7 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 // --- cMenuImageGrid ---------------------------------------------------------
 
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
-: cOsdObject(true)
+: cOsdMenu(tr("Image Grid"))
 {
     source = Source;
     list = new cDirList;
@@ -480,10 +480,10 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 void cMenuImageGrid::Show(void)
 {
     if (!myOsd) {
-        int osdWidth = 0;
-        int osdHeight = 0;
-        double aspect = 0.0;
-        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
+        int left = cOsd::OsdLeft();
+        int top = cOsd::OsdTop();
+        int osdWidth = cOsd::OsdWidth();
+        int osdHeight = cOsd::OsdHeight();
 
         if (osdWidth <= 0 || osdHeight <= 0) {
             osdWidth = 1920; 
@@ -491,7 +491,7 @@ void cMenuImageGrid::Show(void)
         }
 
         // Exklusives Level 0 anfordern, da Hardware keine Overlays unterstützt!
-        myOsd = cOsdProvider::NewOsd(0, 0, 0);
+        myOsd = cOsdProvider::NewOsd(left, top, 0);
         if (myOsd) {
             tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
@@ -539,14 +539,12 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() * 2 + 30;  // Genug Platz für große Skin-Header lassen
     int buttonAreaHeight = font->Height() + 60; // Genug Platz für Skin-Buttons lassen
 
-    // Unsere "Glasplatte" komplett transparent machen, damit Skindesigner sichtbar bleibt!
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, 0x00000000);
-    // VDR Theme-Farben dynamisch auslesen (Korrektes VDR-Objekt 'Theme' verwenden!)
-    tColor bgFull = Theme.Color(clrBackground);
-    tColor textFg = Theme.Color(clrMenuTitleFg);
-    tColor btnRed = Theme.Color(clrButtonRedBg);
-    tColor btnBlue = Theme.Color(clrButtonBlueBg);
-    tColor btnFg = Theme.Color(clrButtonRedFg);
+    // Sichere, fest definierte Farben verwenden, da VDR-Theme-Variablen versionsabhängig sind!
+    tColor bgFull = 0xFF151515;   // Edles Dunkelgrau für den Hintergrund
+    tColor textFg = 0xFF00AAFF;   // Hellblau für den Titel
+    tColor btnRed = 0xFFCC0000;   // Klassisches Rot für die Taste
+    tColor btnBlue = 0xFF0000CC;  // Klassisches Blau für die Taste
+    tColor btnFg = 0xFFFFFFFF;    // Weiß für die Tastenschrift
 
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
     char titleBuf[256];
