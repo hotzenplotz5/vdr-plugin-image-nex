@@ -198,7 +198,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
     avformat_close_input(&fmt_ctx);
 
     if (useTempThumb) unlink(tempThumbPath);
-    esyslog("imageplugin: <--- Finished thumbnail: %s (took %llu ms)", path, cTimeMs::Now() - tStart);
+    esyslog("imageplugin: <--- Finished thumbnail: %s (took %llu ms)", path, (unsigned long long)(cTimeMs::Now() - tStart));
     return retImage;
 }
 
@@ -522,7 +522,7 @@ void cMenuImageGrid::DrawGrid()
         }
     }
 
-    esyslog("imageplugin: ==== DrawGrid complete. Total rendering time: %llu ms ====", cTimeMs::Now() - tGridStart);
+    esyslog("imageplugin: ==== DrawGrid complete. Total rendering time: %llu ms ====", (unsigned long long)(cTimeMs::Now() - tGridStart));
 }
 
 cDirItem *cMenuImageGrid::CurrentItem()
