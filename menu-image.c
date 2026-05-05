@@ -227,11 +227,10 @@ public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
     void Add(const std::string& path, int w, int h);
     void Clear();
-    void StopThread();
     virtual void Action();
 };
 
-static cThumbLoaderThread* ThumbLoader = nullptr;
+static cThumbLoaderThread ThumbLoader;
 
 class cThumbCache {
 private:
@@ -274,12 +273,11 @@ public:
             }
         }
         
-        if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
-        ThumbLoader->Add(path, maxWidth, maxHeight);
+        ThumbLoader.Add(path, maxWidth, maxHeight);
         return nullptr;
     }
     static void Clear() {
-        if (ThumbLoader) ThumbLoader->Clear();
+        ThumbLoader.Clear();
         cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
         lruList.clear();
@@ -299,19 +297,6 @@ void cThumbLoaderThread::Add(const std::string& path, int w, int h) {
 void cThumbLoaderThread::Clear() {
     cMutexLock lock(&queueMutex);
     queue.clear();
-}
-
-void cThumbLoaderThread::StopThread() {
-    cond.Broadcast();
-    Cancel(3);
-}
-
-void StopThumbLoader() {
-    if (ThumbLoader) {
-        ThumbLoader->StopThread();
-        delete ThumbLoader;
-        ThumbLoader = nullptr;
-    }
 }
 
 void cThumbLoaderThread::Action() {
@@ -418,7 +403,7 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 // --- cMenuImageGrid ---------------------------------------------------------
 
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
-: cOsdObject()
+: cOsdObject(false)
 {
     source = Source;
     list = new cDirList;
@@ -485,15 +470,23 @@ void cMenuImageGrid::Show(void)
             osdHeight = 1080;
         }
 
-        myOsd = cOsdProvider::NewOsd(left, top, 0);
-        if (myOsd) {
-            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-            eOsdError err = myOsd->SetAreas(&Area, 1);
-            if (err != oeOk) {
-                esyslog("imageplugin: FATAL ERROR - SetAreas failed for 32-bit OSD with code %d! Dimensions: %dx%d", err, osdWidth, osdHeight);
-                Area.bpp = 8; // Fallback
-                myOsd->SetAreas(&Area, 1);
+        // Skindesigner blockiert Level 0 kurzzeitig für seine Fade-Out-Animationen.
+        // Ein sofortiges Anfordern von Level 0 führt zur Ablehnung und einem unsichtbaren 8-Bit OSD.
+        // Wir suchen dynamisch die Hardware-Layer 0 bis 3 ab, um eine garantierte 32-Bit Ebene zu finden!
+        for (int level = 0; level < 4; level++) {
+            myOsd = cOsdProvider::NewOsd(left, top, level);
+            if (myOsd) {
+                tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
+                if (myOsd->SetAreas(&Area, 1) == oeOk) {
+                    break; // 32-Bit TrueColor OSD erfolgreich zugewiesen!
+                }
+                delete myOsd;
+                myOsd = NULL;
             }
+        }
+        
+        if (!myOsd) {
+            esyslog("imageplugin: FATAL ERROR - Could not allocate 32-bit OSD on any hardware layer!");
         }
     }
 
