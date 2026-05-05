@@ -540,12 +540,12 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    // Skindesigner/VDR Theme-Farben dynamisch auslesen, damit das Grid optisch zum Skin passt!
-    tColor bgFull = cTheme::CurrentTheme()->Color(clrBackground);
-    tColor textFg = cTheme::CurrentTheme()->Color(clrMenuFontDetail);
-    tColor btnRed = cTheme::CurrentTheme()->Color(clrButtonRedBg);
-    tColor btnBlue = cTheme::CurrentTheme()->Color(clrButtonBlueBg);
-    tColor btnFg = cTheme::CurrentTheme()->Color(clrButtonRedFg);
+    // Sichere, fest definierte Farben verwenden, da VDR-Theme-Variablen versionsabhängig sind!
+    tColor bgFull = 0xFF151515;   // Edles Dunkelgrau für den Hintergrund
+    tColor textFg = 0xFF00AAFF;   // Hellblau für den Titel
+    tColor btnRed = 0xFFCC0000;   // Klassisches Rot für die Taste
+    tColor btnBlue = 0xFF0000CC;  // Klassisches Blau für die Taste
+    tColor btnFg = 0xFFFFFFFF;    // Weiß für die Tastenschrift
 
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
 
