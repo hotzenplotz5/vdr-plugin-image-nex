@@ -100,7 +100,10 @@ cMenuSetupImage::cMenuSetupImage(void)
 {
   SetSection(tr("Images"));
 
-  const char *displayModes[] = { tr("List"), "Grid (C++)", "Grid (Skin XML)" };
+  static const char *displayModes[3];
+  displayModes[0] = tr("List");
+  displayModes[1] = "Grid (C++)";
+  displayModes[2] = "Grid (Skin XML)";
   Add(new cMenuEditStraItem(tr("Display Mode"), &m_tmpSetup.m_nDisplayMode, 3, displayModes));
 
   Add(new cMenuEditIntItem(tr("Grid columns (0=auto)"),
