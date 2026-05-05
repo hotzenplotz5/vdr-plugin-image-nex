@@ -381,13 +381,30 @@ void cMenuImageGrid::Display(void)
         int top = cOsd::OsdTop();
         int width = cOsd::OsdWidth();
         int height = cOsd::OsdHeight();
+        // WAHRE Bildschirmmaße vom Ausgabegerät (z.B. softhddevice) abrufen!
+        // Da das native Skin-Menü umgangen wird, sind die cOsd::OsdWidth() Werte ansonsten 0!
+        int osdWidth = 0;
+        int osdHeight = 0;
+        double aspect = 0.0;
+        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
 
         // EXTREM WICHTIG: Level 0 erzwingen! Ausgabeplugins (wie softhddevice) ignorieren oft OSD-Level > 1.
         // Sie akzeptieren sie zwar im Code (daher kein Fehler), rendern sie aber niemals auf den Bildschirm!
         myOsd = cOsdProvider::NewOsd(left, top, 0);
+        if (osdWidth <= 0 || osdHeight <= 0) {
+            osdWidth = 1920; // Sicherer Fallback
+            osdHeight = 1080;
+        }
+
+        // Neues OSD auf Ebene 0 bei Koordinaten X=0, Y=0 erstellen
+        myOsd = cOsdProvider::NewOsd(0, 0, 0);
         if (myOsd) {
             tArea Area = { 0, 0, width - 1, height - 1, 32 };
             myOsd->SetAreas(&Area, 1);
+            tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
+            if (myOsd->SetAreas(&Area, 1) != oeOk) {
+                esyslog("imageplugin: FATAL ERROR - Could not set 32-bit OSD area!");
+            }
         }
     }
 
