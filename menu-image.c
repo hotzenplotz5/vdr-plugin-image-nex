@@ -227,10 +227,11 @@ public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
     void Add(const std::string& path, int w, int h);
     void Clear();
+    void StopThread();
     virtual void Action();
 };
 
-static cThumbLoaderThread ThumbLoader;
+static cThumbLoaderThread* ThumbLoader = nullptr;
 
 class cThumbCache {
 private:
@@ -273,11 +274,12 @@ public:
             }
         }
         
-        ThumbLoader.Add(path, maxWidth, maxHeight);
+        if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
+        ThumbLoader->Add(path, maxWidth, maxHeight);
         return nullptr;
     }
     static void Clear() {
-        ThumbLoader.Clear();
+        if (ThumbLoader) ThumbLoader->Clear();
         cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
         lruList.clear();
@@ -297,6 +299,19 @@ void cThumbLoaderThread::Add(const std::string& path, int w, int h) {
 void cThumbLoaderThread::Clear() {
     cMutexLock lock(&queueMutex);
     queue.clear();
+}
+
+void cThumbLoaderThread::StopThread() {
+    cond.Broadcast();
+    Cancel(3);
+}
+
+void StopThumbLoader() {
+    if (ThumbLoader) {
+        ThumbLoader->StopThread();
+        delete ThumbLoader;
+        ThumbLoader = nullptr;
+    }
 }
 
 void cThumbLoaderThread::Action() {
@@ -403,7 +418,7 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 // --- cMenuImageGrid ---------------------------------------------------------
 
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
-: cOsdObject(false)
+: cOsdMenu("Image Grid")
 {
     source = Source;
     list = new cDirList;
@@ -457,8 +472,13 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     return list->Load(source, dir);
 }
 
-void cMenuImageGrid::Show(void)
+void cMenuImageGrid::Display(void)
 {
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    SetTitle(titleBuf);
+    SetHelp(tr("Select"), "", "", tr("Back"));
+
     if (!myOsd) {
         int left = cOsd::OsdLeft();
         int top = cOsd::OsdTop();
@@ -473,7 +493,9 @@ void cMenuImageGrid::Show(void)
         myOsd = cOsdProvider::NewOsd(left, top, 0);
         if (myOsd) {
             tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-            if (myOsd->SetAreas(&Area, 1) != oeOk) {
+            eOsdError err = myOsd->SetAreas(&Area, 1);
+            if (err != oeOk) {
+                esyslog("imageplugin: FATAL ERROR - SetAreas failed for 32-bit OSD with code %d! Dimensions: %dx%d", err, osdWidth, osdHeight);
                 Area.bpp = 8; // Fallback
                 myOsd->SetAreas(&Area, 1);
             }
@@ -630,27 +652,27 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
-            Show();
+            Display();
             return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
-            Show();
+            Display();
             return osContinue;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
-            Show();
+            Display();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
-            Show();
+            Display();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
-            Show();
+            Display();
             return osContinue;
         case kDown:
             if (currentIndex + columns < totalItems) {
@@ -659,11 +681,11 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
                 // Jump to the last item only if there is a row below us, preventing horizontal jumps in the last row
                 currentIndex = totalItems - 1;
             }
-            Show();
+            Display();
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
-            Show();
+            Display();
             return osContinue;
         case kOk:
         case kRed:
@@ -704,7 +726,7 @@ eOSState cMenuImageGrid::Parent(void)
         }
         free(lastDirName);
 
-        Show();
+        Display();
     } else {
         return osEnd;
     }
@@ -723,7 +745,7 @@ eOSState cMenuImageGrid::Select(bool isred)
         free(currentdir);
         currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
-        Show();
+        Display();
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);

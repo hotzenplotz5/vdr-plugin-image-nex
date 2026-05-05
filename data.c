@@ -104,14 +104,20 @@ public:
     }
 };
 
-static cExifExtractorThread ExifThread;
+static cExifExtractorThread* ExifThread = nullptr;
 
 void StopExifExtractor() {
-    ExifThread.StopThread();
+    if (ExifThread) {
+        ExifThread->StopThread();
+        delete ExifThread;
+        ExifThread = nullptr;
+    }
 }
 
 void ClearExifExtractorTasks() {
-    ExifThread.ClearTasks();
+    if (ExifThread) {
+        ExifThread->ClearTasks();
+    }
 }
 #endif
 
@@ -348,8 +354,10 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
       }
 #ifdef HAVE_LIBEXIF
       else {
-          // Asynchrone Extraktion, UI wird nicht blockiert, opendir passiert nun sicher im Thread!
-          ExifThread.AddTask(fullDirPath, folderJpgPath);
+          if (!ExifThread) {
+              ExifThread = new cExifExtractorThread();
+          }
+          ExifThread->AddTask(fullDirPath, folderJpgPath);
       }
 #endif
 
