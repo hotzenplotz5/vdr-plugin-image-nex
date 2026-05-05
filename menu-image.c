@@ -422,7 +422,7 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 // --- cMenuImageGrid ---------------------------------------------------------
 
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
-: cOsdMenu(tr("Image Grid"))
+: cOsdObject(true)
 {
     source = Source;
     list = new cDirList;
