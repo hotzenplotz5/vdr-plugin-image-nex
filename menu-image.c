@@ -480,26 +480,18 @@ bool cMenuImageGrid::LoadDir(const char *dir)
 void cMenuImageGrid::Show(void)
 {
     if (!myOsd) {
-        int left = cOsd::OsdLeft();
-        int top = cOsd::OsdTop();
-        int osdWidth = cOsd::OsdWidth();
-        int osdHeight = cOsd::OsdHeight();
+        int osdWidth = 0;
+        int osdHeight = 0;
+        double aspect = 0.0;
+        cDevice::PrimaryDevice()->GetOsdSize(osdWidth, osdHeight, aspect);
 
         if (osdWidth <= 0 || osdHeight <= 0) {
             osdWidth = 1920; 
             osdHeight = 1080;
         }
 
-        // Overlay OSD auf Level 1-4 suchen, um TrueColor-Bilder über den Skin zu legen!
-        for (int level = 1; level < 5; level++) {
-            myOsd = cOsdProvider::NewOsd(left, top, level);
-            if (myOsd) {
-                tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
-                if (myOsd->SetAreas(&Area, 1) == oeOk) {
-                    break;
-                }
         // Exklusives Level 0 anfordern, da Hardware keine Overlays unterstützt!
-        myOsd = cOsdProvider::NewOsd(left, top, 0);
+        myOsd = cOsdProvider::NewOsd(0, 0, 0);
         if (myOsd) {
             tArea Area = { 0, 0, osdWidth - 1, osdHeight - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
@@ -510,7 +502,6 @@ void cMenuImageGrid::Show(void)
 
         if (!myOsd) {
             g_NeedsRedraw = true;
-            return; // Hardware Layer aktuell belegt, warten
             return; // Hardware Layer blockiert
         }
     }
