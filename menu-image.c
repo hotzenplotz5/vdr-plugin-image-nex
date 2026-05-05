@@ -166,10 +166,8 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
         if (newWidth <= 0) newWidth = 1;
         if (newHeight <= 0) newHeight = 1;
 
-        // WICHTIGER FIX: VDRs cImage allokiert keinen Speicher, wenn Data=NULL ist!
-        // Wir müssen den Puffer zwingend selbst reservieren, sonst schreibt FFmpeg ins Nichts!
-        tColor* pixelBuffer = (tColor*)malloc(newWidth * newHeight * sizeof(tColor));
-        if (pixelBuffer) {
+        retImage = new cImage(cSize(newWidth, newHeight));
+        if (retImage && retImage->Data()) {
             SwsContext *sws_ctx = sws_getContext(
                 frame->width, frame->height, (AVPixelFormat)frame->format,
                 newWidth, newHeight, AV_PIX_FMT_BGRA,
@@ -177,14 +175,11 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight) {
             );
 
             if (sws_ctx) {
-                uint8_t *dest[4] = { (uint8_t*)pixelBuffer, nullptr, nullptr, nullptr };
+                uint8_t *dest[4] = { (uint8_t*)const_cast<tColor*>(retImage->Data()), nullptr, nullptr, nullptr };
                 int dest_linesize[4] = { newWidth * 4, 0, 0, 0 };
                 sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height, dest, dest_linesize);
                 sws_freeContext(sws_ctx);
-
-                retImage = new cImage(cSize(newWidth, newHeight), pixelBuffer);
             }
-            free(pixelBuffer);
         }
     }
 
@@ -382,8 +377,6 @@ void cMenuImageGrid::Display(void)
     SetTitle(titleBuf);
     SetHelp(tr("Select"), "", "", tr("Back"));
 
-    cOsdMenu::Display();
-
     if (!myOsd) {
         // Exakte VDR-Maße abrufen, damit das Overlay nicht "Out-of-Bounds" vom OSD-Provider abgelehnt wird!
         int left = cOsd::OsdLeft();
@@ -391,14 +384,13 @@ void cMenuImageGrid::Display(void)
         int width = cOsd::OsdWidth();
         int height = cOsd::OsdHeight();
 
-        // Level 1: Wir legen unsere Kacheln als 100% transparentes Overlay ÜBER das Skindesigner-Menü
-        g_GridOsdLevel = 1;
+        // Z-Level 10: Garantiert, dass die Kacheln ÜBER allen Skindesigner-Layern liegen!
+        g_GridOsdLevel = 10;
         myOsd = cOsdProvider::NewOsd(left, top, g_GridOsdLevel);
         if (myOsd) {
             tArea Area = { 0, 0, width - 1, height - 1, 32 };
             if (myOsd->SetAreas(&Area, 1) != oeOk) {
-                // FATAL: Level 1 in 32-Bit abgelehnt (meist OSD Memory-Limit durch Skindesigner).
-                // Wenn wir auf 8-Bit fallen, werden ARGB-Farben unsichtbar (keine Kacheln!).
+                // FATAL: Hardware hat nicht genug Layer/Speicher für ein Overlay.
                 // Lösung: Wir übernehmen Level 0, um echtes 32-Bit TrueColor zu erzwingen!
                 delete myOsd;
                 g_GridOsdLevel = 0;
@@ -409,6 +401,12 @@ void cMenuImageGrid::Display(void)
             }
         }
     }
+
+    // Skindesigner nur malen lassen, wenn wir nicht auf Level 0 sind (verhindert Kollision)
+    if (g_GridOsdLevel > 0) {
+        cOsdMenu::Display();
+    }
+
     if (myOsd) {
         DrawGrid();
         myOsd->Flush();
@@ -441,7 +439,7 @@ void cMenuImageGrid::DrawGrid()
     int titleHeight = font->Height() + 20; // Ungefähre Höhe des Titelbereichs
     int buttonAreaHeight = 50; // Ungefährer Platz für Farbtasten unten
 
-    if (g_GridOsdLevel == 1) {
+    if (g_GridOsdLevel > 0) {
         // Overlay-Modus: OSD transparent machen, Skindesigner-Menü im Hintergrund bleibt sichtbar
         myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, 0x00000000);
     } else {
@@ -471,7 +469,10 @@ void cMenuImageGrid::DrawGrid()
         tColor bgColor = (i == currentIndex) ? 0xFF0055AA : 0xFF333333;
         tColor textColor = (i == currentIndex) ? 0xFFFFFFFF : 0xFFDDDDDD;
 
-        myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Draw tile background
+        // 1-Pixel weißer Rahmen um die Kachel ziehen
+        tColor borderColor = 0xFFFFFFFF; // Weiß
+        myOsd->DrawRectangle(x - 1, y - 1, x + kachelBreite, y + kachelHoehe, borderColor);
+        myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Kachel-Hintergrund zeichnen
 
         cDirItem *item = list->Get(i);
         if (item) {
