@@ -50,4 +50,7 @@ public:
     virtual void Display(void);
     virtual eOSState ProcessKey(eKeys Key);
 };
+
+void StopThumbLoader();
+
 #endif				//___MENU_IMAGE_H

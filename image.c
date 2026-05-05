@@ -131,6 +131,7 @@ cPluginImage::~cPluginImage()
 #ifdef HAVE_LIBEXIF
   StopExifExtractor();
 #endif
+  StopThumbLoader();
   RemoveServiceSource();
 }
 

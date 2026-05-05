@@ -227,6 +227,7 @@ public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
     void Add(const std::string& path, int w, int h);
     void Clear();
+    void StopThread();
     virtual void Action();
 };
 
@@ -297,6 +298,15 @@ void cThumbLoaderThread::Add(const std::string& path, int w, int h) {
 void cThumbLoaderThread::Clear() {
     cMutexLock lock(&queueMutex);
     queue.clear();
+}
+
+void cThumbLoaderThread::StopThread() {
+    cond.Broadcast();
+    Cancel(3);
+}
+
+void StopThumbLoader() {
+    ThumbLoader.StopThread();
 }
 
 void cThumbLoaderThread::Action() {
@@ -495,8 +505,6 @@ void cMenuImageGrid::Display(void)
 
 void cMenuImageGrid::DrawGrid()
 {
-    uint64_t tGridStart = cTimeMs::Now();
-
     if (!myOsd) return;
     int osdWidth = myOsd->Width();
     int osdHeight = myOsd->Height();
