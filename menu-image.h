@@ -51,6 +51,22 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
+class cMenuImageSkin : public cOsdMenu {
+private:
+    cFileSource *source;
+    cDirList *list;
+    char *currentdir;
+
+    bool LoadDir(const char *dir);
+    cDirItem *CurrentItem();
+    eOSState Select(bool isred);
+    eOSState Parent();
+public:
+    cMenuImageSkin(cFileSource *Source);
+    virtual ~cMenuImageSkin();
+    virtual eOSState ProcessKey(eKeys Key);
+};
+
 void StopThumbLoader();
 
 #endif				//___MENU_IMAGE_H
