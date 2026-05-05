@@ -41,7 +41,7 @@ public:
   virtual bool ProcessArgs(int argc, char *argv[]);
   virtual bool Start(void);
   virtual const char *MainMenuEntry(void) { return (ImageSetup.m_bHideMenu ? NULL : tr("Images")); }
-  virtual cOsdObject *MainMenuAction(void);
+  virtual cOsdMenu *MainMenuAction(void);
   virtual cMenuSetupPage *SetupMenu(void);
   virtual bool SetupParse(const char *Name, const char *Value);
   virtual bool Service(const char *Id, void *Data);
@@ -148,7 +148,7 @@ void cPluginImage::RemoveServiceSource()
   }
 }
 
-cOsdObject *cPluginImage::MainMenuAction(void)
+cOsdMenu *cPluginImage::MainMenuAction(void)
 {
   if (ImageSetup.m_nDisplayMode == 1) { // 1 = Grid view
       return new cMenuImageGrid(ImageSources.GetSource());

@@ -659,35 +659,35 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
-            if (g_ThumbnailsUpdated || !myOsd || g_NeedsRedraw) {
+            if (g_ThumbnailsUpdated || !osd || g_NeedsRedraw) {
                 g_ThumbnailsUpdated = false;
                 g_NeedsRedraw = true;
-                Show();
+                Display();
             }
             return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kDown:
             if (currentIndex + columns < totalItems) {
@@ -697,12 +697,12 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
                 currentIndex = totalItems - 1;
             }
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
             g_NeedsRedraw = true;
-            Show();
+            Display();
             return osContinue;
         case kOk:
         case kRed:
@@ -744,7 +744,7 @@ eOSState cMenuImageGrid::Parent(void)
         free(lastDirName);
 
         g_NeedsRedraw = true;
-        Show();
+        Display();
     } else {
         return osEnd;
     }
