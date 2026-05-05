@@ -30,6 +30,7 @@ extern "C" {
 #include "image.h"
 #include "list.h"
 #include <vdr/i18n.h>
+#include <vdr/device.h>
 
 #include "libimage/xpm.h"
 
@@ -333,16 +334,25 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
             if (crop_h <= 0) crop_h = 1;
         }
 
+        // VDR Output Aspect Ratio Correction (Fixes distorted/stretched images)
+        double pixelAspect = 1.0;
+        int dummyW, dummyH;
+        cDevice::PrimaryDevice()->GetOsdSize(dummyW, dummyH, pixelAspect);
+        if (pixelAspect <= 0.0) pixelAspect = 1.0;
+
+        // Calculate Pixel Aspect Ratio (Non-square pixels on TVs, e.g. 720x576 to 16:9)
         double aspect_src_cropped = (double)crop_w / crop_h;
+        double adjusted_src_aspect = aspect_src_cropped / pixelAspect;
+
         double aspect_dst = (double)pShell->nTargetWidth / pShell->nTargetHeight;
         int scaled_w = pShell->nTargetWidth;
         int scaled_h = pShell->nTargetHeight;
         
-        // Calculate letterboxing or pillarboxing
-        if (aspect_src_cropped > aspect_dst) {
-            scaled_h = pShell->nTargetWidth / aspect_src_cropped;
+        // Calculate letterboxing or pillarboxing using the adjusted physical aspect
+        if (adjusted_src_aspect > aspect_dst) {
+            scaled_h = pShell->nTargetWidth / adjusted_src_aspect;
         } else {
-            scaled_w = pShell->nTargetHeight * aspect_src_cropped;
+            scaled_w = pShell->nTargetHeight * adjusted_src_aspect;
         }
         if (scaled_w <= 0) scaled_w = 1;
         if (scaled_h <= 0) scaled_h = 1;
