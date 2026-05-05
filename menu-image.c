@@ -418,7 +418,7 @@ eOSState cMenuImageBrowse::ProcessKey(eKeys Key)
 // --- cMenuImageGrid ---------------------------------------------------------
 
 cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
-: cOsdMenu("Image Grid")
+: cOsdObject()
 {
     source = Source;
     list = new cDirList;
@@ -472,13 +472,8 @@ bool cMenuImageGrid::LoadDir(const char *dir)
     return list->Load(source, dir);
 }
 
-void cMenuImageGrid::Display(void)
+void cMenuImageGrid::Show(void)
 {
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "%s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    SetTitle(titleBuf);
-    SetHelp(tr("Select"), "", "", tr("Back"));
-
     if (!myOsd) {
         int left = cOsd::OsdLeft();
         int top = cOsd::OsdTop();
@@ -652,27 +647,27 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
-            Display();
+            Show();
             return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
-            Display();
+            Show();
             return osContinue;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
-            Display();
+            Show();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
-            Display();
+            Show();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
-            Display();
+            Show();
             return osContinue;
         case kDown:
             if (currentIndex + columns < totalItems) {
@@ -681,11 +676,11 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
                 // Jump to the last item only if there is a row below us, preventing horizontal jumps in the last row
                 currentIndex = totalItems - 1;
             }
-            Display();
+            Show();
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
-            Display();
+            Show();
             return osContinue;
         case kOk:
         case kRed:
@@ -726,7 +721,7 @@ eOSState cMenuImageGrid::Parent(void)
         }
         free(lastDirName);
 
-        Display();
+        Show();
     } else {
         return osEnd;
     }
@@ -745,7 +740,7 @@ eOSState cMenuImageGrid::Select(bool isred)
         free(currentdir);
         currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
-        Display();
+        Show();
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);
