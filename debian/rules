@@ -13,10 +13,5 @@ override_dh_strip:
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/$(PLG_PACKAGE)
 
-override_dh_clean:
-	dh_clean
-	# Radikales Aufräumen: Zwingt Debian, alle temporären Bau-Ordner restlos zu löschen
-	rm -rf debian/vdr-plugin-image-next debian/vdr-plugin-image-next-dbg debian/.debhelper debian/tmp debian/files debian/*.substvars debian/*.debhelper.log
-
 %:
 	dh $@ --with vdrplugin
