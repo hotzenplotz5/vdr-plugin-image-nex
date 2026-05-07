@@ -743,7 +743,21 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     if (item->Type == itDir || item->Type == itParent) {
         thumbPath = AddPath(fullDirPath, "folder.jpg");
     } else if (item->Type == itFile) {
-        thumbPath = strdup(fullDirPath);
+#ifdef HAVE_LIBEXIF
+        // WICHTIG: Niemals das Original-JPEG an den Skindesigner übergeben!
+        // Er versucht sonst, riesige Bilder im Main-Thread zu laden und blockiert das OSD.
+        // Wir extrahieren stattdessen blitzschnell das winzige EXIF-Thumbnail nach /tmp/
+        char tmpPath[512];
+        unsigned int hash = 0;
+        for (const char* p = fullDirPath; *p; ++p) hash = hash * 33 + (unsigned char)*p;
+        snprintf(tmpPath, sizeof(tmpPath), "/tmp/vdr_skindesigner_thumb_%u.jpg", hash);
+        if (access(tmpPath, R_OK) != 0) { 
+            ExtractExifThumbnail(fullDirPath, tmpPath);
+        }
+        thumbPath = strdup(tmpPath);
+#else
+        thumbPath = strdup(""); // Besser kein Bild als das OSD zum Absturz zu bringen
+#endif
     }
     
     int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
