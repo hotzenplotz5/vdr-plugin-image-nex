@@ -84,6 +84,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
     }
+    if (opts) av_dict_free(&opts);
 
     int video_stream_idx = -1;
     for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
@@ -256,27 +257,7 @@ public:
             }
         }
         
-        bool hasExif = false;
-        const char *ext = strrchr(path, '.');
-        if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-            hasExif = true;
-        }
-        
-        if (hasExif) {
-            cImage* thumb = LoadThumbnail(path, maxWidth, maxHeight, true);
-            if (thumb) {
-                cMutexLock lock(&ThumbCacheMutex);
-                Cache[key] = std::unique_ptr<cImage>(thumb);
-                lruList.push_front(key);
-                if (Cache.size() > MAX_CACHE_SIZE) {
-                    std::string last = lruList.back();
-                    lruList.pop_back();
-                    Cache.erase(last);
-                }
-                return thumb;
-            }
-        }
-        
+        // ALLES in den Hintergrund-Thread verlagern! Verhindert das Einfrieren des VDR Haupt-Threads.
         if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
         ThumbLoader->Add(path, maxWidth, maxHeight);
         return nullptr;
@@ -318,8 +299,10 @@ void StopThumbLoader() {
 }
 
 void cThumbLoaderThread::Action() {
+    uint64_t lastRefresh = 0;
     while (Running()) {
         ThumbRequest req;
+        bool isQueueEmpty = false;
         {
             cMutexLock lock(&queueMutex);
             if (queue.empty()) {
@@ -328,6 +311,7 @@ void cThumbLoaderThread::Action() {
             }
             req = queue.front();
             queue.pop_front();
+            isQueueEmpty = queue.empty();
         }
         if (!Running()) break;
 
@@ -340,7 +324,12 @@ void cThumbLoaderThread::Action() {
                 cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
             }
             g_ThumbnailsUpdated = true;
-            cRemote::Put(kNone); // Force VDR to trigger ProcessKey and refresh OSD
+            
+            // Rate-Limiting: Redraw-Überflutung stoppen! (Nur alle 250ms oder am Ende)
+            if (isQueueEmpty || cTimeMs::Now() - lastRefresh > 250) {
+                lastRefresh = cTimeMs::Now();
+                cRemote::Put(kNone); 
+            }
         }
     }
 }
@@ -764,7 +753,8 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     
     char *buffer = NULL;
     if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
-        SetText(buffer, false); // false = cOsdItem übernimmt die Kontrolle über diesen reservierten Speicher
+        SetText(buffer);
+        free(buffer); // Massives Speicherleck behoben! asprintf Puffer muss freigegeben werden.
     }
 
     if (thumbPath) free(thumbPath);
