@@ -321,6 +321,14 @@ void cThumbLoaderThread::Action() {
             snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
             {
                 cMutexLock cacheLock(&ThumbCacheMutex);
+                // Speicherleck behoben: Alte Bilder aus dem RAM löschen, wenn das Limit erreicht ist!
+                if (cThumbCache::Cache.find(keyBuf) == cThumbCache::Cache.end()) {
+                    cThumbCache::lruList.push_front(keyBuf);
+                    if (cThumbCache::lruList.size() > 100) {
+                        cThumbCache::Cache.erase(cThumbCache::lruList.back());
+                        cThumbCache::lruList.pop_back();
+                    }
+                }
                 cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
             }
             g_ThumbnailsUpdated = true;
@@ -740,10 +748,13 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
         unsigned int hash = 0;
         for (const char* p = fullDirPath; *p; ++p) hash = hash * 33 + (unsigned char)*p;
         snprintf(tmpPath, sizeof(tmpPath), "/tmp/vdr_skindesigner_thumb_%u.jpg", hash);
-        if (access(tmpPath, R_OK) != 0) { 
-            ExtractExifThumbnail(fullDirPath, tmpPath);
+        if (access(tmpPath, R_OK) == 0) { 
+            thumbPath = strdup(tmpPath);
+        } else if (ExtractExifThumbnail(fullDirPath, tmpPath)) {
+            thumbPath = strdup(tmpPath);
+        } else {
+            thumbPath = strdup(""); // WICHTIG: Leeren Pfad senden, wenn kein EXIF existiert! Verhindert den Skindesigner-Absturz.
         }
-        thumbPath = strdup(tmpPath);
 #else
         thumbPath = strdup(""); // Besser kein Bild als das OSD zum Absturz zu bringen
 #endif
