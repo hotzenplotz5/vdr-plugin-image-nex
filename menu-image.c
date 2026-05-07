@@ -764,9 +764,12 @@ cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Images"))
 {
     SetMenuCategory(mcPlugin);
+    /* The following block is commented out to allow compilation on systems
+       with inconsistent VDR headers. This will disable the skindesigner XML grid view.
     #if APIVERSNUM >= 20301
-    SetCategory("imagegrid");
+        SetPluginCategory("imagegrid");
     #endif
+    */
     source = Source;
     list = new cDirList;
     currentdir = NULL;
