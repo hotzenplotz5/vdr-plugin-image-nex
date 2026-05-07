@@ -238,10 +238,9 @@ public:
 static cThumbLoaderThread* ThumbLoader = nullptr;
 
 class cThumbCache {
-private:
+public:
     static const size_t MAX_CACHE_SIZE = 100;
     static std::list<std::string> lruList;
-public:
     static std::map<std::string, std::unique_ptr<cImage>> Cache;
     static cImage* Get(const char* path, int maxWidth, int maxHeight) {
         char keyBuf[1024];
