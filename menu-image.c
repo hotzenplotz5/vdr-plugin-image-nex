@@ -724,7 +724,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public cSkindesignerOsdItem {
+class cMenuImageSkinItem : public cSkinDesignerOsdItem {
 private:
     cDirItem *item;
 public:
@@ -732,7 +732,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkindesignerOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkinDesignerOsdItem("") {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
@@ -778,9 +778,6 @@ cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Images"))
 {
     SetMenuCategory(mcPlugin);
-    #if APIVERSNUM >= 20301
-        SetPluginCategory("imagegrid");
-    #endif
     source = Source;
     list = new cDirList;
     currentdir = NULL;
