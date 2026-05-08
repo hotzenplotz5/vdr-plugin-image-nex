@@ -779,9 +779,6 @@ cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Images"))
 {
     SetMenuCategory(mcPlugin);
-    #if APIVERSNUM >= 20301
-        SetPluginCategory("imagegrid");
-    #endif
     source = Source;
     list = new cDirList;
     currentdir = NULL;
