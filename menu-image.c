@@ -48,8 +48,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include <skindesignerapi.h>
-#include <skindesignerosdbase.h>
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
@@ -725,7 +723,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public cSkindesignerOsdItem {
+class cMenuImageSkinItem : public cOsdItem {
 private:
     cDirItem *item;
 public:
@@ -733,7 +731,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkindesignerOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
@@ -764,9 +762,11 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkindesignerOsdItem(""
     
     int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
     
-    SetToken("thumbnail", thumbPath ? thumbPath : "");
-    SetToken("albumname", item->DisplayName ? item->DisplayName : "");
-    SetToken("is_folder", is_dir);
+    char *buffer = NULL;
+    if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
+        SetText(buffer, false);
+        free(buffer);
+    }
 
     if (thumbPath) free(thumbPath);
     free(fullDirPath);
@@ -779,6 +779,9 @@ cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Images"))
 {
     SetMenuCategory(mcPlugin);
+    #if APIVERSNUM >= 20301
+        SetPluginCategory("imagegrid");
+    #endif
     source = Source;
     list = new cDirList;
     currentdir = NULL;
