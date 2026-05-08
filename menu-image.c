@@ -48,6 +48,13 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include <skindesignerapi.h>
+#include <skindesignerosdbase.h>
+#include <tokencontainer.h>
+
+// Genialer Trick: Fängt fehlende oder vorhandene Namespaces in alten/neuen Skindesigner-Versionen nahtlos ab!
+namespace Skindesigner {}
+using namespace Skindesigner;
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
@@ -723,7 +730,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public cOsdItem {
+class cMenuImageSkinItem : public cOsdItem, public cTokenContainer {
 private:
     cDirItem *item;
 public:
@@ -731,7 +738,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem(""), cTokenContainer() {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
@@ -762,11 +769,12 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     
     int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
     
-    char *buffer = NULL;
-    if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
-        SetText(buffer, true);
-        free(buffer);
-    }
+    // Die ECHTE Skindesigner API nutzen!
+    SetToken("thumbnail", thumbPath ? thumbPath : "");
+    SetToken("albumname", item->DisplayName ? item->DisplayName : "");
+    SetToken("is_folder", is_dir);
+    
+    SetText(item->DisplayName ? item->DisplayName : "", true);
 
     if (thumbPath) free(thumbPath);
     free(fullDirPath);
