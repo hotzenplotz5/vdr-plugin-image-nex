@@ -764,7 +764,7 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     
     char *buffer = NULL;
     if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
-        SetText(buffer, false);
+        SetText(buffer, true);
         free(buffer);
     }
 
