@@ -48,6 +48,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include <skindesignerapi.h>
+
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
@@ -722,7 +724,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public cOsdItem {
+class cMenuImageSkinItem : public cSkindesignerOsdItem {
 private:
     cDirItem *item;
 public:
@@ -730,7 +732,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkindesignerOsdItem("") {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
@@ -761,11 +763,9 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     
     int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
     
-    char *buffer = NULL;
-    if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
-        SetText(buffer);
-        free(buffer); // Massives Speicherleck behoben! asprintf Puffer muss freigegeben werden.
-    }
+    SetToken("thumbnail", thumbPath ? thumbPath : "");
+    SetToken("albumname", item->DisplayName ? item->DisplayName : "");
+    SetToken("is_folder", is_dir);
 
     if (thumbPath) free(thumbPath);
     free(fullDirPath);
@@ -778,12 +778,9 @@ cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
 : cOsdMenu(tr("Images"))
 {
     SetMenuCategory(mcPlugin);
-    /* The following block is commented out to allow compilation on systems
-       with inconsistent VDR headers. This will disable the skindesigner XML grid view.
     #if APIVERSNUM >= 20301
         SetPluginCategory("imagegrid");
     #endif
-    */
     source = Source;
     list = new cDirList;
     currentdir = NULL;

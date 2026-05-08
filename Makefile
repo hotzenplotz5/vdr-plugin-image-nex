@@ -100,6 +100,9 @@ CXXFLAGS += $(shell pkg-config --cflags libavcodec)
 LIBS += $(shell pkg-config --libs libswscale)
 CXXFLAGS += $(shell pkg-config --cflags libswscale)
 
+# Skindesigner API
+LIBS += -lskindesignerapi
+
 ifndef WITHOUT_LIBEXIF
   CXXFLAGS += $(shell pkg-config --cflags libexif)
   LIBS += $(shell pkg-config --libs libexif)
