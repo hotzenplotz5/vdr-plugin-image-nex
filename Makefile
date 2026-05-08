@@ -101,7 +101,8 @@ LIBS += $(shell pkg-config --libs libswscale)
 CXXFLAGS += $(shell pkg-config --cflags libswscale)
 
 # Skindesigner API
-LIBS += -lskindesignerapi
+LIBS += $(shell pkg-config --libs skindesignerapi 2>/dev/null || echo "-lskindesignerapi")
+CXXFLAGS += $(shell pkg-config --cflags skindesignerapi 2>/dev/null || echo "-I/usr/include/skindesignerapi -I/usr/include/vdr/plugins")
 
 ifndef WITHOUT_LIBEXIF
   CXXFLAGS += $(shell pkg-config --cflags libexif)
