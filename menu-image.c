@@ -48,8 +48,16 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include <skindesignerapi.h>
-#include <skindesignerosdbase.h>
+
+// WICHTIG: Absolute Pfade erzwingen! Verhindert, dass der Compiler kaputte Header aus alten Installationen lädt.
+#include "/usr/include/libskindesignerapi/skindesignerapi.h"
+#include "/usr/include/libskindesignerapi/skindesignerosdbase.h"
+#include "/usr/include/libskindesignerapi/tokencontainer.h"
+
+namespace skindesigner {}
+using namespace skindesigner;
+namespace Skindesigner {}
+using namespace Skindesigner;
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
@@ -725,7 +733,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public cSkindesignerOsdItem {
+class cMenuImageSkinItem : public cOsdItem, public cTokenContainer {
 private:
     cDirItem *item;
 public:
@@ -733,7 +741,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkindesignerOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem(""), cTokenContainer() {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
