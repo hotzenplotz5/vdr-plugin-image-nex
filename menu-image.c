@@ -48,16 +48,9 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-
-// WICHTIG: Absolute Pfade erzwingen! Verhindert, dass der Compiler kaputte Header aus alten Installationen lädt.
+// Holzhammer-Fix: Absolute Pfade, um kaputte System-Header zu umgehen
 #include "/usr/include/libskindesignerapi/skindesignerapi.h"
 #include "/usr/include/libskindesignerapi/skindesignerosdbase.h"
-#include "/usr/include/libskindesignerapi/tokencontainer.h"
-
-namespace skindesigner {}
-using namespace skindesigner;
-namespace Skindesigner {}
-using namespace Skindesigner;
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
