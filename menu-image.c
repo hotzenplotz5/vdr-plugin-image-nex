@@ -725,7 +725,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public skindesigner::cSkindesignerOsdItem {
+class cMenuImageSkinItem : public cSkindesignerOsdItem {
 private:
     cDirItem *item;
 public:
@@ -733,7 +733,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : skindesigner::cSkindesignerOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkindesignerOsdItem("") {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
