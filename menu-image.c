@@ -49,6 +49,7 @@ extern "C" {
 }
 
 #include <skindesignerapi.h>
+#include <skindesignerosdbase.h>
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
@@ -724,7 +725,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinItem ---------------------------------------------------
 
-class cMenuImageSkinItem : public cSkinDesignerOsdItem {
+class cMenuImageSkinItem : public Skindesigner::cSkindesignerOsdItem {
 private:
     cDirItem *item;
 public:
@@ -732,7 +733,7 @@ public:
     cDirItem *Item(void) { return item; }
 };
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cSkinDesignerOsdItem("") {
+cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : Skindesigner::cSkindesignerOsdItem("") {
     item = Item;
     char *dirPath = item->Path();
     char *fullDirPath = item->Source->BuildName(dirPath);
