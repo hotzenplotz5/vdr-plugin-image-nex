@@ -739,66 +739,6 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
     if (item->Type == itDir || item->Type == itParent) {
         thumbPath = AddPath(fullDirPath, "folder.jpg");
     } else if (item->Type == itFile) {
-#ifdef HAVE_LIBEXIF
-        // WICHTIG: Niemals das Original-JPEG an den Skindesigner übergeben!
-        // Er versucht sonst, riesige Bilder im Main-Thread zu laden und blockiert das OSD.
-        // Wir extrahieren stattdessen blitzschnell das winzige EXIF-Thumbnail nach /tmp/
-        char tmpPath[512];
-        unsigned int hash = 0;
-        for (const char* p = fullDirPath; *p; ++p) hash = hash * 33 + (unsigned char)*p;
-        snprintf(tmpPath, sizeof(tmpPath), "/tmp/vdr_skindesigner_thumb_%u.jpg", hash);
-        if (access(tmpPath, R_OK) == 0) { 
-            thumbPath = strdup(tmpPath);
-        } else if (ExtractExifThumbnail(fullDirPath, tmpPath)) {
-            thumbPath = strdup(tmpPath);
-        } else {
-            thumbPath = strdup(""); // WICHTIG: Leeren Pfad senden, wenn kein EXIF existiert! Verhindert den Skindesigner-Absturz.
-        }
-#else
-        thumbPath = strdup(""); // Besser kein Bild als das OSD zum Absturz zu bringen
-#endif
-<?xml version="1.0" encoding="utf-8"?>
-<menuskin>
-    <background>
-        <area x="0" y="0" width="100%" height="100%">
-            <drawrectangle x="0" y="0" width="100%" height="100%" color="#FF222222" />
-        </area>
-    </background>
-
-    <header>
-        <area x="5%" y="2%" width="90%" height="8%">
-            <drawtext x="0" y="0" font="{regular}" fontsize="80%" color="{clrWhite}" text="Bildergalerie Kacheln" />
-        </area>
-    </header>
-
-    <menuitems x="5%" y="15%" width="90%" height="70%">
-        <!-- Kachel-Ansicht mit 5 Spalten -->
-        <grid columns="5" x="0" y="0" width="100%" height="100%">
-            
-            <item width="18%" height="30%">
-                <drawrectangle x="2%" y="2%" width="96%" height="96%" color="{clrBlack}" />
-                
-                <!-- column2 ist jetzt der PFAD zum Bild! -->
-                <drawimage condition="not(empty({column2}))" path="{column2}" x="5%" y="5%" width="90%" height="70%" />
-                
-                <!-- Ordner-Symbol, falls kein Bild vorhanden (column3 = is_dir) -->
-                <drawtext condition="and(empty({column2}), eq({column3}, '1'))" align="center" y="35%" font="{regular}" fontsize="25%" color="{clrWhite}" text="[ORDNER]" />
-                
-                <!-- column1 ist jetzt der NAME! -->
-                <drawtext align="center" y="78%" width="90%" font="{regular}" fontsize="15%" color="{clrWhite}" text="{column1}" />
-            </item>
-
-            <itemactive width="18%" height="30%">
-                <drawrectangle x="2%" y="2%" width="96%" height="96%" color="#FF0055AA" />
-                
-                <drawimage condition="not(empty({column2}))" path="{column2}" x="5%" y="5%" width="90%" height="70%" />
-                <drawtext condition="and(empty({column2}), eq({column3}, '1'))" align="center" y="35%" font="{bold}" fontsize="25%" color="{clrWhite}" text="[ORDNER]" />
-                <drawtext align="center" y="78%" width="90%" font="{bold}" fontsize="15%" color="{clrWhite}" text="{column1}" />
-            </itemactive>
-
-        </grid>
-    </menuitems>
-</menuskin>
         thumbPath = strdup(fullDirPath); // Skindesigner selbst skalieren lassen!
     }
     
