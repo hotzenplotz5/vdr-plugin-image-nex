@@ -757,12 +757,14 @@ cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
 #else
         thumbPath = strdup(""); // Besser kein Bild als das OSD zum Absturz zu bringen
 #endif
+        thumbPath = strdup(fullDirPath); // Skindesigner selbst skalieren lassen!
     }
     
     int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
     
     char *buffer = NULL;
-    if (asprintf(&buffer, "%s\t%s\t%d", thumbPath ? thumbPath : "", item->DisplayName ? item->DisplayName : "", is_dir) >= 0) {
+    // FIX: Reihenfolge umdrehen! 1. Name (sichtbar), 2. Pfad (versteckt), 3. Ordner-Status
+    if (asprintf(&buffer, "%s\t%s\t%d", item->DisplayName ? item->DisplayName : "", thumbPath ? thumbPath : "", is_dir) >= 0) {
         SetText(buffer, true);
         free(buffer);
     }
