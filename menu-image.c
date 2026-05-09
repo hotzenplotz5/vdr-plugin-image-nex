@@ -739,6 +739,15 @@ static void RegisterSkindesigner() {
         ps->libskindesignerAPIVersion = "1.0"; 
         ps->RegisterRootView("grid");
         
+        // WICHTIG: Background und Header View-Elemente MÜSSEN registriert werden!
+        cTokenContainer *tkBg = new cTokenContainer();
+        tkBg->CreateContainers();
+        ps->RegisterViewElement(0, 0, "background", tkBg);
+        
+        cTokenContainer *tkHeader = new cTokenContainer();
+        tkHeader->CreateContainers();
+        ps->RegisterViewElement(0, 1, "header", tkHeader);
+        
         cTokenContainer *tkDef = new cTokenContainer();
         tkDef->DefineStringToken("thumbnail", 0);
         tkDef->DefineStringToken("albumname", 1);
@@ -823,6 +832,10 @@ void cMenuImageSkinDesigner::Show(void)
 void cMenuImageSkinDesigner::Draw()
 {
     if (!displayPlugin) return;
+
+    // Hintergrund und Header auf dem OSD sichtbar machen!
+    displayPlugin->DisplayViewElement(0, 0); // background
+    displayPlugin->DisplayViewElement(1, 0); // header
 
     displayPlugin->ClearGrids(0, 0);
 
