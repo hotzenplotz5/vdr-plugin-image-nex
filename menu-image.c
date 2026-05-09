@@ -722,7 +722,37 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
-ImageSkinDesigner::cMenuurrentIndex = 0;
+void cMenuImageSkinDesigner::DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk) {
+    if (ve == 1) { // header
+        tk->DefineStringToken("{title}", 0);
+    }
+}
+
+void cMenuImageSkinDesigner::DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk) {
+    if (vg == 0) { // imagegrid
+        tk->DefineStringToken("{thumbnail}", 0);
+        tk->DefineStringToken("{albumname}", 1);
+        tk->DefineIntToken("{is_folder}", 0);
+        tk->DefineIntToken("{current}", 1);
+    }
+}
+
+cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
+: skindesignerapi::cSkindesignerOsdObject(plugStruct)
+{
+    source = Source;
+    list = new cDirList;
+    currentdir = NULL;
+    currentIndex = 0;
+    needsRedraw = true;
+    
+    rootView = NULL;
+    back = NULL;
+    header = NULL;
+    imagegrid = NULL;
+
+    char *parent = NULL;
+    source->GetRemember(currentdir, parent);
 
     LoadDir(currentdir);
 
@@ -791,7 +821,8 @@ void cMenuImageSkinDesigner::Draw()
     if (header) {
         header->ClearTokens();
         header->Clear();
-        header->AddString   header->Display();
+        header->AddStringToken(0, "Bildergalerie");
+        header->Display();
     }
 
     if (imagegrid) {
@@ -803,50 +834,52 @@ void cMenuImageSkinDesigner::Draw()
             return;
         }
 
-    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
-    int rows = 3; // 3 Zeilen pro Seite für Estuary
-    int itemsPerPage = columns * rows;
-    
-    double itemWidth = 100.0 / columns;
-    double itemHeight = 100.0 / rows;
-
-    int page = currentIndex / itemsPerPage;
-    int startIdx = page * itemsPerPage;
-    int endIdx = startIdx + itemsPerPage;
-    if (endIdx > totalItems) endIdx = totalItems;
-
-    for (int i = startIdx; i < endIdx; i++) {
-        cDirItem *item = list->Get(i);
-        if (!item) continue;
+        int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
+        int rows = 3; // 3 Zeilen pro Seite für Estuary
+        int itemsPerPage = columns * rows;
         
-        char *dirPath = item->Path();
-        char *fullDirPath = source->BuildName(dirPath);
-        char *thumbPath = NULL;
-        
-        if (item->Type == itDir || item->Type == itParent) {
-            thumbPath = AddPath(fullDirPath, "folder.jpg");
-        } else if (item->Type == itFile) {
-            thumbPath = strdup(fullDirPath);
+        double itemWidth = 100.0 / columns;
+        double itemHeight = 100.0 / rows;
+
+        int page = currentIndex / itemsPerPage;
+        int startIdx = page * itemsPerPage;
+        int endIdx = startIdx + itemsPerPage;
+        if (endIdx > totalItems) endIdx = totalItems;
+
+        for (int i = startIdx; i < endIdx; i++) {
+            cDirItem *item = list->Get(i);
+            if (!item) continue;
+            
+            char *dirPath = item->Path();
+            char *fullDirPath = source->BuildName(dirPath);
+            char *thumbPath = NULL;
+            
+            if (item->Type == itDir || item->Type == itParent) {
+                thumbPath = AddPath(fullDirPath, "folder.jpg");
+            } else if (item->Type == itFile) {
+                thumbPath = strdup(fullDirPath);
+            }
+            
+            int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
+            
+            // Position der Kachel auf der aktuellen Seite berechnen
+            int idxOnPage = i - startIdx;
+            double x = (idxOnPage % columns) * itemWidth;
+            double y = (idxOnPage / columns) * itemHeight;
+            
+            imagegrid->ClearTokens();
+            imagegrid->AddStringToken(0, thumbPath ? thumbPath : "");
+            imagegrid->AddStringToken(1, item->DisplayName ? item->DisplayName : "");
+            imagegrid->AddIntToken(0, is_dir);
+            imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
+            
+            // DIE LÖSUNG aus tvguideng: Die API-Methode heißt AddGrid!
+            imagegrid->AddGrid(i, x, y, itemWidth, itemHeight);
+            
+            if (thumbPath) free(thumbPath);
+            free(fullDirPath);
+            free(dirPath);
         }
-        
-        int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
-        
-        // Position der Kachel auf der aktuellen Seite berechnen
-        int idxOnPage = i - startIdx;
-        double x = (idxOnPage % columns) * itemWidth;
-        double y = (idxOnPage / columns) * itemHeight;
-        
-        imagegrid->ClearTokens();
-        imagegrid->AddStringToken(0, thumbPath ? thumbPath : "");
-        imagegrid->AddStringToken(1, item->DisplayName ? item->DisplayName : "");
-        imagegrid->AddIntToken(0, is_dir);
-        imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
-        imagegrid->Set(i, x, y, itemWidth, itemHeight);
-        
-        if (thumbPath) free(thumbPath);
-        free(fullDirPath);
-        free(dirPath);
-    }
 
         imagegrid->SetCurrent(currentIndex, true);
         imagegrid->Display();
@@ -857,6 +890,7 @@ void cMenuImageSkinDesigner::Draw()
 eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
 {
     int totalItems = list->Count();
+    if (totalItems == 0) {
         if (Key == kBack || Key == kMenu) return osEnd;
         return osContinue;
     }
