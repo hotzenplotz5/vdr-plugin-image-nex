@@ -772,6 +772,7 @@ cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
     currentIndex = 0;
     displayPlugin = NULL;
     osdInitialized = false;
+    needsRedraw = true;
 
     RegisterSkindesigner();
 
@@ -813,6 +814,7 @@ cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
 bool cMenuImageSkinDesigner::LoadDir(const char *dir)
 {
     currentIndex = 0;
+    needsRedraw = true;
     return list->Load(source, dir);
 }
 
@@ -828,7 +830,10 @@ void cMenuImageSkinDesigner::Show(void)
         displayPlugin->Activate(0);
         osdInitialized = true;
     }
-    Draw();
+    if (needsRedraw) {
+        Draw();
+        needsRedraw = false;
+    }
 }
 
 void cMenuImageSkinDesigner::Draw()
@@ -856,8 +861,8 @@ void cMenuImageSkinDesigner::Draw()
         return;
     }
 
-    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
-    int rows = 3; // 3 Zeilen pro Seite für Estuary
+    int columns = 1; // FORCIERT auf 1 Spalte (Simple Liste statt Kacheln!)
+    int rows = 10;   // 10 Zeilen pro Seite
     int itemsPerPage = columns * rows;
     
     double itemWidth = 100.0 / columns;
@@ -926,8 +931,8 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
         return osContinue;
     }
 
-    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
-    int rows = 3;
+    int columns = 1;
+    int rows = 10;
     int itemsPerPage = columns * rows;
 
     switch (Key & ~k_Repeat) {
@@ -936,22 +941,22 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
         case kChanUp:
             if (currentIndex + itemsPerPage < totalItems) currentIndex += itemsPerPage;
             else currentIndex = totalItems - 1;
-            Draw();
+            needsRedraw = true;
             return osContinue;
         case kChanDn:
             if (currentIndex >= itemsPerPage) currentIndex -= itemsPerPage;
             else currentIndex = 0;
-            Draw();
+            needsRedraw = true;
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
-            Draw();
+            needsRedraw = true;
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
-            Draw();
+            needsRedraw = true;
             return osContinue;
         case kDown:
             if (currentIndex + columns < totalItems) {
@@ -959,12 +964,12 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
             } else {
                 currentIndex = totalItems - 1;
             }
-            Draw();
+            needsRedraw = true;
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
             else currentIndex = 0;
-            Draw();
+            needsRedraw = true;
             return osContinue;
         case kOk:
         case kRed:
@@ -1002,7 +1007,7 @@ eOSState cMenuImageSkinDesigner::Parent(void)
             }
         }
         free(lastDirName);
-        Draw();
+        needsRedraw = true;
     } else {
         return osEnd;
     }
@@ -1021,7 +1026,7 @@ eOSState cMenuImageSkinDesigner::Select(bool isred)
         free(currentdir);
         currentdir = path;
         LoadDir(currentdir);
-        Draw();
+        needsRedraw = true;
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);

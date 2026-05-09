@@ -61,6 +61,7 @@ private:
     int currentIndex;
     skindesignerapi::ISkinDisplayPlugin *displayPlugin;
     bool osdInitialized;
+    bool needsRedraw;
 
     bool LoadDir(const char *dir);
     cDirItem *CurrentItem();
