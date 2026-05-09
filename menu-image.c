@@ -722,21 +722,6 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
-void cMenuImageSkinDesigner::DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk) {
-    if (ve == 1) { // header
-        tk->DefineStringToken("{title}", 0);
-    }
-}
-
-void cMenuImageSkinDesigner::DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk) {
-    if (vg == 0) { // imagegrid
-        tk->DefineStringToken("{thumbnail}", 0);
-        tk->DefineStringToken("{albumname}", 1);
-        tk->DefineIntToken("{is_folder}", 0);
-        tk->DefineIntToken("{current}", 1);
-    }
-}
-
 cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
 : skindesignerapi::cSkindesignerOsdObject(plugStruct)
 {
@@ -873,8 +858,7 @@ void cMenuImageSkinDesigner::Draw()
             imagegrid->AddIntToken(0, is_dir);
             imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
             
-            // DIE LÖSUNG aus tvguideng: Die API-Methode heißt AddGrid!
-            imagegrid->AddGrid(i, x, y, itemWidth, itemHeight);
+            imagegrid->Add(i, x, y, itemWidth, itemHeight);
             
             if (thumbPath) free(thumbPath);
             free(fullDirPath);
