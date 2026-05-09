@@ -771,15 +771,12 @@ cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
     currentdir = NULL;
     currentIndex = 0;
     displayPlugin = NULL;
+    osdInitialized = false;
 
     RegisterSkindesigner();
 
     if (g_SkindesignerRegistered) {
         displayPlugin = SkindesignerAPI::GetDisplayPlugin(g_SkindesignerPlugId);
-        if (displayPlugin) {
-            displayPlugin->InitOsd();
-            displayPlugin->Activate(0);
-        }
     }
 
     char *parent = NULL;
@@ -826,6 +823,11 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
+    if (displayPlugin && !osdInitialized) {
+        displayPlugin->InitOsd();
+        displayPlugin->Activate(0);
+        osdInitialized = true;
+    }
     Draw();
 }
 

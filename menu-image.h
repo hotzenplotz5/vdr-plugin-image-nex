@@ -60,6 +60,7 @@ private:
     char *currentdir;
     int currentIndex;
     skindesignerapi::ISkinDisplayPlugin *displayPlugin;
+    bool osdInitialized;
 
     bool LoadDir(const char *dir);
     cDirItem *CurrentItem();
