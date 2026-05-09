@@ -833,7 +833,7 @@ void cMenuImageSkinDesigner::Draw()
 {
     if (!displayPlugin) return;
 
-    // ZWINGEND: Leere Token-Container übergeben, sonst zeichnet Skindesigner die Elemente nicht!
+    // Leere Token-Container übergeben, sonst zeichnet Skindesigner die Elemente nicht!
     cTokenContainer *tkBg = new cTokenContainer();
     tkBg->CreateContainers();
     displayPlugin->SetViewElementTokens(0, 0, tkBg);
@@ -849,7 +849,24 @@ void cMenuImageSkinDesigner::Draw()
     displayPlugin->ClearGrids(0, 0);
 
     int totalItems = list->Count();
-    for (int i = 0; i < totalItems; i++) {
+    if (totalItems == 0) {
+        displayPlugin->Flush();
+        return;
+    }
+
+    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
+    int rows = 3; // 3 Zeilen pro Seite für Estuary
+    int itemsPerPage = columns * rows;
+    
+    double itemWidth = 100.0 / columns;
+    double itemHeight = 100.0 / rows;
+
+    int page = currentIndex / itemsPerPage;
+    int startIdx = page * itemsPerPage;
+    int endIdx = startIdx + itemsPerPage;
+    if (endIdx > totalItems) endIdx = totalItems;
+
+    for (int i = startIdx; i < endIdx; i++) {
         cDirItem *item = list->Get(i);
         if (!item) continue;
         
@@ -878,7 +895,13 @@ void cMenuImageSkinDesigner::Draw()
         tk->AddIntToken(0, is_dir ? 1 : 0);
         tk->AddIntToken(1, i == currentIndex ? 1 : 0);
         
-        displayPlugin->SetGrid(i, 0, 0, 0, 0, 0, 0, tk);
+        // Position der Kachel auf der aktuellen Seite berechnen
+        int idxOnPage = i - startIdx;
+        double x = (idxOnPage % columns) * itemWidth;
+        double y = (idxOnPage / columns) * itemHeight;
+        
+        // Skindesigner exakt sagen, wie groß die Kachel in % ist!
+        displayPlugin->SetGrid(i, 0, 0, x, y, itemWidth, itemHeight, tk);
         
         if (i == currentIndex) {
             displayPlugin->SetGridCurrent(i, 0, 0, true);
@@ -902,9 +925,21 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
     }
 
     int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
+    int rows = 3;
+    int itemsPerPage = columns * rows;
 
     switch (Key & ~k_Repeat) {
         case kNone:
+            return osContinue;
+        case kChanUp:
+            if (currentIndex + itemsPerPage < totalItems) currentIndex += itemsPerPage;
+            else currentIndex = totalItems - 1;
+            Draw();
+            return osContinue;
+        case kChanDn:
+            if (currentIndex >= itemsPerPage) currentIndex -= itemsPerPage;
+            else currentIndex = 0;
+            Draw();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
@@ -926,6 +961,7 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
+            else currentIndex = 0;
             Draw();
             return osContinue;
         case kOk:
