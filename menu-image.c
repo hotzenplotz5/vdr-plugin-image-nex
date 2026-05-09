@@ -858,7 +858,8 @@ void cMenuImageSkinDesigner::Draw()
             imagegrid->AddIntToken(0, is_dir);
             imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
             
-            imagegrid->Add(i, x, y, itemWidth, itemHeight);
+            // Die Methode in cViewGrid heißt korrekterweise SetGrid!
+            imagegrid->SetGrid(i, x, y, itemWidth, itemHeight);
             
             if (thumbPath) free(thumbPath);
             free(fullDirPath);
