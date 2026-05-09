@@ -861,8 +861,8 @@ void cMenuImageSkinDesigner::Draw()
         return;
     }
 
-    int columns = 1; // FORCIERT auf 1 Spalte (Simple Liste statt Kacheln!)
-    int rows = 10;   // 10 Zeilen pro Seite
+    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
+    int rows = 3; // 3 Zeilen pro Seite für Estuary
     int itemsPerPage = columns * rows;
     
     double itemWidth = 100.0 / columns;
@@ -931,8 +931,8 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
         return osContinue;
     }
 
-    int columns = 1;
-    int rows = 10;
+    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
+    int rows = 3;
     int itemsPerPage = columns * rows;
 
     switch (Key & ~k_Repeat) {
