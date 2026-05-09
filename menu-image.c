@@ -738,7 +738,14 @@ static void RegisterSkindesigner() {
         ps->name = "image_next";
         ps->libskindesignerAPIVersion = "1.0"; 
         ps->RegisterRootView("grid");
-        ps->RegisterViewGrid(0, 0, "imagegrid", new cTokenContainer());
+        
+        cTokenContainer *tkDef = new cTokenContainer();
+        tkDef->DefineStringToken("thumbnail", 0);
+        tkDef->DefineStringToken("albumname", 1);
+        tkDef->DefineIntToken("is_folder", 0);
+        tkDef->DefineIntToken("current", 1);
+        tkDef->CreateContainers();
+        ps->RegisterViewGrid(0, 0, "imagegrid", tkDef);
         SkindesignerAPI::RegisterPlugin(ps);
         g_SkindesignerPlugId = ps->id;
         g_SkindesignerRegistered = true;
@@ -838,10 +845,16 @@ void cMenuImageSkinDesigner::Draw()
         
         int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
         
-        tk->SetToken("thumbnail", thumbPath ? thumbPath : "");
-        tk->SetToken("albumname", item->DisplayName ? item->DisplayName : "");
-        tk->SetToken("is_folder", is_dir ? "1" : "0");
-        tk->SetToken("current", i == currentIndex ? 1 : 0);
+        tk->DefineStringToken("thumbnail", 0);
+        tk->DefineStringToken("albumname", 1);
+        tk->DefineIntToken("is_folder", 0);
+        tk->DefineIntToken("current", 1);
+        tk->CreateContainers();
+        
+        tk->AddStringToken(0, thumbPath ? thumbPath : "");
+        tk->AddStringToken(1, item->DisplayName ? item->DisplayName : "");
+        tk->AddIntToken(0, is_dir ? 1 : 0);
+        tk->AddIntToken(1, i == currentIndex ? 1 : 0);
         
         displayPlugin->SetGrid(i, 0, 0, 0, 0, 0, 0, tk);
         
