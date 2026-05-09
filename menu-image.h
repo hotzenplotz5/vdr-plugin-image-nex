@@ -73,6 +73,8 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
+void RegisterSkindesigner();
+
 void StopThumbLoader();
 
 #endif				//___MENU_IMAGE_H

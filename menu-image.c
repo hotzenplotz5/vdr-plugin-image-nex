@@ -731,7 +731,7 @@ using namespace skindesignerapi;
 static int g_SkindesignerPlugId = -1;
 static bool g_SkindesignerRegistered = false;
 
-static void RegisterSkindesigner() {
+void RegisterSkindesigner() {
     if (g_SkindesignerRegistered) return;
     if (SkindesignerAPI::ServiceAvailable()) {
         cPluginStructure *ps = new cPluginStructure();
