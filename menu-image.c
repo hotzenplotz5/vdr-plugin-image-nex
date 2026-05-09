@@ -734,8 +734,6 @@ cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
     osdInitialized = false;
     needsRedraw = true;
 
-    cSkindesignerService::RegisterPlugin();
-
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
 

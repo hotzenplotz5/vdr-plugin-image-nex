@@ -25,6 +25,7 @@
 #include <vdr/i18n.h>
 #include "commands.h"
 #include "liboutput/encode.h"
+#include "skindesigner_service.h"
 
 static const char *VERSION        = "0.6.0";
 
@@ -98,6 +99,8 @@ bool cPluginImage::Start(void)
   if(!cEncode::Register()) {   
     return false;
   }
+  
+  cSkindesignerService::RegisterPlugin(); // MUSS ZWINGEND HIER REIN!
   
   cString szConfSource = AddDirectory(ConfigDirectory(g_szConfigDirectory),  "imagesources.conf");
   ImageSources.Load(szConfSource);
