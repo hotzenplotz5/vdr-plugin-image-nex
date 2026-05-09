@@ -17,6 +17,8 @@
 
 #include "menu.h"
 #include "data.h"
+#include <libskindesignerapi/skindesignerapi.h>
+#include <libskindesignerapi/skindesignerosdbase.h>
 
 // ----------------------------------------------------------------
 class cMenuImageBrowse:public cMenuBrowse {
@@ -51,14 +53,18 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
-class cMenuImageSkinDesigner : public cOsdObject {
+class cMenuImageSkinDesigner : public skindesignerapi::cSkindesignerOsdObject {
 private:
     cFileSource *source;
     cDirList *list;
     char *currentdir;
     int currentIndex;
-    bool osdInitialized;
     bool needsRedraw;
+
+    skindesignerapi::cOsdView *rootView;
+    skindesignerapi::cViewElement *back;
+    skindesignerapi::cViewElement *header;
+    skindesignerapi::cViewGrid *imagegrid;
 
     bool LoadDir(const char *dir);
     cDirItem *CurrentItem();
@@ -66,10 +72,13 @@ private:
     eOSState Select(bool isred);
     eOSState Parent();
 public:
-    cMenuImageSkinDesigner(cFileSource *Source);
+    cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct);
     virtual ~cMenuImageSkinDesigner();
     virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
+    
+    static void DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk);
+    static void DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk);
 };
 
 void StopThumbLoader();

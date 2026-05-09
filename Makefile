@@ -114,7 +114,7 @@ endif
 
 OBJS = image.o data.o menu.o data-image.o menu-image.o \
  setup-image.o player-image.o control-image.o commands.o menu-commands.o \
- list.o skindesigner_service.o \
+ list.o \
  liboutput/encode.o liboutput/stillimage.o liboutput/stillimage-player.o \
  libimage/xpm.o
 

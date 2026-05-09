@@ -48,8 +48,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "skindesigner_service.h"
-
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
@@ -724,15 +722,34 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
-cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
-: cOsdObject(true)
+void cMenuImageSkinDesigner::DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk) {
+    if (ve == 1) { // header
+        tk->DefineStringToken("{title}", 0);
+    }
+}
+
+void cMenuImageSkinDesigner::DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk) {
+    if (vg == 0) { // imagegrid
+        tk->DefineStringToken("{thumbnail}", 0);
+        tk->DefineStringToken("{albumname}", 1);
+        tk->DefineIntToken("{is_folder}", 0);
+        tk->DefineIntToken("{current}", 1);
+    }
+}
+
+cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
+: skindesignerapi::cSkindesignerOsdObject(plugStruct)
 {
     source = Source;
     list = new cDirList;
     currentdir = NULL;
     currentIndex = 0;
-    osdInitialized = false;
     needsRedraw = true;
+    
+    rootView = NULL;
+    back = NULL;
+    header = NULL;
+    imagegrid = NULL;
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
@@ -756,7 +773,9 @@ cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
     cDirItem *item = CurrentItem();
     if (item && source) source->SetRemember(currentdir, item->Name);
 
-    cSkindesignerService::CloseOsd();
+    if (back) delete back;
+    if (header) delete header;
+    if (imagegrid) delete imagegrid;
 
     delete list;
     free(currentdir);
@@ -776,9 +795,18 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
-    if (cSkindesignerService::IsRegistered() && !osdInitialized) {
-        cSkindesignerService::InitOsd();
-        osdInitialized = true;
+    if (!SkindesignerAvailable()) return;
+    
+    rootView = GetOsdView();
+    if (!rootView) return;
+    
+    back = rootView->GetViewElement(0); // background
+    header = rootView->GetViewElement(1); // header
+    imagegrid = rootView->GetViewGrid(0); // imagegrid
+    
+    if (back) back->Display();
+
+    rootView->Activate();
     }
     
     if (needsRedraw) {
@@ -789,16 +817,23 @@ void cMenuImageSkinDesigner::Show(void)
 
 void cMenuImageSkinDesigner::Draw()
 {
-    if (!cSkindesignerService::IsRegistered()) return;
+    if (!rootView) return;
 
-    cSkindesignerService::DisplayViewElements();
-    cSkindesignerService::ClearGrids();
-
-    int totalItems = list->Count();
-    if (totalItems == 0) {
-        cSkindesignerService::Flush();
-        return;
+    if (header) {
+        header->ClearTokens();
+        header->Clear();
+        header->AddStringToken(0, "Bildergalerie");
+        header->Display();
     }
+
+    if (imagegrid) {
+        imagegrid->Clear();
+
+        int totalItems = list->Count();
+        if (totalItems == 0) {
+            rootView->Display();
+            return;
+        }
 
     int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
     int rows = 3; // 3 Zeilen pro Seite für Estuary
@@ -828,24 +863,22 @@ void cMenuImageSkinDesigner::Draw()
         
         int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
         
-        // Position der Kachel auf der aktuellen Seite berechnen
-        int idxOnPage = i - startIdx;
-        double x = (idxOnPage % columns) * itemWidth;
-        double y = (idxOnPage / columns) * itemHeight;
-        
-        cSkindesignerService::SetGrid(i, 
-            thumbPath ? thumbPath : "", 
-            item->DisplayName ? item->DisplayName : "", 
-            is_dir, 
-            i == currentIndex, 
-            x, y, itemWidth, itemHeight);
+        imagegrid->ClearTokens();
+        imagegrid->AddStringToken(0, thumbPath ? thumbPath : "");
+        imagegrid->AddStringToken(1, item->DisplayName ? item->DisplayName : "");
+        imagegrid->AddIntToken(0, is_dir);
+        imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
+        imagegrid->SetItem(i);
         
         if (thumbPath) free(thumbPath);
         free(fullDirPath);
         free(dirPath);
     }
 
-    cSkindesignerService::Flush();
+        imagegrid->SetCurrent(currentIndex, true);
+        imagegrid->Display();
+    }
+    rootView->Display();
 }
 
 eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)

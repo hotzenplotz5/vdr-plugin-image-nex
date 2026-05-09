@@ -25,13 +25,14 @@
 #include <vdr/i18n.h>
 #include "commands.h"
 #include "liboutput/encode.h"
-#include "skindesigner_service.h"
+#include <libskindesignerapi/skindesignerapi.h>
 
 static const char *VERSION        = "0.6.0";
 
 class cPluginImage : public cPlugin {
     cDirItem*      m_pServiceDirItem;
     cFileSource*   m_pServiceFileSource;
+    skindesignerapi::cPluginStructure *m_pluginStructure;
 
 public:
   cPluginImage();
@@ -100,7 +101,21 @@ bool cPluginImage::Start(void)
     return false;
   }
   
-  cSkindesignerService::RegisterPlugin(); // MUSS ZWINGEND HIER REIN!
+  if (skindesignerapi::SkindesignerAPI::ServiceAvailable()) {
+      m_pluginStructure = new skindesignerapi::cPluginStructure();
+      m_pluginStructure->name = "image_next";
+      m_pluginStructure->libskindesignerAPIVersion = "1.0"; 
+      m_pluginStructure->RegisterRootView("grid");
+      
+      m_pluginStructure->RegisterViewElement(0, 0, "background");
+      m_pluginStructure->RegisterViewElement(0, 1, "header");
+      m_pluginStructure->RegisterViewGrid(0, 0, "imagegrid");
+      
+      m_pluginStructure->SetDefineTokensElementsCallback(&cMenuImageSkinDesigner::DefineTokensElements);
+      m_pluginStructure->SetDefineTokensGridsCallback(&cMenuImageSkinDesigner::DefineTokensGrids);
+      
+      skindesignerapi::SkindesignerAPI::RegisterPlugin(m_pluginStructure);
+  }
   
   cString szConfSource = AddDirectory(ConfigDirectory(g_szConfigDirectory),  "imagesources.conf");
   ImageSources.Load(szConfSource);
@@ -126,6 +141,7 @@ cPluginImage::cPluginImage()
 {
     m_pServiceDirItem = NULL;
     m_pServiceFileSource = NULL;
+    m_pluginStructure = NULL;
 }
 
 cPluginImage::~cPluginImage()
@@ -154,7 +170,9 @@ void cPluginImage::RemoveServiceSource()
 cOsdObject *cPluginImage::MainMenuAction(void)
 {
   if (ImageSetup.m_nDisplayMode == 2) {
-      return new cMenuImageSkinDesigner(ImageSources.GetSource()); // Skindesigner Native API Mode
+      if (m_pluginStructure) {
+          return new cMenuImageSkinDesigner(ImageSources.GetSource(), m_pluginStructure);
+      }
   } else if (ImageSetup.m_nDisplayMode == 1) {
       return new cMenuImageGrid(ImageSources.GetSource()); // Standalone C++ Fallback (Weg B)
   }
