@@ -51,15 +51,12 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
-namespace skindesignerapi { class ISkinDisplayPlugin; }
-
 class cMenuImageSkinDesigner : public cOsdObject {
 private:
     cFileSource *source;
     cDirList *list;
     char *currentdir;
     int currentIndex;
-    skindesignerapi::ISkinDisplayPlugin *displayPlugin;
     bool osdInitialized;
     bool needsRedraw;
 
@@ -74,8 +71,6 @@ public:
     virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
 };
-
-void RegisterSkindesigner();
 
 void StopThumbLoader();
 

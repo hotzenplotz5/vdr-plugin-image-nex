@@ -48,9 +48,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include <skindesignerapi.h>
-#include <pluginstructure.h>
-#include <tokencontainer.h>
+#include "skindesigner_service.h"
 
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
@@ -724,43 +722,6 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     return osContinue;
 }
 
-// --- Skindesigner Native API Initialization -------------------------------
-
-using namespace skindesignerapi;
-
-static int g_SkindesignerPlugId = -1;
-static bool g_SkindesignerRegistered = false;
-
-void RegisterSkindesigner() {
-    if (g_SkindesignerRegistered) return;
-    if (SkindesignerAPI::ServiceAvailable()) {
-        cPluginStructure *ps = new cPluginStructure();
-        ps->name = "image_next";
-        ps->libskindesignerAPIVersion = "1.0"; 
-        ps->RegisterRootView("grid");
-        
-        // WICHTIG: Background und Header View-Elemente MÜSSEN registriert werden!
-        cTokenContainer *tkBg = new cTokenContainer();
-        tkBg->CreateContainers();
-        ps->RegisterViewElement(0, 0, "background", tkBg);
-        
-        cTokenContainer *tkHeader = new cTokenContainer();
-        tkHeader->CreateContainers();
-        ps->RegisterViewElement(0, 1, "header", tkHeader);
-        
-        cTokenContainer *tkDef = new cTokenContainer();
-        tkDef->DefineStringToken("thumbnail", 0);
-        tkDef->DefineStringToken("albumname", 1);
-        tkDef->DefineIntToken("is_folder", 0);
-        tkDef->DefineIntToken("current", 1);
-        tkDef->CreateContainers();
-        ps->RegisterViewGrid(0, 0, "imagegrid", tkDef);
-        SkindesignerAPI::RegisterPlugin(ps);
-        g_SkindesignerPlugId = ps->id;
-        g_SkindesignerRegistered = true;
-    }
-}
-
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
 cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
@@ -770,15 +731,10 @@ cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
     list = new cDirList;
     currentdir = NULL;
     currentIndex = 0;
-    displayPlugin = NULL;
     osdInitialized = false;
     needsRedraw = true;
 
-    RegisterSkindesigner();
-
-    if (g_SkindesignerRegistered) {
-        displayPlugin = SkindesignerAPI::GetDisplayPlugin(g_SkindesignerPlugId);
-    }
+    cSkindesignerService::RegisterPlugin();
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
@@ -802,10 +758,7 @@ cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
     cDirItem *item = CurrentItem();
     if (item && source) source->SetRemember(currentdir, item->Name);
 
-    if (displayPlugin) {
-        displayPlugin->Deactivate(0, true);
-        displayPlugin->CloseOsd();
-    }
+    cSkindesignerService::CloseOsd();
 
     delete list;
     free(currentdir);
@@ -825,11 +778,11 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
-    if (displayPlugin && !osdInitialized) {
-        displayPlugin->InitOsd();
-        displayPlugin->Activate(0);
+    if (cSkindesignerService::IsRegistered() && !osdInitialized) {
+        cSkindesignerService::InitOsd();
         osdInitialized = true;
     }
+    
     if (needsRedraw) {
         Draw();
         needsRedraw = false;
@@ -838,26 +791,14 @@ void cMenuImageSkinDesigner::Show(void)
 
 void cMenuImageSkinDesigner::Draw()
 {
-    if (!displayPlugin) return;
+    if (!cSkindesignerService::IsRegistered()) return;
 
-    // Leere Token-Container übergeben, sonst zeichnet Skindesigner die Elemente nicht!
-    cTokenContainer *tkBg = new cTokenContainer();
-    tkBg->CreateContainers();
-    displayPlugin->SetViewElementTokens(0, 0, tkBg);
-    
-    cTokenContainer *tkHeader = new cTokenContainer();
-    tkHeader->CreateContainers();
-    displayPlugin->SetViewElementTokens(1, 0, tkHeader);
-
-    // Hintergrund und Header auf dem OSD sichtbar machen!
-    displayPlugin->DisplayViewElement(0, 0); // background
-    displayPlugin->DisplayViewElement(1, 0); // header
-
-    displayPlugin->ClearGrids(0, 0);
+    cSkindesignerService::DisplayViewElements();
+    cSkindesignerService::ClearGrids();
 
     int totalItems = list->Count();
     if (totalItems == 0) {
-        displayPlugin->Flush();
+        cSkindesignerService::Flush();
         return;
     }
 
@@ -891,36 +832,24 @@ void cMenuImageSkinDesigner::Draw()
         
         int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
         
-        tk->DefineStringToken("thumbnail", 0);
-        tk->DefineStringToken("albumname", 1);
-        tk->DefineIntToken("is_folder", 0);
-        tk->DefineIntToken("current", 1);
-        tk->CreateContainers();
-        
-        tk->AddStringToken(0, thumbPath ? thumbPath : "");
-        tk->AddStringToken(1, item->DisplayName ? item->DisplayName : "");
-        tk->AddIntToken(0, is_dir ? 1 : 0);
-        tk->AddIntToken(1, i == currentIndex ? 1 : 0);
-        
         // Position der Kachel auf der aktuellen Seite berechnen
         int idxOnPage = i - startIdx;
         double x = (idxOnPage % columns) * itemWidth;
         double y = (idxOnPage / columns) * itemHeight;
         
-        // Skindesigner exakt sagen, wie groß die Kachel in % ist!
-        displayPlugin->SetGrid(i, 0, 0, x, y, itemWidth, itemHeight, tk);
-        
-        if (i == currentIndex) {
-            displayPlugin->SetGridCurrent(i, 0, 0, true);
-        }
+        cSkindesignerService::SetGrid(i, 
+            thumbPath ? thumbPath : "", 
+            item->DisplayName ? item->DisplayName : "", 
+            is_dir, 
+            i == currentIndex, 
+            x, y, itemWidth, itemHeight);
         
         if (thumbPath) free(thumbPath);
         free(fullDirPath);
         free(dirPath);
     }
 
-    displayPlugin->DisplayGrids(0, 0);
-    displayPlugin->Flush();
+    cSkindesignerService::Flush();
 }
 
 eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)

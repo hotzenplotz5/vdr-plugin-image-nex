@@ -99,8 +99,6 @@ bool cPluginImage::Start(void)
     return false;
   }
   
-  RegisterSkindesigner(); // Skindesigner direkt beim VDR-Start informieren!
-  
   cString szConfSource = AddDirectory(ConfigDirectory(g_szConfigDirectory),  "imagesources.conf");
   ImageSources.Load(szConfSource);
 
