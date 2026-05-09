@@ -833,6 +833,15 @@ void cMenuImageSkinDesigner::Draw()
 {
     if (!displayPlugin) return;
 
+    // ZWINGEND: Leere Token-Container übergeben, sonst zeichnet Skindesigner die Elemente nicht!
+    cTokenContainer *tkBg = new cTokenContainer();
+    tkBg->CreateContainers();
+    displayPlugin->SetViewElementTokens(0, 0, tkBg);
+    
+    cTokenContainer *tkHeader = new cTokenContainer();
+    tkHeader->CreateContainers();
+    displayPlugin->SetViewElementTokens(1, 0, tkHeader);
+
     // Hintergrund und Header auf dem OSD sichtbar machen!
     displayPlugin->DisplayViewElement(0, 0); // background
     displayPlugin->DisplayViewElement(1, 0); // header
