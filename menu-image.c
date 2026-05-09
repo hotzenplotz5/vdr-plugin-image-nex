@@ -937,6 +937,11 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
+            if (g_ThumbnailsUpdated || needsRedraw) {
+                g_ThumbnailsUpdated = false;
+                needsRedraw = false;
+                Draw();
+            }
             return osContinue;
         case kChanUp:
             if (currentIndex + itemsPerPage < totalItems) currentIndex += itemsPerPage;
