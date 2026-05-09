@@ -151,7 +151,7 @@ void cPluginImage::RemoveServiceSource()
 cOsdObject *cPluginImage::MainMenuAction(void)
 {
   if (ImageSetup.m_nDisplayMode == 2) {
-      return new cMenuImageSkin(ImageSources.GetSource()); // Skindesigner XML Mode (Weg A)
+      return new cMenuImageSkinDesigner(ImageSources.GetSource()); // Skindesigner Native API Mode
   } else if (ImageSetup.m_nDisplayMode == 1) {
       return new cMenuImageGrid(ImageSources.GetSource()); // Standalone C++ Fallback (Weg B)
   }

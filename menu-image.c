@@ -48,6 +48,10 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include <skindesignerapi.h>
+#include <pluginstructure.h>
+#include <tokencontainer.h>
+
 static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
@@ -720,52 +724,47 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     return osContinue;
 }
 
-// --- cMenuImageSkinItem ---------------------------------------------------
+// --- Skindesigner Native API Initialization -------------------------------
 
-class cMenuImageSkinItem : public cOsdItem {
-private:
-    cDirItem *item;
-public:
-    cMenuImageSkinItem(cDirItem *Item);
-    cDirItem *Item(void) { return item; }
-};
+using namespace skindesignerapi;
 
-cMenuImageSkinItem::cMenuImageSkinItem(cDirItem *Item) : cOsdItem("") {
-    item = Item;
-    char *dirPath = item->Path();
-    char *fullDirPath = item->Source->BuildName(dirPath);
-    char *thumbPath = NULL;
-    
-    if (item->Type == itDir || item->Type == itParent) {
-        thumbPath = AddPath(fullDirPath, "folder.jpg");
-    } else if (item->Type == itFile) {
-        thumbPath = strdup(fullDirPath); // Skindesigner selbst skalieren lassen!
+static int g_SkindesignerPlugId = -1;
+static bool g_SkindesignerRegistered = false;
+
+static void RegisterSkindesigner() {
+    if (g_SkindesignerRegistered) return;
+    if (SkindesignerAPI::ServiceAvailable()) {
+        cPluginStructure *ps = new cPluginStructure();
+        ps->name = "image_next";
+        ps->libskindesignerAPIVersion = "1.0"; 
+        ps->RegisterRootView("grid");
+        ps->RegisterViewGrid(0, 0, "imagegrid", new cTokenContainer());
+        SkindesignerAPI::RegisterPlugin(ps);
+        g_SkindesignerPlugId = ps->id;
+        g_SkindesignerRegistered = true;
     }
-    
-    int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
-    
-    char *buffer = NULL;
-    // FIX: Reihenfolge umdrehen! 1. Name (sichtbar), 2. Pfad (versteckt), 3. Ordner-Status
-    if (asprintf(&buffer, "%s\t%s\t%d", item->DisplayName ? item->DisplayName : "", thumbPath ? thumbPath : "", is_dir) >= 0) {
-        SetText(buffer, true);
-        free(buffer);
-    }
-
-    if (thumbPath) free(thumbPath);
-    free(fullDirPath);
-    free(dirPath);
 }
 
-// --- cMenuImageSkin -------------------------------------------------------
+// --- cMenuImageSkinDesigner -----------------------------------------------
 
-cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
-// WICHTIG: Kein tr() verwenden! Der Name MUSS exakt "image_next" sein, damit Skindesigner die Datei displaymenu-image_next.xml findet!
-: cOsdMenu("image_next")
+cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source)
+: cOsdObject(true)
 {
-    SetMenuCategory(mcPlugin);
     source = Source;
     list = new cDirList;
     currentdir = NULL;
+    currentIndex = 0;
+    displayPlugin = NULL;
+
+    RegisterSkindesigner();
+
+    if (g_SkindesignerRegistered) {
+        displayPlugin = SkindesignerAPI::GetDisplayPlugin(g_SkindesignerPlugId);
+        if (displayPlugin) {
+            displayPlugin->InitOsd();
+            displayPlugin->Activate(0);
+        }
+    }
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
@@ -773,68 +772,141 @@ cMenuImageSkin::cMenuImageSkin(cFileSource *Source)
     LoadDir(currentdir);
 
     if (parent) {
-        for (int i = 0; i < Count(); i++) {
-            cMenuImageSkinItem *item = (cMenuImageSkinItem *)Get(i);
-            if (item && item->Item() && item->Item()->Name && strcmp(item->Item()->Name, parent) == 0) {
-                SetCurrent(item);
+        for (int i = 0; i < list->Count(); i++) {
+            cDirItem *item = list->Get(i);
+            if (item && item->Name && strcmp(item->Name, parent) == 0) {
+                currentIndex = i;
                 break;
             }
         }
         free(parent);
     }
-    SetHelp(tr("Select"), "", "", tr("Back"));
-    Display();
 }
 
-cMenuImageSkin::~cMenuImageSkin()
+cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
 {
     cDirItem *item = CurrentItem();
     if (item && source) source->SetRemember(currentdir, item->Name);
+
+    if (displayPlugin) {
+        displayPlugin->Deactivate(0, true);
+        displayPlugin->CloseOsd();
+    }
 
     delete list;
     free(currentdir);
 }
 
-bool cMenuImageSkin::LoadDir(const char *dir)
+bool cMenuImageSkinDesigner::LoadDir(const char *dir)
 {
-    Clear();
-    bool res = list->Load(source, dir);
-    for (int i = 0; i < list->Count(); i++) {
+    currentIndex = 0;
+    return list->Load(source, dir);
+}
+
+cDirItem *cMenuImageSkinDesigner::CurrentItem()
+{
+    return list->Get(currentIndex);
+}
+
+void cMenuImageSkinDesigner::Show(void)
+{
+    Draw();
+}
+
+void cMenuImageSkinDesigner::Draw()
+{
+    if (!displayPlugin) return;
+
+    displayPlugin->ClearGrids(0, 0);
+
+    int totalItems = list->Count();
+    for (int i = 0; i < totalItems; i++) {
         cDirItem *item = list->Get(i);
-        if (item) {
-            Add(new cMenuImageSkinItem(item));
+        if (!item) continue;
+        
+        cTokenContainer *tk = new cTokenContainer();
+        
+        char *dirPath = item->Path();
+        char *fullDirPath = source->BuildName(dirPath);
+        char *thumbPath = NULL;
+        
+        if (item->Type == itDir || item->Type == itParent) {
+            thumbPath = AddPath(fullDirPath, "folder.jpg");
+        } else if (item->Type == itFile) {
+            thumbPath = strdup(fullDirPath);
         }
-    }
-    return res;
-}
-
-cDirItem *cMenuImageSkin::CurrentItem()
-{
-    cMenuImageSkinItem *item = (cMenuImageSkinItem *)Get(Current());
-    return item ? item->Item() : NULL;
-}
-
-eOSState cMenuImageSkin::ProcessKey(eKeys Key)
-{
-    eOSState state = cOsdMenu::ProcessKey(Key);
-
-    if (state == osUnknown) {
-        switch (Key) {
-            case kOk:
-            case kRed:
-                return Select(Key == kRed);
-            case kBlue:
-                return Parent();
-            case kBack:
-            case kMenu:
-                return osEnd;
-            default: break;
+        
+        int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
+        
+        tk->SetToken("thumbnail", thumbPath ? thumbPath : "");
+        tk->SetToken("albumname", item->DisplayName ? item->DisplayName : "");
+        tk->SetToken("is_folder", is_dir ? "1" : "0");
+        tk->SetToken("current", i == currentIndex ? 1 : 0);
+        
+        displayPlugin->SetGrid(i, 0, 0, 0, 0, 0, 0, tk);
+        
+        if (i == currentIndex) {
+            displayPlugin->SetGridCurrent(i, 0, 0, true);
         }
+        
+        if (thumbPath) free(thumbPath);
+        free(fullDirPath);
+        free(dirPath);
     }
-    return state;
+
+    displayPlugin->DisplayGrids(0, 0);
+    displayPlugin->Flush();
 }
 
-eOSState cMenuImageSkin::Parent(void)
+eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
+{
+    int totalItems = list->Count();
+    if (totalItems == 0) {
+        if (Key == kBack || Key == kMenu) return osEnd;
+        return osContinue;
+    }
+
+    int columns = ImageSetup.m_nGridColumns > 0 ? ImageSetup.m_nGridColumns : 5;
+
+    switch (Key & ~k_Repeat) {
+        case kNone:
+            return osContinue;
+        case kRight:
+            if (currentIndex < totalItems - 1) currentIndex++;
+            else currentIndex = 0;
+            Draw();
+            return osContinue;
+        case kLeft:
+            if (currentIndex > 0) currentIndex--;
+            else currentIndex = totalItems - 1;
+            Draw();
+            return osContinue;
+        case kDown:
+            if (currentIndex + columns < totalItems) {
+                currentIndex += columns;
+            } else {
+                currentIndex = totalItems - 1;
+            }
+            Draw();
+            return osContinue;
+        case kUp:
+            if (currentIndex >= columns) currentIndex -= columns;
+            Draw();
+            return osContinue;
+        case kOk:
+        case kRed:
+            return Select(Key == kRed);
+        case kBlue:
+            return Parent();
+        case kBack:
+        case kMenu:
+            return osEnd;
+        default: break;
+    }
+    return osContinue;
+}
+
+eOSState cMenuImageSkinDesigner::Parent(void)
 {
     if (currentdir) {
         char *parentDir = NULL;
@@ -849,22 +921,22 @@ eOSState cMenuImageSkin::Parent(void)
         currentdir = parentDir;
         LoadDir(currentdir);
 
-        for (int i = 0; i < Count(); i++) {
-            cMenuImageSkinItem *item = (cMenuImageSkinItem *)Get(i);
-            if (item && item->Item() && item->Item()->Name && strcmp(item->Item()->Name, lastDirName) == 0) {
-                SetCurrent(item);
+        for (int i = 0; i < list->Count(); i++) {
+            cDirItem *item = list->Get(i);
+            if (item && item->Name && strcmp(item->Name, lastDirName) == 0) {
+                currentIndex = i;
                 break;
             }
         }
         free(lastDirName);
-        Display();
+        Draw();
     } else {
         return osEnd;
     }
     return osContinue;
 }
 
-eOSState cMenuImageSkin::Select(bool isred)
+eOSState cMenuImageSkinDesigner::Select(bool isred)
 {
     cDirItem *item = CurrentItem();
     if (!item) return osContinue;
@@ -876,7 +948,7 @@ eOSState cMenuImageSkin::Select(bool isred)
         free(currentdir);
         currentdir = path;
         LoadDir(currentdir);
-        Display();
+        Draw();
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);

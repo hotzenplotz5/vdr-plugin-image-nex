@@ -51,19 +51,25 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
-class cMenuImageSkin : public cOsdMenu {
+namespace skindesignerapi { class ISkinDisplayPlugin; }
+
+class cMenuImageSkinDesigner : public cOsdObject {
 private:
     cFileSource *source;
     cDirList *list;
     char *currentdir;
+    int currentIndex;
+    skindesignerapi::ISkinDisplayPlugin *displayPlugin;
 
     bool LoadDir(const char *dir);
     cDirItem *CurrentItem();
+    void Draw();
     eOSState Select(bool isred);
     eOSState Parent();
 public:
-    cMenuImageSkin(cFileSource *Source);
-    virtual ~cMenuImageSkin();
+    cMenuImageSkinDesigner(cFileSource *Source);
+    virtual ~cMenuImageSkinDesigner();
+    virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
 };
 
