@@ -722,37 +722,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
-void cMenuImageSkinDesigner::DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk) {
-    if (ve == 1) { // header
-        tk->DefineStringToken("{title}", 0);
-    }
-}
-
-void cMenuImageSkinDesigner::DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk) {
-    if (vg == 0) { // imagegrid
-        tk->DefineStringToken("{thumbnail}", 0);
-        tk->DefineStringToken("{albumname}", 1);
-        tk->DefineIntToken("{is_folder}", 0);
-        tk->DefineIntToken("{current}", 1);
-    }
-}
-
-cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
-: skindesignerapi::cSkindesignerOsdObject(plugStruct)
-{
-    source = Source;
-    list = new cDirList;
-    currentdir = NULL;
-    currentIndex = 0;
-    needsRedraw = true;
-    
-    rootView = NULL;
-    back = NULL;
-    header = NULL;
-    imagegrid = NULL;
-
-    char *parent = NULL;
-    source->GetRemember(currentdir, parent);
+ImageSkinDesigner::cMenuurrentIndex = 0;
 
     LoadDir(currentdir);
 
@@ -807,7 +777,6 @@ void cMenuImageSkinDesigner::Show(void)
     if (back) back->Display();
 
     rootView->Activate();
-    }
     
     if (needsRedraw) {
         Draw();
@@ -822,8 +791,7 @@ void cMenuImageSkinDesigner::Draw()
     if (header) {
         header->ClearTokens();
         header->Clear();
-        header->AddStringToken(0, "Bildergalerie");
-        header->Display();
+        header->AddString   header->Display();
     }
 
     if (imagegrid) {
@@ -863,12 +831,17 @@ void cMenuImageSkinDesigner::Draw()
         
         int is_dir = (item->Type == itDir || item->Type == itParent) ? 1 : 0;
         
+        // Position der Kachel auf der aktuellen Seite berechnen
+        int idxOnPage = i - startIdx;
+        double x = (idxOnPage % columns) * itemWidth;
+        double y = (idxOnPage / columns) * itemHeight;
+        
         imagegrid->ClearTokens();
         imagegrid->AddStringToken(0, thumbPath ? thumbPath : "");
         imagegrid->AddStringToken(1, item->DisplayName ? item->DisplayName : "");
         imagegrid->AddIntToken(0, is_dir);
         imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
-        imagegrid->SetItem(i);
+        imagegrid->Set(i, x, y, itemWidth, itemHeight);
         
         if (thumbPath) free(thumbPath);
         free(fullDirPath);
@@ -884,7 +857,6 @@ void cMenuImageSkinDesigner::Draw()
 eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
 {
     int totalItems = list->Count();
-    if (totalItems == 0) {
         if (Key == kBack || Key == kMenu) return osEnd;
         return osContinue;
     }

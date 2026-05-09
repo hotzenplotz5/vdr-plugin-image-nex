@@ -76,9 +76,6 @@ public:
     virtual ~cMenuImageSkinDesigner();
     virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
-    
-    static void DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk);
-    static void DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk);
 };
 
 void StopThumbLoader();

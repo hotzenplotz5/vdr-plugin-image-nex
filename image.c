@@ -26,6 +26,8 @@
 #include "commands.h"
 #include "liboutput/encode.h"
 #include <libskindesignerapi/skindesignerapi.h>
+#include <libskindesignerapi/pluginstructure.h>
+#include <libskindesignerapi/tokencontainer.h>
 
 static const char *VERSION        = "0.6.0";
 
@@ -107,13 +109,23 @@ bool cPluginImage::Start(void)
       m_pluginStructure->libskindesignerAPIVersion = "1.0"; 
       m_pluginStructure->RegisterRootView("grid");
       
-      m_pluginStructure->RegisterViewElement(0, 0, "background");
-      m_pluginStructure->RegisterViewElement(0, 1, "header");
-      m_pluginStructure->RegisterViewGrid(0, 0, "imagegrid");
+      skindesignerapi::cTokenContainer *tkBg = new skindesignerapi::cTokenContainer();
+      tkBg->CreateContainers();
+      m_pluginStructure->RegisterViewElement(0, 0, "background", tkBg);
       
-      m_pluginStructure->SetDefineTokensElementsCallback(&cMenuImageSkinDesigner::DefineTokensElements);
-      m_pluginStructure->SetDefineTokensGridsCallback(&cMenuImageSkinDesigner::DefineTokensGrids);
+      skindesignerapi::cTokenContainer *tkHeader = new skindesignerapi::cTokenContainer();
+      tkHeader->DefineStringToken("title", 0);
+      tkHeader->CreateContainers();
+      m_pluginStructure->RegisterViewElement(0, 1, "header", tkHeader);
       
+      skindesignerapi::cTokenContainer *tkDef = new skindesignerapi::cTokenContainer();
+      tkDef->DefineStringToken("thumbnail", 0);
+      tkDef->DefineStringToken("albumname", 1);
+      tkDef->DefineIntToken("is_folder", 0);
+      tkDef->DefineIntToken("current", 1);
+      tkDef->CreateContainers();
+      m_pluginStructure->RegisterViewGrid(0, 0, "imagegrid", tkDef);
+
       skindesignerapi::SkindesignerAPI::RegisterPlugin(m_pluginStructure);
   }
   
