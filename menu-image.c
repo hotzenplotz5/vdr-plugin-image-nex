@@ -818,8 +818,6 @@ void cMenuImageSkinDesigner::Draw()
         cDirItem *item = list->Get(i);
         if (!item) continue;
         
-        cTokenContainer *tk = new cTokenContainer();
-        
         char *dirPath = item->Path();
         char *fullDirPath = source->BuildName(dirPath);
         char *thumbPath = NULL;
