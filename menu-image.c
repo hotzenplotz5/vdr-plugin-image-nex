@@ -531,39 +531,39 @@ void cMenuImageGrid::DrawGrid()
 
     int totalItems = list->Count();
     
-    tColor bgFull     = 0xFF151515;
-    tColor textFg     = 0xFF00AAFF;
-    tColor btnRed     = 0xFFCC0000;
-    tColor btnRedFg   = 0xFFFFFFFF;
-    tColor btnBlue    = 0xFF0000CC;
-    tColor btnBlueFg  = 0xFFFFFFFF;
-    tColor itemBg     = 0xFF333333;
-    tColor itemFg     = 0xFFDDDDDD;
-    tColor cursorBg   = 0xFF0055AA;
-    tColor cursorFg   = 0xFFFFFFFF;
-    tColor borderSel  = 0xFFFFCC00;
-    tColor borderNorm = 0xFFFFFFFF;
+    cImageGridTheme theme;
+    theme.fontTitle  = cFont::GetFont(fontOsd);
+    theme.fontSml    = cFont::GetFont(fontSml);
+    theme.bgFull     = Theme.Color(clrOsdBackground);
+    theme.textFg     = Theme.Color(clrMenuTitleFg);
+    theme.btnRed     = Theme.Color(clrColorButtonRedBg);
+    theme.btnRedFg   = Theme.Color(clrColorButtonRedFg);
+    theme.btnBlue    = Theme.Color(clrColorButtonBlueBg);
+    theme.btnBlueFg  = Theme.Color(clrColorButtonBlueFg);
+    theme.itemBg     = Theme.Color(clrMenuItemBg);
+    theme.itemFg     = Theme.Color(clrMenuItemFg);
+    theme.cursorBg   = Theme.Color(clrMenuItemCurrentBg);
+    theme.cursorFg   = Theme.Color(clrMenuItemCurrentFg);
+    theme.borderSel  = Theme.Color(clrMenuScrollbarFg);
+    theme.borderNorm = Theme.Color(clrMenuFrame);
 
-    const cFont *fntTitle = cFont::GetFont(fontOsd);
-    const cFont *fntSml   = cFont::GetFont(fontSml);
-
-    int titleHeight = fntTitle->Height() * 2 + 30;
-    int buttonAreaHeight = fntTitle->Height() + 60;
+    int titleHeight = theme.fontTitle->Height() * 2 + 30;
+    int buttonAreaHeight = theme.fontTitle->Height() + 60;
     
     int visibleRows = (osdHeight - titleHeight - buttonAreaHeight) / (kachelHoehe + padding);
     if (visibleRows < 1) visibleRows = 1;
     int startRow = (currentIndex / columns / visibleRows) * visibleRows;
 
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, theme.bgFull);
     char titleBuf[256];
     snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, textFg, bgFull, fntTitle);
+    myOsd->DrawText(margin, 10, titleBuf, theme.textFg, theme.bgFull, theme.fontTitle);
 
     int btnY = osdHeight - buttonAreaHeight;
-    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + fntTitle->Height() + 10, btnRed);
-    myOsd->DrawText(margin, btnY + 10, tr("Select"), btnRedFg, btnRed, fntTitle);
-    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + fntTitle->Height() + 10, btnBlue);
-    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnBlueFg, btnBlue, fntTitle);
+    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + theme.fontTitle->Height() + 10, theme.btnRed);
+    myOsd->DrawText(margin, btnY + 10, tr("Select"), theme.btnRedFg, theme.btnRed, theme.fontTitle);
+    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + theme.fontTitle->Height() + 10, theme.btnBlue);
+    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), theme.btnBlueFg, theme.btnBlue, theme.fontTitle);
 
     for (int i = 0; i < totalItems; i++) {
         int row = (i / columns) - startRow;
@@ -573,59 +573,64 @@ void cMenuImageGrid::DrawGrid()
         int x = margin + col * (kachelBreite + padding);
         int y = titleHeight + row * (kachelHoehe + padding);
         
-        tColor bgColor = (i == currentIndex) ? cursorBg : itemBg;
-        tColor textColor = (i == currentIndex) ? cursorFg : itemFg;
+        DrawTile(i, x, y, kachelBreite, kachelHoehe, theme);
+    }
+}
 
-        int b = (i == currentIndex) ? 4 : 1; 
-        tColor actBorderColor = (i == currentIndex) ? borderSel : borderNorm;
-        
-        myOsd->DrawRectangle(x - b, y - b, x + kachelBreite + b - 1, y + kachelHoehe + b - 1, actBorderColor);
-        myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); 
+void cMenuImageGrid::DrawTile(int index, int x, int y, int width, int height, const cImageGridTheme &theme)
+{
+    tColor bgColor = (index == currentIndex) ? theme.cursorBg : theme.itemBg;
+    tColor textColor = (index == currentIndex) ? theme.cursorFg : theme.itemFg;
 
-        cDirItem *item = list->Get(i);
-        if (item) {
-            bool thumbDrawn = false;
-            char *dirPath = item->Path();
-            char *fullDirPath = source->BuildName(dirPath);
-            char *thumbPath = NULL;
+    int b = (index == currentIndex) ? 4 : 1; 
+    tColor actBorderColor = (index == currentIndex) ? theme.borderSel : theme.borderNorm;
+    
+    myOsd->DrawRectangle(x - b, y - b, x + width + b - 1, y + height + b - 1, actBorderColor);
+    myOsd->DrawRectangle(x, y, x + width - 1, y + height - 1, bgColor); 
 
-            if (item->Type == itDir || item->Type == itParent) {
-                thumbPath = AddPath(fullDirPath, "folder.jpg");
-            } else if (item->Type == itFile) {
-                thumbPath = strdup(fullDirPath);
-            }
+    cDirItem *item = list->Get(index);
+    if (item) {
+        bool thumbDrawn = false;
+        char *dirPath = item->Path();
+        char *fullDirPath = source->BuildName(dirPath);
+        char *thumbPath = NULL;
 
-            if (item->Type == itFile && !item->HasFolderJpg) {
-                item->HasFolderJpg = true;
-            }
-            
-            if (thumbPath && item->HasFolderJpg) {
-                cImage* thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
-                if (thumb) {
-                    int thumbX = x + (kachelBreite - thumb->Width()) / 2;
-                    int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
-                    myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
-                    thumbDrawn = true;
-                }
-            }
-
-            if (thumbPath) free(thumbPath);
-            free(fullDirPath);
-            free(dirPath);
-
-            if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
-                myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, fntSml);
-            } else if (!thumbDrawn && item->Type == itFile) {
-                myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, fntSml);
-            }
-
-            int textBarHeight = fntSml->Height() + 4;
-            int textY = y + kachelHoehe - textBarHeight;
-            if (textY < y) textY = y; 
-            myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); 
-
-            myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, bgColor, fntSml, kachelBreite - 10);
+        if (item->Type == itDir || item->Type == itParent) {
+            thumbPath = AddPath(fullDirPath, "folder.jpg");
+        } else if (item->Type == itFile) {
+            thumbPath = strdup(fullDirPath);
         }
+
+        if (item->Type == itFile && !item->HasFolderJpg) {
+            item->HasFolderJpg = true;
+        }
+        
+        if (thumbPath && item->HasFolderJpg) {
+            cImage* thumb = cThumbCache::Get(thumbPath, width, height);
+            if (thumb) {
+                int thumbX = x + (width - thumb->Width()) / 2;
+                int thumbY = y + (height - thumb->Height()) / 2;
+                myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
+                thumbDrawn = true;
+            }
+        }
+
+        if (thumbPath) free(thumbPath);
+        free(fullDirPath);
+        free(dirPath);
+
+        if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
+            myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, theme.fontSml);
+        } else if (!thumbDrawn && item->Type == itFile) {
+            myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, theme.fontSml);
+        }
+
+        int textBarHeight = theme.fontSml->Height() + 4;
+        int textY = y + height - textBarHeight;
+        if (textY < y) textY = y; 
+        myOsd->DrawRectangle(x, textY, x + width - 1, y + height - 1, bgColor); 
+
+        myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, bgColor, theme.fontSml, width - 10);
     }
 }
 
@@ -862,15 +867,14 @@ void cMenuImageSkinDesigner::Draw()
             imagegrid->AddIntToken(0, is_dir);
             imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
             
-            // Die kompilierende API-Methode für cViewGrid heißt SetGrid!
-            imagegrid->SetGrid(i, x, y, itemWidth, itemHeight);
+            imagegrid->SetGrid(idxOnPage, x, y, itemWidth, itemHeight);
             
             if (thumbPath) free(thumbPath);
             free(fullDirPath);
             free(dirPath);
         }
 
-        imagegrid->SetCurrent(currentIndex, true);
+        imagegrid->SetCurrent(currentIndex - startIdx, true);
         imagegrid->Display();
     }
     rootView->Display();
