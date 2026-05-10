@@ -129,16 +129,17 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
         return nullptr;
     }
     
+    // Speed up decoding for full JPEGs by rendering at lower resolution (1/8)
+    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
+        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
+        codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
+    }
+
     if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
-    }
-
-    // Speed up decoding for full JPEGs by rendering at lower resolution (1/8)
-    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
-        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
     }
 
     if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
@@ -216,7 +217,7 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
             SwsContext *sws_ctx = sws_getContext(
                 frame->width, frame->height, (AVPixelFormat)frame->format,
                 newWidth, newHeight, AV_PIX_FMT_BGRA,
-                SWS_BILINEAR, nullptr, nullptr, nullptr
+                SWS_FAST_BILINEAR, nullptr, nullptr, nullptr
             );
 
             if (sws_ctx) {
@@ -239,6 +240,7 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
 
 // Globaler Mutex für den Cache
 static cMutex ThumbCacheMutex;
+static cMutex ThumbLoaderMutex;
 
 struct ThumbRequest {
     std::string path;
@@ -294,7 +296,10 @@ public:
             
             if (Loading.find(key) == Loading.end()) {
                 Loading.insert(key);
-                if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
+                {
+                    cMutexLock loaderLock(&ThumbLoaderMutex);
+                    if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
+                }
                 ThumbLoader->Add(path, maxWidth, maxHeight, g_CacheGeneration.load());
             }
         }
@@ -331,7 +336,7 @@ void cThumbLoaderThread::Clear() {
 
 void cThumbLoaderThread::StopThread() {
     cond.Broadcast();
-    Cancel(3);
+    Cancel(0);
 }
 
 void StopThumbLoader() {
@@ -649,6 +654,8 @@ void cMenuImageGrid::DrawGrid()
 
             if (item->Type == itFile && !item->HasFolderJpg) {
                 item->HasFolderJpg = true;
+            if (item->Type == itFile && !item->HasFolderJpg && thumbPath) {
+                item->HasFolderJpg = (access(thumbPath, R_OK) == 0);
             }
             
             if (thumbPath && item->HasFolderJpg) {
@@ -657,6 +664,13 @@ void cMenuImageGrid::DrawGrid()
                     int thumbX = x + (kachelBreite - thumb->Width()) / 2;
                     int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
                     myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
+                if (!item->CachedThumb) {
+                    item->CachedThumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
+                }
+                if (item->CachedThumb) {
+                    int thumbX = x + (kachelBreite - item->CachedThumb->Width()) / 2;
+                    int thumbY = y + (kachelHoehe - item->CachedThumb->Height()) / 2;
+                    myOsd->DrawImage(cPoint(thumbX, thumbY), *item->CachedThumb);
                     thumbDrawn = true;
                 }
             }
@@ -775,21 +789,14 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
         // Wenn wir uns auf derselben Seite bewegen, machen wir ein schnelles Partial-Redraw!
         if (oldPage == newPage && myOsd && !g_ThumbnailsUpdated.load()) {
-            cImageGridTheme theme;
-            theme.fontTitle  = cFont::GetFont(fontOsd);
-            theme.fontSml    = cFont::GetFont(fontSml);
-            theme.bgFull     = Theme.Color(clrOsdBackground);
-            theme.textFg     = Theme.Color(clrMenuTitleFg);
-            theme.btnRed     = Theme.Color(clrColorButtonRedBg);
-            theme.btnRedFg   = Theme.Color(clrColorButtonRedFg);
-            theme.btnBlue    = Theme.Color(clrColorButtonBlueBg);
-            theme.btnBlueFg  = Theme.Color(clrColorButtonBlueFg);
-            theme.itemBg     = Theme.Color(clrMenuItemBg);
-            theme.itemFg     = Theme.Color(clrMenuItemFg);
-            theme.cursorBg   = Theme.Color(clrMenuItemCurrentBg);
-            theme.cursorFg   = Theme.Color(clrMenuItemCurrentFg);
-            theme.borderSel  = Theme.Color(clrMenuScrollbarFg);
-            theme.borderNorm = Theme.Color(clrMenuFrame);
+            tColor itemBg     = 0xFF333333;
+            tColor itemFg     = 0xFFDDDDDD;
+            tColor cursorBg   = 0xFF0055AA;
+            tColor cursorFg   = 0xFFFFFFFF;
+            tColor borderSel  = 0xFFFFCC00;
+            tColor borderNorm = 0xFFFFFFFF;
+
+            const cFont *fntSml = cFont::GetFont(fontSml);
 
             int margin = 50;
             int padding = 20;
@@ -800,7 +807,39 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
                 int col = idx % columns;
                 int x = margin + col * (kachelBreite + padding);
                 int y = titleHeight + row * (kachelHoehe + padding);
-                DrawTile(idx, x, y, kachelBreite, kachelHoehe, theme);
+                
+                tColor bgColor = (idx == currentIndex) ? cursorBg : itemBg;
+                tColor textColor = (idx == currentIndex) ? cursorFg : itemFg;
+
+                int b = (idx == currentIndex) ? 4 : 1; 
+                tColor actBorderColor = (idx == currentIndex) ? borderSel : borderNorm;
+                
+                myOsd->DrawRectangle(x - b, y - b, x + kachelBreite + b - 1, y + kachelHoehe + b - 1, actBorderColor);
+                myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); 
+
+                cDirItem *item = list->Get(idx);
+                if (item) {
+                    bool thumbDrawn = false;
+                    if (item->CachedThumb) {
+                        int thumbX = x + (kachelBreite - item->CachedThumb->Width()) / 2;
+                        int thumbY = y + (kachelHoehe - item->CachedThumb->Height()) / 2;
+                        myOsd->DrawImage(cPoint(thumbX, thumbY), *item->CachedThumb);
+                        thumbDrawn = true;
+                    }
+
+                    if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
+                        myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, fntSml);
+                    } else if (!thumbDrawn && item->Type == itFile) {
+                        myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, fntSml);
+                    }
+
+                    int textBarHeight = fntSml->Height() + 4;
+                    int textY = y + kachelHoehe - textBarHeight;
+                    if (textY < y) textY = y; 
+                    myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); 
+
+                    myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, bgColor, fntSml, kachelBreite - 10);
+                }
             };
 
             updateTile(oldIndex);        // Alten Cursor entfernen
@@ -809,7 +848,6 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
         } else {
             // Seitenwechsel oder neue Thumbnails geladen -> Komplettes Redraw nötig
             g_NeedsRedraw.store(true);
-            Show();
         }
     }
     return osContinue;
@@ -1037,8 +1075,12 @@ eOSState cMenuImageSkinDesigner::Parent(void)
         char *parentDir = NULL;
         char *ss = strrchr(currentdir, '/');
         if (ss) {
-            *ss = 0;
-            parentDir = strdup(currentdir);
+            if (ss == currentdir) {
+                parentDir = strdup("/");
+            } else {
+                *ss = 0;
+                parentDir = strdup(currentdir);
+            }
         }
         char* lastDirName = ss ? strdup(ss + 1) : strdup(currentdir);
 
@@ -1093,8 +1135,12 @@ eOSState cMenuImageGrid::Parent(void)
         char *parentDir = NULL;
         char *ss = strrchr(currentdir, '/');
         if (ss) {
-            *ss = 0;
-            parentDir = strdup(currentdir);
+            if (ss == currentdir) {
+                parentDir = strdup("/");
+            } else {
+                *ss = 0;
+                parentDir = strdup(currentdir);
+            }
         }
         // Remember the directory we just left to restore cursor position
         char* lastDirName = ss ? strdup(ss + 1) : strdup(currentdir);
@@ -1114,7 +1160,6 @@ eOSState cMenuImageGrid::Parent(void)
         free(lastDirName);
 
         g_NeedsRedraw.store(true);
-        Show();
     } else {
         return osEnd;
     }
@@ -1134,7 +1179,6 @@ eOSState cMenuImageGrid::Select(bool isred)
         currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
         g_NeedsRedraw.store(true);
-        Show();
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);
