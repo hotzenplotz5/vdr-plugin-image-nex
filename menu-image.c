@@ -780,15 +780,22 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
+    isyslog("imageplugin: cMenuImageSkinDesigner::Show() called");
     if (!SkindesignerAvailable()) return;
     
     rootView = GetOsdView();
-    if (!rootView) return;
+    if (!rootView) {
+        esyslog("imageplugin: GetOsdView() returned NULL! Skindesigner did not find or could not parse 'plug-image_next-grid.xml'!");
+        return;
+    }
+    isyslog("imageplugin: GetOsdView() successful. Rendering OSD...");
     
     back = rootView->GetViewElement(0); // background
     header = rootView->GetViewElement(1); // header
     imagegrid = rootView->GetViewGrid(0); // imagegrid
     
+    if (!imagegrid) esyslog("imageplugin: Warning - imagegrid view is NULL");
+
     if (back) back->Display();
 
     rootView->Activate();
@@ -858,15 +865,17 @@ void cMenuImageSkinDesigner::Draw()
             imagegrid->AddIntToken(0, is_dir);
             imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
             
-            // Die Methode in cViewGrid heißt korrekterweise SetGrid!
-            imagegrid->SetGrid(i, x, y, itemWidth, itemHeight);
+            // WICHTIG: Das Grid MUSS pro Seite bei Index 0 anfangen!
+            imagegrid->SetGrid(idxOnPage, x, y, itemWidth, itemHeight);
             
             if (thumbPath) free(thumbPath);
             free(fullDirPath);
             free(dirPath);
         }
 
-        imagegrid->SetCurrent(currentIndex, true);
+        // Auch SetCurrent muss sich auf die aktuelle Seite beziehen!
+        int currentOnPage = currentIndex - startIdx;
+        imagegrid->SetCurrent(currentOnPage, true);
         imagegrid->Display();
     }
     rootView->Display();
