@@ -519,114 +519,118 @@ void cMenuImageGrid::DrawGrid()
     if (ImageSetup.m_nGridColumns > 0) {
         columns = ImageSetup.m_nGridColumns;
     } else {
-        // Auto-calculation based on resolution
         columns = (osdWidth >= 1920) ? 6 : 4;
-        if (osdWidth >= 3840) columns = 8; // 4K Support
+        if (osdWidth >= 3840) columns = 8;
     }
 
     int margin = 50;
     int padding = 20;
     int kachelBreite = (osdWidth - (2 * margin) - ((columns - 1) * padding)) / columns;
-    if (kachelBreite < 10) kachelBreite = 10; // Prevent negative/zero sizes on exotic skins
+    if (kachelBreite < 10) kachelBreite = 10;
     int kachelHoehe = kachelBreite * 3 / 4;
 
     int totalItems = list->Count();
-    const cFont *fontTitle = cFont::GetFont(fontOsd);
-    const cFont *fontSml = cFont::GetFont(fontSml); // Etwas kleinere Schrift für die Kacheln
-    int titleHeight = fontTitle->Height() * 2 + 30;  
-    int buttonAreaHeight = fontTitle->Height() + 60; 
+    
+    cImageGridTheme theme;
+    theme.fontTitle  = cFont::GetFont(fontOsd);
+    theme.fontSml    = cFont::GetFont(fontSml);
+    theme.bgFull     = Theme.Color(clrOsdBackground);
+    theme.textFg     = Theme.Color(clrMenuTitleFg);
+    theme.btnRed     = Theme.Color(clrColorButtonRedBg);
+    theme.btnRedFg   = Theme.Color(clrColorButtonRedFg);
+    theme.btnBlue    = Theme.Color(clrColorButtonBlueBg);
+    theme.btnBlueFg  = Theme.Color(clrColorButtonBlueFg);
+    theme.itemBg     = Theme.Color(clrMenuItemBg);
+    theme.itemFg     = Theme.Color(clrMenuItemFg);
+    theme.cursorBg   = Theme.Color(clrMenuItemCurrentBg);
+    theme.cursorFg   = Theme.Color(clrMenuItemCurrentFg);
+    theme.borderSel  = Theme.Color(clrMenuScrollbarFg);
+    theme.borderNorm = Theme.Color(clrMenuFrame);
 
-    // --- THEME ABSTRAKTION (Mini-Skindesigner-Bridge) ---
-    // Wir beziehen die Farben nun direkt und dynamisch vom aktuell aktiven Skin!
-    tColor bgFull     = Theme.Color(clrBackground);
-    tColor textFg     = Theme.Color(clrMenuTitleFg);
-    tColor btnRed     = Theme.Color(clrButtonRedBg);
-    tColor btnRedFg   = Theme.Color(clrButtonRedFg);
-    tColor btnBlue    = Theme.Color(clrButtonBlueBg);
-    tColor btnBlueFg  = Theme.Color(clrButtonBlueFg);
-    tColor itemBg     = Theme.Color(clrMenuItemBg);
-    tColor itemFg     = Theme.Color(clrMenuItemFg);
-    tColor cursorBg   = Theme.Color(clrButtonBlueBg);   // Cursor-Hintergrund
-    tColor cursorFg   = Theme.Color(clrButtonBlueFg);   // Cursor-Text
-    tColor borderSel  = Theme.Color(clrMenuScrollbarFg);// Auffälliger Rand für Auswahl
-
-    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
-    char titleBuf[256];
-    snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, textFg, bgFull, fontTitle);
-
-    int btnY = osdHeight - buttonAreaHeight;
-    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + fontTitle->Height() + 10, btnRed);
-    myOsd->DrawText(margin, btnY + 10, tr("Select"), btnRedFg, btnRed, fontTitle);
-    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + fontTitle->Height() + 10, btnBlue);
-    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnBlueFg, btnBlue, fontTitle);
-
+    int titleHeight = theme.fontTitle->Height() * 2 + 30;
+    int buttonAreaHeight = theme.fontTitle->Height() + 60;
+    
     int visibleRows = (osdHeight - titleHeight - buttonAreaHeight) / (kachelHoehe + padding);
     if (visibleRows < 1) visibleRows = 1;
     int startRow = (currentIndex / columns / visibleRows) * visibleRows;
 
+    myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, theme.bgFull);
+    char titleBuf[256];
+    snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
+    myOsd->DrawText(margin, 10, titleBuf, theme.textFg, theme.bgFull, theme.fontTitle);
+
+    int btnY = osdHeight - buttonAreaHeight;
+    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + theme.fontTitle->Height() + 10, theme.btnRed);
+    myOsd->DrawText(margin, btnY + 10, tr("Select"), theme.btnRedFg, theme.btnRed, theme.fontTitle);
+    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + theme.fontTitle->Height() + 10, theme.btnBlue);
+    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), theme.btnBlueFg, theme.btnBlue, theme.fontTitle);
+
     for (int i = 0; i < totalItems; i++) {
         int row = (i / columns) - startRow;
         if (row < 0 || row >= visibleRows) continue;
+
         int col = i % columns;
         int x = margin + col * (kachelBreite + padding);
         int y = titleHeight + row * (kachelHoehe + padding);
+        
+        DrawTile(i, x, y, kachelBreite, kachelHoehe, theme);
+    }
+}
 
-            // Dynamische Zuordnung für selektierte und nicht-selektierte Kacheln
-            tColor bgColor = (i == currentIndex) ? cursorBg : itemBg;
-            tColor textColor = (i == currentIndex) ? cursorFg : itemFg;
+void cMenuImageGrid::DrawTile(int index, int x, int y, int width, int height, const cImageGridTheme &theme)
+{
+    tColor bgColor = (index == currentIndex) ? theme.cursorBg : theme.itemBg;
+    tColor textColor = (index == currentIndex) ? theme.cursorFg : theme.itemFg;
 
-        int b = (i == currentIndex) ? 4 : 1; // 4 Pixel dick, wenn ausgewählt, sonst 1 Pixel
-            tColor actBorderColor = (i == currentIndex) ? borderSel : Theme.Color(clrMenuFrame);
-            myOsd->DrawRectangle(x - b, y - b, x + kachelBreite + b - 1, y + kachelHoehe + b - 1, actBorderColor);
-        myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Kachel-Hintergrund zeichnen
+    int b = (index == currentIndex) ? 4 : 1; 
+    tColor actBorderColor = (index == currentIndex) ? theme.borderSel : theme.borderNorm;
+    
+    myOsd->DrawRectangle(x - b, y - b, x + width + b - 1, y + height + b - 1, actBorderColor);
+    myOsd->DrawRectangle(x, y, x + width - 1, y + height - 1, bgColor); 
 
-        cDirItem *item = list->Get(i);
-        if (item) {
-            bool thumbDrawn = false;
-            char *dirPath = item->Path();
-            char *fullDirPath = source->BuildName(dirPath);
-            char *thumbPath = NULL;
+    cDirItem *item = list->Get(index);
+    if (item) {
+        bool thumbDrawn = false;
+        char *dirPath = item->Path();
+        char *fullDirPath = source->BuildName(dirPath);
+        char *thumbPath = NULL;
 
-            if (item->Type == itDir) {
-                thumbPath = AddPath(fullDirPath, "folder.jpg");
-            } else if (item->Type == itFile) {
-                thumbPath = strdup(fullDirPath);
-            }
-            if (thumbPath && !item->HasFolderJpg && access(thumbPath, R_OK) == 0) {
-                item->HasFolderJpg = true;
-            }
-            if (thumbPath && item->HasFolderJpg) {
-                cImage* thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
-                if (thumb) {
-                    // Center the image in the tile
-                    int thumbX = x + (kachelBreite - thumb->Width()) / 2;
-                    int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
-                    myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
-                    thumbDrawn = true;
-                }
-            }
-
-            if (thumbPath) free(thumbPath);
-            free(fullDirPath);
-            free(dirPath);
-
-            // If no thumbnail was drawn, draw the text icon
-            if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
-                myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, fontSml);
-            } else if (!thumbDrawn && item->Type == itFile) {
-                myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, fontSml);
-            }
-
-            // Draw the name at the bottom with a semi-transparent bar
-            int textBarHeight = fontSml->Height() + 4;
-            int textY = y + kachelHoehe - textBarHeight;
-            if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
-            myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Gleicher HG wie Kachel
-
-            // Limit the drawing width to prevent long names from bleeding into adjacent grid tiles
-            myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, bgColor, fontSml, kachelBreite - 10);
+        if (item->Type == itDir || item->Type == itParent) {
+            thumbPath = AddPath(fullDirPath, "folder.jpg");
+        } else if (item->Type == itFile) {
+            thumbPath = strdup(fullDirPath);
         }
+
+        if (item->Type == itFile && !item->HasFolderJpg) {
+            item->HasFolderJpg = true;
+        }
+        
+        if (thumbPath && item->HasFolderJpg) {
+            cImage* thumb = cThumbCache::Get(thumbPath, width, height);
+            if (thumb) {
+                int thumbX = x + (width - thumb->Width()) / 2;
+                int thumbY = y + (height - thumb->Height()) / 2;
+                myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
+                thumbDrawn = true;
+            }
+        }
+
+        if (thumbPath) free(thumbPath);
+        free(fullDirPath);
+        free(dirPath);
+
+        if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
+            myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, theme.fontSml);
+        } else if (!thumbDrawn && item->Type == itFile) {
+            myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, theme.fontSml);
+        }
+
+        int textBarHeight = theme.fontSml->Height() + 4;
+        int textY = y + height - textBarHeight;
+        if (textY < y) textY = y; 
+        myOsd->DrawRectangle(x, textY, x + width - 1, y + height - 1, bgColor); 
+
+        myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, bgColor, theme.fontSml, width - 10);
     }
 }
 
@@ -652,16 +656,15 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             if (myOsd->Width() >= 3840) columns = 8;
         }
     }
-
-    int visibleRows = 1;
+    
+    int visibleRows = 3;
     if (myOsd) {
         int kachelBreite = (myOsd->Width() - 100 - ((columns - 1) * 20)) / columns;
-        if (kachelBreite < 10) kachelBreite = 10;
         int kachelHoehe = kachelBreite * 3 / 4;
         const cFont *font = cFont::GetFont(fontOsd);
         int titleHeight = font->Height() * 2 + 30;
         int buttonAreaHeight = font->Height() + 60;
-        visibleRows = (myOsd->Height() - titleHeight - buttonAreaHeight - 20) / (kachelHoehe + 20);
+        visibleRows = (myOsd->Height() - titleHeight - buttonAreaHeight) / (kachelHoehe + 20);
         if (visibleRows < 1) visibleRows = 1;
     }
     int pageItems = columns * visibleRows;
@@ -702,7 +705,6 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             if (currentIndex + columns < totalItems) {
                 currentIndex += columns;
             } else if ((currentIndex / columns) < ((totalItems - 1) / columns)) {
-                // Jump to the last item only if there is a row below us, preventing horizontal jumps in the last row
                 currentIndex = totalItems - 1;
             }
             g_NeedsRedraw = true;
@@ -710,6 +712,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
+            else currentIndex = 0;
             g_NeedsRedraw = true;
             Show();
             return osContinue;
@@ -792,7 +795,6 @@ bool cMenuImageSkinDesigner::LoadDir(const char *dir)
     currentIndex = 0;
     needsRedraw = true;
     return list->Load(source, dir);
-}
 
 cDirItem *cMenuImageSkinDesigner::CurrentItem()
 {
