@@ -775,6 +775,7 @@ bool cMenuImageSkinDesigner::LoadDir(const char *dir)
     currentIndex = 0;
     needsRedraw = true;
     return list->Load(source, dir);
+}
 
 cDirItem *cMenuImageSkinDesigner::CurrentItem()
 {
@@ -987,76 +988,6 @@ eOSState cMenuImageSkinDesigner::Select(bool isred)
         return osContinue;
     } else if (item->Type == itFile) {
         cSlideShow *newss = new cSlideShow(item);
-        if (newss->Load() && newss->Count()) {
-            cImageControl::SetSlideShow(newss);
-            return osEnd;
-        }
-        delete newss;
-        OSD_ErrorMsg(tr("No files!"));
-    }
-    return osContinue;
-}
-
-eOSState cMenuImageGrid::Parent(void)
-{
-    if (currentdir) {
-        char *parentDir = NULL;
-        char *ss = strrchr(currentdir, '/');
-        if (ss) {
-            *ss = 0;
-            parentDir = strdup(currentdir);
-        }
-        // Remember the directory we just left to restore cursor position
-        char* lastDirName = ss ? strdup(ss + 1) : strdup(currentdir);
-
-        free(currentdir);
-        currentdir = parentDir;
-        LoadDir(currentdir);
-
-        // Automatically place cursor on the folder we just exited
-        for (int i = 0; i < list->Count(); i++) {
-            cDirItem *item = list->Get(i);
-            if (item && item->Name && strcmp(item->Name, lastDirName) == 0) {
-                currentIndex = i;
-                break;
-            }
-        }
-        free(lastDirName);
-
-        g_NeedsRedraw = true;
-        Show();
-    } else {
-        return osEnd;
-    }
-    return osContinue;
-}
-
-eOSState cMenuImageGrid::Select(bool isred)
-{
-    cDirItem *item = CurrentItem();
-    if (!item) return osContinue;
-
-    if (item->Type == itParent) {
-        return Parent();
-    } else if (item->Type == itDir) {
-        char *path = item->Path();
-        free(currentdir);
-        currentdir = path; // path already contains the fully resolved absolute directory string
-        LoadDir(currentdir);
-        g_NeedsRedraw = true;
-        Show();
-        return osContinue;
-    } else if (item->Type == itFile) {
-        cSlideShow *newss = new cSlideShow(item);
-        if (newss->Load() && newss->Count()) {
-            cImageControl::SetSlideShow(newss);
-            return osEnd;
-        }
-        delete newss;
-        OSD_ErrorMsg(tr("No files!"));
-    }
-    return osContinue;
-}
         if (newss->Load() && newss->Count()) {
             cImageControl::SetSlideShow(newss);
             return osEnd;
