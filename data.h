@@ -17,6 +17,9 @@
 #include <vdr/tools.h>
 #include <vdr/config.h>
 
+#include <memory>
+class cImage;
+
 extern const char *g_szMountScript;
 
 // ----------------------------------------------------------------
@@ -54,6 +57,7 @@ public:
   char *DisplayName;
   eItemType Type;
   bool HasFolderJpg;
+  std::shared_ptr<cImage> CachedThumb;
   };
 
 // ----------------------------------------------------------------
