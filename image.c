@@ -114,15 +114,15 @@ bool cPluginImage::Start(void)
       m_pluginStructure->RegisterViewElement(0, 0, "background", tkBg);
       
       skindesignerapi::cTokenContainer *tkHeader = new skindesignerapi::cTokenContainer();
-      tkHeader->DefineStringToken("title", 0);
+      tkHeader->DefineStringToken("{title}", 0);
       tkHeader->CreateContainers();
       m_pluginStructure->RegisterViewElement(0, 1, "header", tkHeader);
       
       skindesignerapi::cTokenContainer *tkDef = new skindesignerapi::cTokenContainer();
-      tkDef->DefineStringToken("thumbnail", 0);
-      tkDef->DefineStringToken("albumname", 1);
-      tkDef->DefineIntToken("is_folder", 0);
-      tkDef->DefineIntToken("current", 1);
+      tkDef->DefineStringToken("{thumbnail}", 0);
+      tkDef->DefineStringToken("{albumname}", 1);
+      tkDef->DefineIntToken("{is_folder}", 0);
+      tkDef->DefineIntToken("{current}", 1);
       tkDef->CreateContainers();
       m_pluginStructure->RegisterViewGrid(0, 0, "imagegrid", tkDef);
 
