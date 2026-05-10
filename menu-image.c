@@ -652,7 +652,7 @@ void cMenuImageGrid::DrawGrid()
             }
             
             if (thumbPath && item->HasFolderJpg) {
-                cImage* thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
+                std::shared_ptr<cImage> thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
                 if (thumb) {
                     int thumbX = x + (kachelBreite - thumb->Width()) / 2;
                     int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
