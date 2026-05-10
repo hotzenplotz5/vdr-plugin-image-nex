@@ -24,6 +24,7 @@
 #include <unordered_set>
 #include <atomic>
 #include <functional>
+#include <algorithm>
 
 #include "image.h"
 #include "menu.h"
@@ -51,7 +52,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
+static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool fastOnly = false) {
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
 
@@ -122,11 +123,22 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
     }
 
     AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
-    avcodec_parameters_to_context(codec_ctx, codecpar);
+    if (!codec_ctx) {
+        avformat_close_input(&fmt_ctx);
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr;
+    }
+    
+    if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr;
+    }
 
     // Speed up decoding for full JPEGs by rendering at lower resolution (1/8)
     if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
-        codec_ctx->lowres = codec->max_lowres < 3 ? codec->max_lowres : 3; 
+        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
     }
 
     if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
@@ -150,7 +162,10 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
 
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_idx) {
-            avcodec_send_packet(codec_ctx, pkt);
+            if (avcodec_send_packet(codec_ctx, pkt) < 0) {
+                av_packet_unref(pkt);
+                break;
+            }
             while (true) {
                 int ret = avcodec_receive_frame(codec_ctx, frame);
                 if (ret == 0) {
@@ -182,7 +197,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
     }
     av_packet_free(&pkt);
 
-    cImage* retImage = nullptr;
+    std::shared_ptr<cImage> retImage = nullptr;
     if (decoded && frame->width > 0 && frame->height > 0) {
         double aspect = (double)frame->height / frame->width;
         int newWidth = maxWidth;
@@ -196,7 +211,7 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
 
         esyslog("imageplugin: Decoding finished, scaling to %dx%d...", newWidth, newHeight);
 
-        retImage = new cImage(cSize(newWidth, newHeight));
+        retImage = std::make_shared<cImage>(cSize(newWidth, newHeight));
         if (retImage && retImage->Data()) {
             SwsContext *sws_ctx = sws_getContext(
                 frame->width, frame->height, (AVPixelFormat)frame->format,
@@ -236,7 +251,7 @@ static std::atomic<bool> g_NeedsRedraw(true);
 static std::atomic<uint64_t> g_CacheGeneration(0);
 
 struct CacheEntry {
-    std::unique_ptr<cImage> image;
+    std::shared_ptr<cImage> image;
     std::list<std::string>::iterator lruIt;
 };
 
@@ -263,7 +278,7 @@ public:
     static std::unordered_map<std::string, CacheEntry> Cache;
     static std::unordered_set<std::string> Loading;
 
-    static cImage* Get(const char* path, int maxWidth, int maxHeight) {
+    static std::shared_ptr<cImage> Get(const char* path, int maxWidth, int maxHeight) {
         char keyBuf[1024];
         snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
         std::string key = keyBuf;
@@ -274,7 +289,7 @@ public:
             if (it != Cache.end()) {
                 // Fast O(1) LRU update
                 lruList.splice(lruList.begin(), lruList, it->second.lruIt);
-                return it->second.image.get();
+                return it->second.image;
             }
             
             if (Loading.find(key) == Loading.end()) {
@@ -341,9 +356,15 @@ void cThumbLoaderThread::Action() {
         }
         if (!Running()) break;
 
-        cImage* img = nullptr;
+        std::shared_ptr<cImage> img = nullptr;
         if (req.generation == g_CacheGeneration.load()) {
             img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
+        }
+
+        // Frühzeitiger Abbruch bei Generation-Mismatch (verhindert stale cache entries)
+        if (req.generation != g_CacheGeneration.load()) {
+            cCondWait::SleepMs(5);
+            continue;
         }
 
         char keyBuf[1024];
@@ -354,20 +375,16 @@ void cThumbLoaderThread::Action() {
             cMutexLock cacheLock(&ThumbCacheMutex);
             cThumbCache::Loading.erase(key);
             
-            if (img && req.generation == g_CacheGeneration.load()) {
+            if (img) {
                 if (cThumbCache::Cache.find(key) == cThumbCache::Cache.end()) {
                     cThumbCache::lruList.push_front(key);
                     if (cThumbCache::lruList.size() > cThumbCache::MAX_CACHE_SIZE) {
                         cThumbCache::Cache.erase(cThumbCache::lruList.back());
                         cThumbCache::lruList.pop_back();
                     }
-                    cThumbCache::Cache[key] = { std::unique_ptr<cImage>(img), cThumbCache::lruList.begin() };
-                } else {
-                    delete img; // Safeguard if it was added concurrently
+                    cThumbCache::Cache[key] = { img, cThumbCache::lruList.begin() };
                 }
                 g_ThumbnailsUpdated.store(true);
-            } else if (img) {
-                delete img; // Discard stale/invalid generation
             }
         }
         
@@ -896,15 +913,14 @@ void cMenuImageSkinDesigner::Draw()
             imagegrid->AddIntToken(0, is_dir);
             imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
             
-            // Die kompilierende API-Methode für cViewGrid heißt SetGrid!
-            imagegrid->SetGrid(i, x, y, itemWidth, itemHeight);
+            imagegrid->SetGrid(idxOnPage, x, y, itemWidth, itemHeight);
             
             if (thumbPath) free(thumbPath);
             free(fullDirPath);
             free(dirPath);
         }
 
-        imagegrid->SetCurrent(currentIndex, true);
+        imagegrid->SetCurrent(currentIndex - startIdx, true);
         imagegrid->Display();
     }
     rootView->Display();
