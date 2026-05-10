@@ -652,18 +652,11 @@ void cMenuImageGrid::DrawGrid()
                 thumbPath = strdup(fullDirPath);
             }
 
-            if (item->Type == itFile && !item->HasFolderJpg) {
-                item->HasFolderJpg = true;
             if (item->Type == itFile && !item->HasFolderJpg && thumbPath) {
                 item->HasFolderJpg = (access(thumbPath, R_OK) == 0);
             }
             
             if (thumbPath && item->HasFolderJpg) {
-                std::shared_ptr<cImage> thumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
-                if (thumb) {
-                    int thumbX = x + (kachelBreite - thumb->Width()) / 2;
-                    int thumbY = y + (kachelHoehe - thumb->Height()) / 2;
-                    myOsd->DrawImage(cPoint(thumbX, thumbY), *thumb);
                 if (!item->CachedThumb) {
                     item->CachedThumb = cThumbCache::Get(thumbPath, kachelBreite, kachelHoehe);
                 }
