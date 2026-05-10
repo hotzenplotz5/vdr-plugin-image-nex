@@ -18,9 +18,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <typeinfo>
-#include <map>
 #include <string>
 #include <list>
+#include <unordered_map>
+#include <unordered_set>
+#include <atomic>
+#include <functional>
 
 #include "image.h"
 #include "menu.h"
@@ -60,7 +63,8 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
     // EXIF Thumbnails are instantly loaded compared to 24 Megapixel JPEGs
     const char *ext = strrchr(path, '.');
     if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u_%p.jpg", (unsigned int)getpid(), path);
+        std::hash<std::string> hasher;
+        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u_%zu.jpg", (unsigned int)getpid(), hasher(path));
         if (ExtractExifThumbnail(path, tempThumbPath)) {
             loadPath = tempThumbPath;
             useTempThumb = true;
@@ -134,6 +138,14 @@ static cImage* LoadThumbnail(const char* path, int maxWidth, int maxHeight, bool
 
     AVFrame *frame = av_frame_alloc();
     AVPacket *pkt = av_packet_alloc();
+    if (!frame || !pkt) {
+        if (frame) av_frame_free(&frame);
+        if (pkt) av_packet_free(&pkt);
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        if (useTempThumb) unlink(tempThumbPath);
+        return nullptr;
+    }
     bool decoded = false;
 
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
@@ -216,10 +228,17 @@ static cMutex ThumbCacheMutex;
 struct ThumbRequest {
     std::string path;
     int w, h;
+    uint64_t generation;
 };
 
-static bool g_ThumbnailsUpdated = false;
-static bool g_NeedsRedraw = true;
+static std::atomic<bool> g_ThumbnailsUpdated(false);
+static std::atomic<bool> g_NeedsRedraw(true);
+static std::atomic<uint64_t> g_CacheGeneration(0);
+
+struct CacheEntry {
+    std::unique_ptr<cImage> image;
+    std::list<std::string>::iterator lruIt;
+};
 
 // Hintergrund-Thread: Lädt langsame JPEGs ruckelfrei im Hintergrund!
 class cThumbLoaderThread : public cThread {
@@ -229,7 +248,7 @@ private:
     cCondVar cond;
 public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
-    void Add(const std::string& path, int w, int h);
+    void Add(const std::string& path, int w, int h, uint64_t generation);
     void Clear();
     void StopThread();
     virtual void Action();
@@ -241,7 +260,9 @@ class cThumbCache {
 public:
     static const size_t MAX_CACHE_SIZE = 100;
     static std::list<std::string> lruList;
-    static std::map<std::string, std::unique_ptr<cImage>> Cache;
+    static std::unordered_map<std::string, CacheEntry> Cache;
+    static std::unordered_set<std::string> Loading;
+
     static cImage* Get(const char* path, int maxWidth, int maxHeight) {
         char keyBuf[1024];
         snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
@@ -249,32 +270,41 @@ public:
         
         {
             cMutexLock lock(&ThumbCacheMutex);
-            if (Cache.find(key) != Cache.end()) {
-                lruList.remove(key);
-                lruList.push_front(key);
-                return Cache[key].get();
+            auto it = Cache.find(key);
+            if (it != Cache.end()) {
+                // Fast O(1) LRU update
+                lruList.splice(lruList.begin(), lruList, it->second.lruIt);
+                return it->second.image.get();
+            }
+            
+            if (Loading.find(key) == Loading.end()) {
+                Loading.insert(key);
+                if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
+                ThumbLoader->Add(path, maxWidth, maxHeight, g_CacheGeneration.load());
             }
         }
         
-        // ALLES in den Hintergrund-Thread verlagern! Verhindert das Einfrieren des VDR Haupt-Threads.
-        if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
-        ThumbLoader->Add(path, maxWidth, maxHeight);
         return nullptr;
     }
     static void Clear() {
+        g_CacheGeneration++; // Invalidate pending requests
         if (ThumbLoader) ThumbLoader->Clear();
         cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
         lruList.clear();
+        Loading.clear();
     }
 };
 std::list<std::string> cThumbCache::lruList;
-std::map<std::string, std::unique_ptr<cImage>> cThumbCache::Cache;
+std::unordered_map<std::string, CacheEntry> cThumbCache::Cache;
+std::unordered_set<std::string> cThumbCache::Loading;
 
-void cThumbLoaderThread::Add(const std::string& path, int w, int h) {
+void cThumbLoaderThread::Add(const std::string& path, int w, int h, uint64_t generation) {
     cMutexLock lock(&queueMutex);
-    for (auto const& req : queue) if (req.path == path) return;
-    queue.push_back({path, w, h});
+    for (auto const& req : queue) {
+        if (req.path == path && req.w == w && req.h == h) return;
+    }
+    queue.push_back({path, w, h, generation});
     cond.Broadcast();
     if (!Active()) Start();
 }
@@ -298,10 +328,8 @@ void StopThumbLoader() {
 }
 
 void cThumbLoaderThread::Action() {
-    uint64_t lastRefresh = 0;
     while (Running()) {
         ThumbRequest req;
-        bool isQueueEmpty = false;
         {
             cMutexLock lock(&queueMutex);
             if (queue.empty()) {
@@ -310,34 +338,41 @@ void cThumbLoaderThread::Action() {
             }
             req = queue.front();
             queue.pop_front();
-            isQueueEmpty = queue.empty();
         }
         if (!Running()) break;
 
-        cImage* img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
-        if (img) {
-            char keyBuf[1024];
-            snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
-            {
-                cMutexLock cacheLock(&ThumbCacheMutex);
-                // Speicherleck behoben: Alte Bilder aus dem RAM löschen, wenn das Limit erreicht ist!
-                if (cThumbCache::Cache.find(keyBuf) == cThumbCache::Cache.end()) {
-                    cThumbCache::lruList.push_front(keyBuf);
-                    if (cThumbCache::lruList.size() > 100) {
+        cImage* img = nullptr;
+        if (req.generation == g_CacheGeneration.load()) {
+            img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
+        }
+
+        char keyBuf[1024];
+        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
+        std::string key = keyBuf;
+        
+        {
+            cMutexLock cacheLock(&ThumbCacheMutex);
+            cThumbCache::Loading.erase(key);
+            
+            if (img && req.generation == g_CacheGeneration.load()) {
+                if (cThumbCache::Cache.find(key) == cThumbCache::Cache.end()) {
+                    cThumbCache::lruList.push_front(key);
+                    if (cThumbCache::lruList.size() > cThumbCache::MAX_CACHE_SIZE) {
                         cThumbCache::Cache.erase(cThumbCache::lruList.back());
                         cThumbCache::lruList.pop_back();
                     }
+                    cThumbCache::Cache[key] = { std::unique_ptr<cImage>(img), cThumbCache::lruList.begin() };
+                } else {
+                    delete img; // Safeguard if it was added concurrently
                 }
-                cThumbCache::Cache[keyBuf] = std::unique_ptr<cImage>(img);
-            }
-            g_ThumbnailsUpdated = true;
-            
-            // Rate-Limiting: Redraw-Überflutung stoppen! (Nur alle 250ms oder am Ende)
-            if (isQueueEmpty || cTimeMs::Now() - lastRefresh > 250) {
-                lastRefresh = cTimeMs::Now();
-                cRemote::Put(kNone); 
+                g_ThumbnailsUpdated.store(true);
+            } else if (img) {
+                delete img; // Discard stale/invalid generation
             }
         }
+        
+        // Throttling yield to prevent pinning the CPU on big collections
+        cCondWait::SleepMs(5);
     }
 }
 
@@ -425,7 +460,7 @@ cMenuImageGrid::cMenuImageGrid(cFileSource *Source)
     currentIndex = 0;
     currentdir = NULL;
     myOsd = NULL;
-    g_NeedsRedraw = true;
+    g_NeedsRedraw.store(true);
 
     char *parent = NULL;
     source->GetRemember(currentdir, parent);
@@ -497,15 +532,15 @@ void cMenuImageGrid::Show(void)
         }
 
         if (!myOsd) {
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             return; // Hardware Layer blockiert
         }
     }
 
-    if (myOsd && g_NeedsRedraw) {
+    if (myOsd && g_NeedsRedraw.load()) {
         DrawGrid();
         myOsd->Flush();
-        g_NeedsRedraw = false;
+        g_NeedsRedraw.store(false);
     }
 }
 
@@ -666,34 +701,33 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
-            if (g_ThumbnailsUpdated || !myOsd || g_NeedsRedraw) {
-                g_ThumbnailsUpdated = false;
-                g_NeedsRedraw = true;
+            if (g_ThumbnailsUpdated.exchange(false) || !myOsd || g_NeedsRedraw.load()) {
+                g_NeedsRedraw.store(true);
                 Show();
             }
             return osContinue;
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             Show();
             return osContinue;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             Show();
             return osContinue;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             Show();
             return osContinue;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             Show();
             return osContinue;
         case kDown:
@@ -702,13 +736,13 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
             } else if ((currentIndex / columns) < ((totalItems - 1) / columns)) {
                 currentIndex = totalItems - 1;
             }
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             Show();
             return osContinue;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
             else currentIndex = 0;
-            g_NeedsRedraw = true;
+            g_NeedsRedraw.store(true);
             Show();
             return osContinue;
         case kOk:
@@ -890,8 +924,7 @@ eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
 
     switch (Key & ~k_Repeat) {
         case kNone:
-            if (g_ThumbnailsUpdated || needsRedraw) {
-                g_ThumbnailsUpdated = false;
+            if (g_ThumbnailsUpdated.exchange(false) || needsRedraw) {
                 needsRedraw = false;
                 Draw();
             }
@@ -1024,7 +1057,7 @@ eOSState cMenuImageGrid::Parent(void)
         }
         free(lastDirName);
 
-        g_NeedsRedraw = true;
+        g_NeedsRedraw.store(true);
         Show();
     } else {
         return osEnd;
@@ -1044,7 +1077,7 @@ eOSState cMenuImageGrid::Select(bool isred)
         free(currentdir);
         currentdir = path; // path already contains the fully resolved absolute directory string
         LoadDir(currentdir);
-        g_NeedsRedraw = true;
+        g_NeedsRedraw.store(true);
         Show();
         return osContinue;
     } else if (item->Type == itFile) {
