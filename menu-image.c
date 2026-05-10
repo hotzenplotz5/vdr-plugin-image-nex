@@ -705,16 +705,22 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     }
     
     int visibleRows = 3;
+    int kachelBreite = 100;
+    int kachelHoehe = 75;
+    int titleHeight = 50;
     if (myOsd) {
-        int kachelBreite = (myOsd->Width() - 100 - ((columns - 1) * 20)) / columns;
-        int kachelHoehe = kachelBreite * 3 / 4;
+        kachelBreite = (myOsd->Width() - 100 - ((columns - 1) * 20)) / columns;
+        kachelHoehe = kachelBreite * 3 / 4;
         const cFont *font = cFont::GetFont(fontOsd);
-        int titleHeight = font->Height() * 2 + 30;
+        titleHeight = font->Height() * 2 + 30;
         int buttonAreaHeight = font->Height() + 60;
         visibleRows = (myOsd->Height() - titleHeight - buttonAreaHeight) / (kachelHoehe + 20);
         if (visibleRows < 1) visibleRows = 1;
     }
     int pageItems = columns * visibleRows;
+
+    int oldIndex = currentIndex;
+    bool handled = true;
 
     switch (Key & ~k_Repeat) {
         case kNone:
@@ -726,42 +732,30 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
         case kChanUp:
             if (currentIndex + pageItems < totalItems) currentIndex += pageItems;
             else currentIndex = totalItems - 1;
-            g_NeedsRedraw.store(true);
-            Show();
-            return osContinue;
+            break;
         case kChanDn:
             if (currentIndex >= pageItems) currentIndex -= pageItems;
             else currentIndex = 0;
-            g_NeedsRedraw.store(true);
-            Show();
-            return osContinue;
+            break;
         case kRight:
             if (currentIndex < totalItems - 1) currentIndex++;
             else currentIndex = 0;
-            g_NeedsRedraw.store(true);
-            Show();
-            return osContinue;
+            break;
         case kLeft:
             if (currentIndex > 0) currentIndex--;
             else currentIndex = totalItems - 1;
-            g_NeedsRedraw.store(true);
-            Show();
-            return osContinue;
+            break;
         case kDown:
             if (currentIndex + columns < totalItems) {
                 currentIndex += columns;
             } else if ((currentIndex / columns) < ((totalItems - 1) / columns)) {
                 currentIndex = totalItems - 1;
             }
-            g_NeedsRedraw.store(true);
-            Show();
-            return osContinue;
+            break;
         case kUp:
             if (currentIndex >= columns) currentIndex -= columns;
             else currentIndex = 0;
-            g_NeedsRedraw.store(true);
-            Show();
-            return osContinue;
+            break;
         case kOk:
         case kRed:
             return Select(Key == kRed);
@@ -770,7 +764,53 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
         case kBack:
         case kMenu:
             return osEnd;
-        default: break;
+        default: 
+            handled = false;
+            break;
+    }
+
+    if (handled && oldIndex != currentIndex) {
+        int oldPage = oldIndex / pageItems;
+        int newPage = currentIndex / pageItems;
+
+        // Wenn wir uns auf derselben Seite bewegen, machen wir ein schnelles Partial-Redraw!
+        if (oldPage == newPage && myOsd && !g_ThumbnailsUpdated.load()) {
+            cImageGridTheme theme;
+            theme.fontTitle  = cFont::GetFont(fontOsd);
+            theme.fontSml    = cFont::GetFont(fontSml);
+            theme.bgFull     = Theme.Color(clrOsdBackground);
+            theme.textFg     = Theme.Color(clrMenuTitleFg);
+            theme.btnRed     = Theme.Color(clrColorButtonRedBg);
+            theme.btnRedFg   = Theme.Color(clrColorButtonRedFg);
+            theme.btnBlue    = Theme.Color(clrColorButtonBlueBg);
+            theme.btnBlueFg  = Theme.Color(clrColorButtonBlueFg);
+            theme.itemBg     = Theme.Color(clrMenuItemBg);
+            theme.itemFg     = Theme.Color(clrMenuItemFg);
+            theme.cursorBg   = Theme.Color(clrMenuItemCurrentBg);
+            theme.cursorFg   = Theme.Color(clrMenuItemCurrentFg);
+            theme.borderSel  = Theme.Color(clrMenuScrollbarFg);
+            theme.borderNorm = Theme.Color(clrMenuFrame);
+
+            int margin = 50;
+            int padding = 20;
+            int startRow = newPage * visibleRows;
+
+            auto updateTile = [&](int idx) {
+                int row = (idx / columns) - startRow;
+                int col = idx % columns;
+                int x = margin + col * (kachelBreite + padding);
+                int y = titleHeight + row * (kachelHoehe + padding);
+                DrawTile(idx, x, y, kachelBreite, kachelHoehe, theme);
+            };
+
+            updateTile(oldIndex);        // Alten Cursor entfernen
+            updateTile(currentIndex);    // Neuen Cursor zeichnen
+            myOsd->Flush();              // Die beiden Kacheln direkt an die Grafikkarte schicken
+        } else {
+            // Seitenwechsel oder neue Thumbnails geladen -> Komplettes Redraw nötig
+            g_NeedsRedraw.store(true);
+            Show();
+        }
     }
     return osContinue;
 }
