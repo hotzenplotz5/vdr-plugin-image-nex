@@ -531,27 +531,35 @@ void cMenuImageGrid::DrawGrid()
     int kachelHoehe = kachelBreite * 3 / 4;
 
     int totalItems = list->Count();
-    const cFont *font = cFont::GetFont(fontOsd);
-    int titleHeight = font->Height() * 2 + 30;  // Genug Platz für große Skin-Header lassen
-    int buttonAreaHeight = font->Height() + 60; // Genug Platz für Skin-Buttons lassen
+    const cFont *fontTitle = cFont::GetFont(fontOsd);
+    const cFont *fontSml = cFont::GetFont(fontSml); // Etwas kleinere Schrift für die Kacheln
+    int titleHeight = fontTitle->Height() * 2 + 30;  
+    int buttonAreaHeight = fontTitle->Height() + 60; 
 
-    // Sichere, fest definierte Farben verwenden, da VDR-Theme-Variablen versionsabhängig sind!
-    tColor bgFull = 0xFF151515;   // Edles Dunkelgrau für den Hintergrund
-    tColor textFg = 0xFF00AAFF;   // Hellblau für den Titel
-    tColor btnRed = 0xFFCC0000;   // Klassisches Rot für die Taste
-    tColor btnBlue = 0xFF0000CC;  // Klassisches Blau für die Taste
-    tColor btnFg = 0xFFFFFFFF;    // Weiß für die Tastenschrift
+    // --- THEME ABSTRAKTION (Mini-Skindesigner-Bridge) ---
+    // Wir beziehen die Farben nun direkt und dynamisch vom aktuell aktiven Skin!
+    tColor bgFull     = Theme.Color(clrBackground);
+    tColor textFg     = Theme.Color(clrMenuTitleFg);
+    tColor btnRed     = Theme.Color(clrButtonRedBg);
+    tColor btnRedFg   = Theme.Color(clrButtonRedFg);
+    tColor btnBlue    = Theme.Color(clrButtonBlueBg);
+    tColor btnBlueFg  = Theme.Color(clrButtonBlueFg);
+    tColor itemBg     = Theme.Color(clrMenuItemBg);
+    tColor itemFg     = Theme.Color(clrMenuItemFg);
+    tColor cursorBg   = Theme.Color(clrButtonBlueBg);   // Cursor-Hintergrund
+    tColor cursorFg   = Theme.Color(clrButtonBlueFg);   // Cursor-Text
+    tColor borderSel  = Theme.Color(clrMenuScrollbarFg);// Auffälliger Rand für Auswahl
 
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
     char titleBuf[256];
     snprintf(titleBuf, sizeof(titleBuf), "  %s - %s", tr("Image Grid"), currentdir ? currentdir : "/");
-    myOsd->DrawText(margin, 10, titleBuf, textFg, bgFull, font);
+    myOsd->DrawText(margin, 10, titleBuf, textFg, bgFull, fontTitle);
 
     int btnY = osdHeight - buttonAreaHeight;
-    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + font->Height() + 10, btnRed);
-    myOsd->DrawText(margin, btnY + 10, tr("Select"), btnFg, btnRed, font);
-    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + font->Height() + 10, btnBlue);
-    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnFg, btnBlue, font);
+    myOsd->DrawRectangle(margin - 10, btnY + 5, margin + 150, btnY + 5 + fontTitle->Height() + 10, btnRed);
+    myOsd->DrawText(margin, btnY + 10, tr("Select"), btnRedFg, btnRed, fontTitle);
+    myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + fontTitle->Height() + 10, btnBlue);
+    myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnBlueFg, btnBlue, fontTitle);
 
     int visibleRows = (osdHeight - titleHeight - buttonAreaHeight) / (kachelHoehe + padding);
     if (visibleRows < 1) visibleRows = 1;
@@ -564,14 +572,13 @@ void cMenuImageGrid::DrawGrid()
         int x = margin + col * (kachelBreite + padding);
         int y = titleHeight + row * (kachelHoehe + padding);
 
-        // Vollständig deckende Farben (0xFF...) erzwingen, um unsichtbare Kacheln durch Alpha-Blending-Fehler zu vermeiden!
-        tColor bgColor = (i == currentIndex) ? 0xFF0055AA : 0xFF333333;
-        tColor textColor = (i == currentIndex) ? 0xFFFFFFFF : 0xFFDDDDDD;
+            // Dynamische Zuordnung für selektierte und nicht-selektierte Kacheln
+            tColor bgColor = (i == currentIndex) ? cursorBg : itemBg;
+            tColor textColor = (i == currentIndex) ? cursorFg : itemFg;
 
-        // Deutliche Markierung für das ausgewählte Bild! (Dickerer, farbiger Rahmen)
-        tColor borderColor = (i == currentIndex) ? 0xFFFFCC00 : 0xFFFFFFFF; // Gelb/Orange für Fokus, sonst Weiß
         int b = (i == currentIndex) ? 4 : 1; // 4 Pixel dick, wenn ausgewählt, sonst 1 Pixel
-        myOsd->DrawRectangle(x - b, y - b, x + kachelBreite + b - 1, y + kachelHoehe + b - 1, borderColor);
+            tColor actBorderColor = (i == currentIndex) ? borderSel : Theme.Color(clrMenuFrame);
+            myOsd->DrawRectangle(x - b, y - b, x + kachelBreite + b - 1, y + kachelHoehe + b - 1, actBorderColor);
         myOsd->DrawRectangle(x, y, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Kachel-Hintergrund zeichnen
 
         cDirItem *item = list->Get(i);
@@ -606,20 +613,19 @@ void cMenuImageGrid::DrawGrid()
 
             // If no thumbnail was drawn, draw the text icon
             if (!thumbDrawn && (item->Type == itDir || item->Type == itParent)) {
-                myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, font);
+                myOsd->DrawText(x + 5, y + 5, "[DIR]", textColor, bgColor, fontSml);
             } else if (!thumbDrawn && item->Type == itFile) {
-                myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, font);
+                myOsd->DrawText(x + 5, y + 5, "[IMG]", textColor, bgColor, fontSml);
             }
 
             // Draw the name at the bottom with a semi-transparent bar
-            int textBarHeight = font->Height() + 4;
+            int textBarHeight = fontSml->Height() + 4;
             int textY = y + kachelHoehe - textBarHeight;
             if (textY < y) textY = y; // Ensure text bar does not bleed out of the tile on tiny resolutions
-            tColor textBg = (i == currentIndex) ? 0xDD0055AA : 0xA0000000; // Blau für Fokus, sonst Schwarz
-            myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, textBg);
+            myOsd->DrawRectangle(x, textY, x + kachelBreite - 1, y + kachelHoehe - 1, bgColor); // Gleicher HG wie Kachel
 
             // Limit the drawing width to prevent long names from bleeding into adjacent grid tiles
-            myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, textBg, font, kachelBreite - 10);
+            myOsd->DrawText(x + 5, textY + 2, item->DisplayName, textColor, bgColor, fontSml, kachelBreite - 10);
         }
     }
 }
@@ -722,6 +728,21 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
 
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
+void cMenuImageSkinDesigner::DefineTokensElements(int ve, skindesignerapi::cTokenContainer *tk) {
+    if (ve == 1) { // header
+        tk->DefineStringToken("{title}", 0);
+    }
+}
+
+void cMenuImageSkinDesigner::DefineTokensGrids(int vg, skindesignerapi::cTokenContainer *tk) {
+    if (vg == 0) { // imagegrid
+        tk->DefineStringToken("{thumbnail}", 0);
+        tk->DefineStringToken("{albumname}", 1);
+        tk->DefineIntToken("{is_folder}", 0);
+        tk->DefineIntToken("{current}", 1);
+    }
+}
+
 cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
 : skindesignerapi::cSkindesignerOsdObject(plugStruct)
 {
@@ -780,22 +801,15 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
-    isyslog("imageplugin: cMenuImageSkinDesigner::Show() called");
     if (!SkindesignerAvailable()) return;
     
     rootView = GetOsdView();
-    if (!rootView) {
-        esyslog("imageplugin: GetOsdView() returned NULL! Skindesigner did not find or could not parse 'plug-image_next-grid.xml'!");
-        return;
-    }
-    isyslog("imageplugin: GetOsdView() successful. Rendering OSD...");
+    if (!rootView) return;
     
     back = rootView->GetViewElement(0); // background
     header = rootView->GetViewElement(1); // header
     imagegrid = rootView->GetViewGrid(0); // imagegrid
     
-    if (!imagegrid) esyslog("imageplugin: Warning - imagegrid view is NULL");
-
     if (back) back->Display();
 
     rootView->Activate();
@@ -865,17 +879,15 @@ void cMenuImageSkinDesigner::Draw()
             imagegrid->AddIntToken(0, is_dir);
             imagegrid->AddIntToken(1, i == currentIndex ? 1 : 0);
             
-            // WICHTIG: Das Grid MUSS pro Seite bei Index 0 anfangen!
-            imagegrid->SetGrid(idxOnPage, x, y, itemWidth, itemHeight);
+            // Die kompilierende API-Methode für cViewGrid heißt SetGrid!
+            imagegrid->SetGrid(i, x, y, itemWidth, itemHeight);
             
             if (thumbPath) free(thumbPath);
             free(fullDirPath);
             free(dirPath);
         }
 
-        // Auch SetCurrent muss sich auf die aktuelle Seite beziehen!
-        int currentOnPage = currentIndex - startIdx;
-        imagegrid->SetCurrent(currentOnPage, true);
+        imagegrid->SetCurrent(currentIndex, true);
         imagegrid->Display();
     }
     rootView->Display();
