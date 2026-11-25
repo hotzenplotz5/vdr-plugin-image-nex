@@ -31,6 +31,7 @@ extern "C" {
 #include "list.h"
 #include <vdr/i18n.h>
 #include <vdr/device.h>
+#include <vdr/osd.h>
 #include <algorithm>
 
 #include "libimage/xpm.h"
@@ -49,6 +50,9 @@ cImagePlayer::cImagePlayer(cSlideShow *pCurSlideShow)
 , m_szError(NULL)
 , m_nSourceWidth(0)
 , m_nSourceHeight(0)
+, m_directOutput(false)
+, m_directWidth(0)
+, m_directHeight(0)
 {
   theSlideShow.Assign(pCurSlideShow);
 }
@@ -599,6 +603,80 @@ void cImagePlayer::Exec(std::unique_ptr<cDecodeRequest> pCmd)
   }
 }
 
+void cImagePlayer::SetDirectOutput(bool enabled, int width, int height)
+{
+  // Only called by the foreground cControl when an OSD is opened/closed.
+  // Avoid publishing any stale decoded image after an output mode change.
+  m_directOutput.store(false);
+  {
+    cMutexLock lock(&m_pictureMutex);
+    m_pendingPicture.reset();
+  }
+  m_directWidth.store(width);
+  m_directHeight.store(height);
+  if (enabled) {
+    m_StillImage.EncodeRequired(false);
+    m_directOutput.store(true);
+  }
+}
+
+std::shared_ptr<cImage> cImagePlayer::TakeDirectPicture()
+{
+  cMutexLock lock(&m_pictureMutex);
+  std::shared_ptr<cImage> frame;
+  frame.swap(m_pendingPicture);
+  return frame;
+}
+
+bool cImagePlayer::PublishDirectPicture()
+{
+  const int width = m_directWidth.load();
+  const int height = m_directHeight.load();
+  const int sourceWidth = static_cast<int>(m_StillImage.GetWidth());
+  const int sourceHeight = static_cast<int>(m_StillImage.GetHeight());
+  uint8_t *rgb = m_StillImage.GetRGBMem();
+  if (width <= 0 || height <= 0 || sourceWidth <= 0 || sourceHeight <= 0 || !rgb)
+    return false;
+
+  std::shared_ptr<cImage> image = std::make_shared<cImage>(cSize(width, height));
+  if (!image || !image->Data())
+    return false;
+
+  // VDR's cImage uses ARGB tColor; BGRA is the corresponding FFmpeg
+  // byte layout on little-endian VDR platforms. Unlike MPEG-2, this
+  // transfer keeps the decoded image in a lossless 32-bit OSD bitmap.
+  SwsContext *scaler = sws_getContext(
+      sourceWidth, sourceHeight, AV_PIX_FMT_RGB24,
+      width, height, AV_PIX_FMT_BGRA,
+      SWS_BICUBIC, nullptr, nullptr, nullptr);
+  if (!scaler)
+    return false;
+
+  const uint8_t *source[4] = {rgb, nullptr, nullptr, nullptr};
+  int sourceStride[4] = {sourceWidth * 3, 0, 0, 0};
+  uint8_t *destination[4] = {
+      reinterpret_cast<uint8_t*>(const_cast<tColor*>(image->Data())),
+      nullptr, nullptr, nullptr
+  };
+  int destinationStride[4] = {width * static_cast<int>(sizeof(tColor)), 0, 0, 0};
+  const int rows = sws_scale(scaler, source, sourceStride, 0, sourceHeight,
+                             destination, destinationStride);
+  sws_freeContext(scaler);
+  if (rows != height)
+    return false;
+
+  // Output state may have changed while the background conversion ran.
+  if (!m_directOutput.load() || width != m_directWidth.load() ||
+      height != m_directHeight.load())
+    return true;
+  {
+    cMutexLock lock(&m_pictureMutex);
+    if (m_directOutput.load())
+      m_pendingPicture = image;
+  }
+  return true;
+}
+
 bool cImagePlayer::Worker(bool bDoIt)
 {
   bool bQueueEmpty;
@@ -620,12 +698,22 @@ bool cImagePlayer::Worker(bool bDoIt)
   }  
 
   if(pShell->szSource) {
-    if(DecodeNative(pShell.get())) {
+    const bool decoded = DecodeNative(pShell.get());
+    if (!decoded) {
+      esyslog("imageplugin: native decoding failed for '%s'", pShell->szSource);
+      ExecFailed(pShell.get(), tr("Image couldn't load"));
+    }
+
+    if (m_directOutput.load()) {
+      if (!PublishDirectPicture()) {
+        // If the direct transfer cannot be created, resume the existing
+        // MPEG-2 renderer rather than leaving a black screen.
+        esyslog("imageplugin: direct OSD transfer failed; resuming MPEG-2 output");
+        m_directOutput.store(false);
         m_StillImage.EncodeRequired(true);
+      }
     } else {
-        esyslog("imageplugin: native decoding failed for '%s'", pShell->szSource);
-        ExecFailed(pShell.get(), tr("Image couldn't load"));        
-        m_StillImage.EncodeRequired(true);
+      m_StillImage.EncodeRequired(true);
     }
   } 
   return bQueueEmpty;
