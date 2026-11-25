@@ -142,9 +142,10 @@ void cPluginImage::RegisterSkinDesigner(void)
 
 bool cPluginImage::Start(void)
 {
-  if(!cEncode::Register()) {   
-    return false;
-  }
+  // JPEG/PNG browsing and direct true-color OSD output do not require an
+  // MPEG-2 encoder. Leave the legacy path available when it is present.
+  if (!cEncode::Register())
+    esyslog("imageplugin: MPEG-2 encoder unavailable; direct OSD output remains available");
   
 #ifdef HAVE_SKINDESIGNER
   RegisterSkinDesigner();
