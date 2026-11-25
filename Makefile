@@ -106,6 +106,7 @@ SKINDESIGNER_PC := $(shell pkg-config --exists libskindesignerapi && echo libski
 ifneq ($(WITH_SKINDESIGNER),0)
   ifneq ($(strip $(SKINDESIGNER_PC)),)
     DEFINES += -DHAVE_SKINDESIGNER
+    DEFINES += -DLIBSKINDESIGNERAPIVERSION='"$(shell pkg-config --modversion $(SKINDESIGNER_PC))"'
     CXXFLAGS += $(shell pkg-config --cflags $(SKINDESIGNER_PC))
     LIBS += $(shell pkg-config --libs $(SKINDESIGNER_PC))
   else
