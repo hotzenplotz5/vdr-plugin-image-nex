@@ -57,7 +57,7 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
 
-    char tempThumbPath[256];
+    char tempThumbPath[] = "/tmp/vdr-image-thumb-XXXXXX";
     bool useTempThumb = false;
     const char* loadPath = path;
     int rotation = 0;
@@ -65,20 +65,19 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
     ImageMirror mirror = NONE;
     // EXIF orientation belongs to the original JPEG, not the extracted
     // thumbnail, which may lack its own orientation metadata.
-    GetRotationFromExifData(path, rotation, mirror);
-#else
-    const int mirror = 0;
-#endif
-
-#ifdef HAVE_LIBEXIF
-    // EXIF Thumbnails are instantly loaded compared to 24 Megapixel JPEGs
     const char *ext = strrchr(path, '.');
     if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-        std::hash<std::string> hasher;
-        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u_%zu.jpg", (unsigned int)getpid(), hasher(path));
-        if (ExtractExifThumbnail(path, tempThumbPath)) {
-            loadPath = tempThumbPath;
-            useTempThumb = true;
+        GetRotationFromExifData(path, rotation, mirror);
+        // mkstemp avoids collisions and predictable shared /tmp filenames.
+        int fd = mkstemp(tempThumbPath);
+        if (fd >= 0) {
+            close(fd);
+            if (ExtractExifThumbnail(path, tempThumbPath)) {
+                loadPath = tempThumbPath;
+                useTempThumb = true;
+            } else {
+                unlink(tempThumbPath);
+            }
         }
     }
 #endif
