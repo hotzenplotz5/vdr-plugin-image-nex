@@ -65,6 +65,7 @@ private:
     bool needsRedraw;
 
     skindesignerapi::cOsdView *rootView;
+    cMenuImageGrid *fallbackGrid;
     skindesignerapi::cViewElement *back;
     skindesignerapi::cViewElement *header;
     skindesignerapi::cViewGrid *imagegrid;
