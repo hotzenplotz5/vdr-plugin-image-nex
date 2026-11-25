@@ -117,12 +117,15 @@ bool cImagePlayer::Convert(const char *szChange)
     pCmd->nCropY = 0;      // No crop
     
     int rot = 0;
+#ifdef HAVE_LIBEXIF
+    rot = pImage->DefaultRotate();
+#endif
     if (szChange) {
-        if (strcmp(szChange, "right") == 0) rot = 90;
-        else if (strcmp(szChange, "rotated") == 0) rot = 180;
-        else if (strcmp(szChange, "left") == 0) rot = 270;
+        if (strcmp(szChange, "right") == 0) rot += 90;
+        else if (strcmp(szChange, "rotated") == 0) rot += 180;
+        else if (strcmp(szChange, "left") == 0) rot += 270;
     }
-    pCmd->nRotationAngle = rot;
+    pCmd->nRotationAngle = rot % 360;
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -158,6 +161,9 @@ bool cImagePlayer::ConvertJump(int nOffset)
           pCmd->nOffTop =  (pCmd->nTargetHeight * h); // Border wird in DecodeNative addiert
         
           pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
+#ifdef HAVE_LIBEXIF
+          pCmd->nRotationAngle = pImage[(h*nMatrix)+w]->DefaultRotate();
+#endif
           pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
   
           Exec(std::move(pCmd));
@@ -186,12 +192,15 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
     pCmd->nCropY = nTopPos; // These are pixel offsets in the *zoomed* image
 
     int rot = 0;
+#ifdef HAVE_LIBEXIF
+    rot = pImage->DefaultRotate();
+#endif
     if (szChange) {
-        if (strcmp(szChange, "right") == 0) rot = 90;
-        else if (strcmp(szChange, "rotated") == 0) rot = 180;
-        else if (strcmp(szChange, "left") == 0) rot = 270;
+        if (strcmp(szChange, "right") == 0) rot += 90;
+        else if (strcmp(szChange, "rotated") == 0) rot += 180;
+        else if (strcmp(szChange, "left") == 0) rot += 270;
     }
-    pCmd->nRotationAngle = rot;
+    pCmd->nRotationAngle = rot % 360;
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -235,8 +244,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         avformat_close_input(&fmt_ctx);
         return false;
     }
-    avcodec_parameters_to_context(codec_ctx, codecpar);
-    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
+    if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0 ||
+        avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         return false;
@@ -337,7 +346,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         // VDR Output Aspect Ratio Correction (Fixes distorted/stretched images)
         double pixelAspect = 1.0;
         int dummyW, dummyH;
-        cDevice::PrimaryDevice()->GetOsdSize(dummyW, dummyH, pixelAspect);
+        if (cDevice::PrimaryDevice())
+            cDevice::PrimaryDevice()->GetOsdSize(dummyW, dummyH, pixelAspect);
         if (pixelAspect <= 0.0) pixelAspect = 1.0;
 
         // Calculate Pixel Aspect Ratio (Non-square pixels on TVs, e.g. 720x576 to 16:9)
@@ -366,6 +376,12 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         if (osd_offset_y < 0) osd_offset_y = 0;
         if (osd_offset_x + scaled_w > (int)m_StillImage.GetWidth()) scaled_w = m_StillImage.GetWidth() - osd_offset_x;
         if (osd_offset_y + scaled_h > (int)m_StillImage.GetHeight()) scaled_h = m_StillImage.GetHeight() - osd_offset_y;
+        if (scaled_w <= 0 || scaled_h <= 0) {
+            av_frame_free(&frame);
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+            return false;
+        }
 
         // Convert to RGB24 full image to safely crop & avoid planar chroma issues
         AVFrame *rgb_frame = av_frame_alloc();
