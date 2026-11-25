@@ -37,6 +37,7 @@ struct cDecodeRequest {
   int nCropX;      // X offset for cropping in original image pixels (or zoomed image pixels for zoom mode)
   int nCropY;      // Y offset for cropping in original image pixels (or zoomed image pixels for zoom mode)
   int nRotationAngle; // 0, 90, 180, 270
+  int nMirror; // EXIF: 0 none, 1 mirror horizontally, 2 flip vertically
 
   cDecodeRequest()
   : szSource(nullptr) // Initialize all members
@@ -50,6 +51,7 @@ struct cDecodeRequest {
   , nCropX(0)
   , nCropY(0)
   , nRotationAngle(0)
+  , nMirror(0)
   {
   }
 
