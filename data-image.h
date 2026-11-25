@@ -31,6 +31,7 @@ class cImageData
   
 #ifdef HAVE_LIBEXIF
   int          m_nDefaultRotate;
+  int          m_nDefaultMirror;
 #endif
 protected:
   void Clear(void);
@@ -46,6 +47,7 @@ public:
 
 #ifdef HAVE_LIBEXIF
   int DefaultRotate() const { return m_nDefaultRotate; }
+  int DefaultMirror() const { return m_nDefaultMirror; }
 #endif
 };
 
