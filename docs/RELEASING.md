@@ -13,7 +13,7 @@ Keep `debian/changelog` consistent when publishing:
 - `0.7.0-rc1` -> `0.7.0~rc1-1` in Debian packaging.
 - `0.7.0` -> `0.7.0-1` in Debian packaging.
 
-Do not use `0.7.0-rc1` until the native and Skindesigner build jobs pass.
+The 0.7.0-rc1 version is currently set in VERSION after CI build validation.
 No public release is implied by development version strings.
 
 ## Candidate acceptance
@@ -39,7 +39,8 @@ background thread or OSD active. These checks cannot be replaced by CI.
 
 ## Release
 
-After all candidate checks are green, update VERSION and debian/changelog for
-`0.7.0-rc1`, verify the compiled VDR Version() matches, and obtain user
-approval before creating a Git tag or publishing a package. Repeat device
-checks for final `0.7.0`. This repository's current PR is a draft.
+VERSION and debian/changelog currently describe 0.7.0-rc1. Confirm the CI
+build on this exact candidate commit and verify the compiled VDR Version()
+against VERSION. Obtain user approval and device validation before creating
+a Git tag or publishing a package. Repeat acceptance checks for final
+0.7.0. This repository's current PR is a draft.
