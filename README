@@ -4,7 +4,7 @@ VDR image_next — native image viewer and slideshow
 This fork builds on the VDR Image plugin and its 2022 FFmpeg updates.
 The native decoder uses libavcodec/libswscale rather than the historical
 imageplugin.sh conversion scripts. The current development version is
-read from the root VERSION file (currently 0.6.3-dev; see HISTORY).
+read from the root VERSION file (currently 0.7.0-rc1; see HISTORY).
 The Makefile passes this version to the compiled VDR plugin as
 IMAGE_PLUGIN_VERSION. Do not edit version strings independently in C++ sources.
 
