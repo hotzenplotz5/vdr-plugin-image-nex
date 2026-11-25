@@ -374,6 +374,13 @@ std::list<std::string> cThumbCache::lruList;
 std::unordered_map<std::string, CacheEntry> cThumbCache::Cache;
 std::unordered_set<std::string> cThumbCache::Loading;
 
+std::shared_ptr<cImage> ImageNextCachedThumbnail(const char *path, int width, int height)
+{
+    if (!path || width <= 0 || height <= 0)
+        return nullptr;
+    return cThumbCache::Get(path, width, height);
+}
+
 void cThumbLoaderThread::Add(const std::string& path, const std::string& key, int w, int h, uint64_t generation) {
     cMutexLock lock(&queueMutex);
     for (auto const& req : queue) {
