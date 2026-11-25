@@ -7,7 +7,11 @@ This fork uses [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 headings where useful. The single source for the build version is [VERSION](VERSION).
 Unreleased work stays in the existing development branch and is not a release.
 
-## [Unreleased] — 0.6.3-dev
+## [Unreleased]
+
+No additional changes since the release-candidate version update.
+
+## [0.7.0-rc1] — 2026-11-25 (candidate only, not tagged or published)
 
 ### Added
 - Optional full-screen 32-bit VDR OSD output without MPEG-2 re-encoding, with
@@ -26,9 +30,11 @@ Unreleased work stays in the existing development branch and is not a release.
 - Removed the implicit filesystem-root photo source.
 
 ### Verification
-- The native build on Ubuntu 24.04 with packaged VDR 2.6.0 passed GitHub CI.
-- True-color OSD runtime, the Skindesigner build and VDR 2.8.4 still require
-  independent validation. Do not tag or publish a stable release on this basis.
+- Ubuntu 24.04 native build and Debian package content checks passed CI.
+- The official VDR 2.8.4 release-source build passed CI, both without
+  Skindesigner and with the Skindesigner API compiled against VDR 2.8.4.
+- Runtime output on a real VDR is not yet verified. This candidate exists
+  only as source on the single development branch, without a Git tag.
 
 ## [0.6.1] — 2026-05-01
 
@@ -36,7 +42,7 @@ Historical development baseline; see HISTORY for the original changes.
 
 ## Release policy
 
-The next planned release is **0.7.0-rc1**, but only after the VDR 2.8.4 and
-Skindesigner builds pass and release acceptance checks are recorded.
-Version **0.7.0** additionally requires a real VDR OSD/slideshow acceptance
-test. No release tag is created solely for passing source-contract checks.
+The source version **0.7.0-rc1** is a pre-release candidate. It may be
+tagged or published only after approval and validation. Stable **0.7.0**
+requires real VDR OSD/slideshow and compatibility acceptance tests.
+No release tag is created solely for passing source-contract checks.
