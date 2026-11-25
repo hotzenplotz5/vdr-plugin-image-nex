@@ -184,8 +184,10 @@ bool LoadThumbnail(imagenext::Thumbnail &request)
     request.ready = false;
     request.width = request.height = 0;
     request.argb.clear();
-    if (request.maxWidth < 1 || request.maxWidth > 512 ||
-        request.maxHeight < 1 || request.maxHeight > 512 ||
+    // Carousel centre images need larger previews than the compact grid.
+    // Keep a hard cap to protect the 64 MiB image_next thumbnail cache.
+    if (request.maxWidth < 1 || request.maxWidth > 896 ||
+        request.maxHeight < 1 || request.maxHeight > 896 ||
         !IsPhoto(request.path))
         return true;
     std::string absolute;
