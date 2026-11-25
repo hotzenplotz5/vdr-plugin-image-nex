@@ -39,6 +39,7 @@ In the image_next plugin setup:
 IMPORTANT: Building against Skindesigner is not enough! The active XML skin
 must provide the template named plug-image_next-grid.xml. A reference
 template is included in skindesigner/plug-image_next-grid.xml.
+The build records the actual libskindesignerapi version from pkg-config.
 Install a copy into the xmlfiles/ directory of your ACTIVE Skindesigner skin,
 then reload the skin or restart VDR as required by Skindesigner.
 For example, the target filename is:
