@@ -46,8 +46,17 @@ void cStillImage::Action(void)
   bool bFreeze = true;
   unsigned int nFrame = 0,nFrameOff=0;
   int nMircoSekWait;
-  while (Running()) {      
-      
+  while (Running()) {
+      // Modern output: keep decoding on this worker, but never encode an
+      // MPEG-2 frame or touch the video device while the true-color OSD
+      // renderer is active. Only the foreground cControl may draw the OSD.
+      if (player->DirectOutput()) {
+        if (!player->Worker(false))
+          player->Worker(true);
+        cCondWait::SleepMs(10);
+        continue;
+      }
+
       nMircoSekWait = 10000;
       bQueueEmpty = player->Worker(false);
       if(!bQueueEmpty)
