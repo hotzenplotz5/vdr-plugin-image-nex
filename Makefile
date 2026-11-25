@@ -146,7 +146,7 @@ all: $(SOFILE) i18n
 
 MAKEDEP = $(CXX) -MM -MG
 DEPFILE = .dependencies
-$(DEPFILE): makefile
+$(DEPFILE): Makefile
 	@$(MAKEDEP) $(DEFINES) $(INCLUDES) $(OBJS:%.o=%.c) *.h > $@
 
 -include $(DEPFILE)
