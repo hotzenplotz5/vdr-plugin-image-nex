@@ -23,6 +23,8 @@
 #include "data-image.h"
 #include "menu-image.h"
 #include "control-image.h"
+// Local VDR service bridge consumed by SuiteOSD (image_next owns files/player).
+extern bool HandleImageNextSuiteService(const char *id, void *data);
 #include <vdr/i18n.h>
 #include "commands.h"
 #include "liboutput/encode.h"
@@ -230,6 +232,8 @@ cMenuSetupPage *cPluginImage::SetupMenu(void)
 
 bool cPluginImage::Service(const char *Id, void *Data)
 {
+  if (HandleImageNextSuiteService(Id, Data))
+    return true;
   if (Id && strcmp(Id, "Image-ShowImage-v1.0") == 0) {
     if (Data == NULL)
       return true;
