@@ -83,6 +83,8 @@ public:
 };
 #endif
 
+// Reuse image_next's async, bounded thumbnail cache for SuiteOSD.
+std::shared_ptr<cImage> ImageNextCachedThumbnail(const char *path, int width, int height);
 void StopThumbLoader();
 
 #endif				//___MENU_IMAGE_H
