@@ -242,8 +242,24 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
 static cMutex ThumbCacheMutex;
 static cMutex ThumbLoaderMutex;
 
+static std::string ThumbCacheKey(const std::string& path, int w, int h)
+{
+    // Include file identity so replacing a photo does not reuse an older bitmap.
+    std::string key = path + "|" + std::to_string(w) + "x" + std::to_string(h);
+    struct stat st;
+    if (stat(path.c_str(), &st) == 0) {
+        key += "|" + std::to_string(static_cast<long long>(st.st_size));
+        key += "|" + std::to_string(static_cast<long long>(st.st_mtime));
+#if defined(__linux__)
+        key += "|" + std::to_string(static_cast<long long>(st.st_mtim.tv_nsec));
+#endif
+    }
+    return key;
+}
+
 struct ThumbRequest {
     std::string path;
+    std::string key;
     int w, h;
     uint64_t generation;
 };
@@ -255,6 +271,7 @@ static std::atomic<uint64_t> g_CacheGeneration(0);
 struct CacheEntry {
     std::shared_ptr<cImage> image;
     std::list<std::string>::iterator lruIt;
+    size_t bytes;
 };
 
 // Hintergrund-Thread: Lädt langsame JPEGs ruckelfrei im Hintergrund!
@@ -265,7 +282,7 @@ private:
     cCondVar cond;
 public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
-    void Add(const std::string& path, int w, int h, uint64_t generation);
+    void Add(const std::string& path, const std::string& key, int w, int h, uint64_t generation);
     void Clear();
     void StopThread();
     virtual void Action();
@@ -276,14 +293,14 @@ static cThumbLoaderThread* ThumbLoader = nullptr;
 class cThumbCache {
 public:
     static const size_t MAX_CACHE_SIZE = 100;
+    static const size_t MAX_CACHE_BYTES = 64U * 1024U * 1024U;
+    static size_t cacheBytes;
     static std::list<std::string> lruList;
     static std::unordered_map<std::string, CacheEntry> Cache;
     static std::unordered_set<std::string> Loading;
 
     static std::shared_ptr<cImage> Get(const char* path, int maxWidth, int maxHeight) {
-        char keyBuf[1024];
-        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
-        std::string key = keyBuf;
+        const std::string key = ThumbCacheKey(path, maxWidth, maxHeight);
         
         {
             cMutexLock lock(&ThumbCacheMutex);
@@ -300,7 +317,7 @@ public:
                     cMutexLock loaderLock(&ThumbLoaderMutex);
                     if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
                 }
-                ThumbLoader->Add(path, maxWidth, maxHeight, g_CacheGeneration.load());
+                ThumbLoader->Add(path, key, maxWidth, maxHeight, g_CacheGeneration.load());
             }
         }
         
@@ -311,20 +328,22 @@ public:
         if (ThumbLoader) ThumbLoader->Clear();
         cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
+        cacheBytes = 0;
         lruList.clear();
         Loading.clear();
     }
 };
+size_t cThumbCache::cacheBytes = 0;
 std::list<std::string> cThumbCache::lruList;
 std::unordered_map<std::string, CacheEntry> cThumbCache::Cache;
 std::unordered_set<std::string> cThumbCache::Loading;
 
-void cThumbLoaderThread::Add(const std::string& path, int w, int h, uint64_t generation) {
+void cThumbLoaderThread::Add(const std::string& path, const std::string& key, int w, int h, uint64_t generation) {
     cMutexLock lock(&queueMutex);
     for (auto const& req : queue) {
-        if (req.path == path && req.w == w && req.h == h) return;
+        if (req.key == key && req.generation == generation) return;
     }
-    queue.push_back({path, w, h, generation});
+    queue.push_back({path, key, w, h, generation});
     cond.Broadcast();
     if (!Active()) Start();
 }
@@ -336,7 +355,8 @@ void cThumbLoaderThread::Clear() {
 
 void cThumbLoaderThread::StopThread() {
     cond.Broadcast();
-    Cancel(0);
+    // Wait for the worker before destroying its queue/mutex members.
+    Cancel(3);
 }
 
 void StopThumbLoader() {
@@ -366,30 +386,42 @@ void cThumbLoaderThread::Action() {
             img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
         }
 
-        // Frühzeitiger Abbruch bei Generation-Mismatch (verhindert stale cache entries)
-        if (req.generation != g_CacheGeneration.load()) {
-            cCondWait::SleepMs(5);
+        // A queued request may become obsolete after a directory change or
+        // after the file was replaced while decoding. Never publish stale data.
+        if (req.generation != g_CacheGeneration.load())
             continue;
-        }
+        const bool fileChanged = (ThumbCacheKey(req.path, req.w, req.h) != req.key);
 
-        char keyBuf[1024];
-        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
-        std::string key = keyBuf;
-        
         {
             cMutexLock cacheLock(&ThumbCacheMutex);
-            cThumbCache::Loading.erase(key);
-            
-            if (img) {
-                if (cThumbCache::Cache.find(key) == cThumbCache::Cache.end()) {
-                    cThumbCache::lruList.push_front(key);
-                    if (cThumbCache::lruList.size() > cThumbCache::MAX_CACHE_SIZE) {
-                        cThumbCache::Cache.erase(cThumbCache::lruList.back());
+            if (req.generation != g_CacheGeneration.load())
+                continue;
+            cThumbCache::Loading.erase(req.key);
+            if (fileChanged) {
+                g_ThumbnailsUpdated.store(true); // request a fresh thumbnail
+                continue;
+            }
+
+            if (img && cThumbCache::Cache.find(req.key) == cThumbCache::Cache.end()) {
+                const size_t bytes = static_cast<size_t>(img->Width()) *
+                                     static_cast<size_t>(img->Height()) * sizeof(tColor);
+                if (bytes <= cThumbCache::MAX_CACHE_BYTES) {
+                    while (!cThumbCache::lruList.empty() &&
+                           (cThumbCache::Cache.size() >= cThumbCache::MAX_CACHE_SIZE ||
+                            cThumbCache::cacheBytes > cThumbCache::MAX_CACHE_BYTES - bytes)) {
+                        const std::string& oldest = cThumbCache::lruList.back();
+                        auto old = cThumbCache::Cache.find(oldest);
+                        if (old != cThumbCache::Cache.end()) {
+                            cThumbCache::cacheBytes -= old->second.bytes;
+                            cThumbCache::Cache.erase(old);
+                        }
                         cThumbCache::lruList.pop_back();
                     }
-                    cThumbCache::Cache[key] = { img, cThumbCache::lruList.begin() };
+                    cThumbCache::lruList.push_front(req.key);
+                    cThumbCache::Cache[req.key] = {img, cThumbCache::lruList.begin(), bytes};
+                    cThumbCache::cacheBytes += bytes;
+                    g_ThumbnailsUpdated.store(true);
                 }
-                g_ThumbnailsUpdated.store(true);
             }
         }
         
