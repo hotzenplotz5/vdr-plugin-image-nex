@@ -15,6 +15,7 @@ extern "C" {
 }
 
 #include <sstream>
+#include <unistd.h>
 
 #include "player-image.h"
 #include "control-image.h"
@@ -253,10 +254,13 @@ bool ExtractExifThumbnail(const char* jpegFile, const char* thumbOut) {
     if (edata && edata->data && edata->size > 0) {
         FILE *f = fopen(thumbOut, "wb");
         if (f) {
-            fwrite(edata->data, 1, edata->size, f);
-            fclose(f);
+            bool complete = fwrite(edata->data, 1, edata->size, f) == edata->size;
+            if (fclose(f) != 0)
+                complete = false;
             exif_data_unref(edata);
-            return true;
+            if (!complete)
+                unlink(thumbOut);
+            return complete;
         }
     }
     if (edata) exif_data_unref(edata);
