@@ -11,6 +11,7 @@
  *   
  * This code is distributed under the terms and conditions of the
  * GNU GENERAL PUBLIC LICENSE. See the file COPYING for details.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  */
 
@@ -31,7 +32,7 @@
 #include <libskindesignerapi/tokencontainer.h>
 #endif
 
-static const char *VERSION        = "0.6.3-dev";
+static const char *VERSION        = IMAGE_PLUGIN_VERSION;
 
 class cPluginImage : public cPlugin {
     cDirItem*      m_pServiceDirItem;
