@@ -1,17 +1,16 @@
 #!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-2.0-or-later
 
-#DH_VERBOSE=1
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
-PLG_PACKAGE = $(filter-out %-dbg, $(shell dh_listpackages))
-DBG_PACKAGE = $(filter %-dbg, $(shell dh_listpackages))
+.PHONY: override_dh_auto_build override_dh_auto_install
 
-.PHONY: override_dh_strip override_dh_auto_install clean dh_auto_clean
-
-override_dh_strip:
-	dh_strip --dbg-package=$(DBG_PACKAGE)
+override_dh_auto_build:
+	# Optional Skindesigner support is detected via pkg-config if present.
+	dh_auto_build -- WITH_SKINDESIGNER=auto
 
 override_dh_auto_install:
-	dh_auto_install --destdir=debian/$(PLG_PACKAGE)
+	dh_auto_install --destdir=debian/vdr-plugin-image-next
 
 %:
 	dh $@ --with vdrplugin
