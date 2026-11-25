@@ -134,6 +134,9 @@ ifndef WITHOUT_LIBEXIF
   OBJS    += exif.o
 endif
 
+### Install the reference XML as a package asset, not into arbitrary third-party skins.
+SKINDESIGNER_TEMPLATE_DIR ?= /usr/share/vdr-plugin-image-next/skindesigner
+
 ### The main target:
 
 all: $(SOFILE) i18n
@@ -151,6 +154,9 @@ $(DEPFILE): Makefile
 	@$(MAKEDEP) $(DEFINES) $(INCLUDES) $(OBJS:%.o=%.c) *.h > $@
 
 -include $(DEPFILE)
+
+# Version changes must rebuild the object that embeds IMAGE_PLUGIN_VERSION.
+image.o: VERSION
 
 ### Internationalization (I18N):
 
@@ -186,7 +192,10 @@ $(SOFILE): $(OBJS)
 install-lib: $(SOFILE)
 	install -D $^ $(DESTDIR)$(LIBDIR)/$^.$(APIVERSION)
 
-install: install-lib install-i18n
+install-skin-template:
+	install -D -m644 skindesigner/plug-image_next-grid.xml $(DESTDIR)$(SKINDESIGNER_TEMPLATE_DIR)/plug-image_next-grid.xml
+
+install: install-lib install-i18n install-skin-template
 
 dist: $(I18Npo) clean
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
