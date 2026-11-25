@@ -36,7 +36,12 @@
 
 char* cImageControl::m_szLastShowStatusMsg = 0;
 
-void cImageControl::SetSlideShow(cSlideShow * pNewSlideShow)
+void cImageControl::SetSlideShow(cSlideShow *pNewSlideShow)
+{
+  SetSlideShow(pNewSlideShow, ImageSetup.m_bSlideShow != 0);
+}
+
+void cImageControl::SetSlideShow(cSlideShow * pNewSlideShow, bool autoplay)
 {
   // Remove old session
 #if APIVERSNUM < 20402
@@ -53,14 +58,14 @@ void cImageControl::SetSlideShow(cSlideShow * pNewSlideShow)
   	cControl::Shutdown();
 
   if(pNewSlideShow) {
-    cImageControl* pControl = new cImageControl(pNewSlideShow);
+    cImageControl* pControl = new cImageControl(pNewSlideShow, autoplay);
     cControl::Launch(pControl);
   }
 }
 //////////////////////////////////////////////////////////////////////////////
 /** C-tor Create for control-object to control the image-player
 */
-cImageControl::cImageControl(cSlideShow * pNewSlideShow)
+cImageControl::cImageControl(cSlideShow * pNewSlideShow, bool autoplay)
  : cControl(player = new cImagePlayer(pNewSlideShow))
  , m_pCmdMenu(NULL)
  , m_pDisplayReplay(NULL)
@@ -82,7 +87,7 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow)
   m_eOSDStatusVisable = Setup.ShowReplayMode?eDisplayModeOnly:eDisplayNothing;
   
   m_ePlayMode = ePlayModeNormal;
-  m_bSlideShowActiv = ImageSetup.m_bSlideShow;
+  m_bSlideShowActiv = autoplay;
   m_bSlideShowBefore = false;
 
   // Support for Zoom
