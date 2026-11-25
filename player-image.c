@@ -31,6 +31,7 @@ extern "C" {
 #include "list.h"
 #include <vdr/i18n.h>
 #include <vdr/device.h>
+#include <algorithm>
 
 #include "libimage/xpm.h"
 
@@ -126,6 +127,9 @@ bool cImagePlayer::Convert(const char *szChange)
         else if (strcmp(szChange, "left") == 0) rot += 270;
     }
     pCmd->nRotationAngle = rot % 360;
+#ifdef HAVE_LIBEXIF
+    pCmd->nMirror = pImage->DefaultMirror();
+#endif
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -163,6 +167,7 @@ bool cImagePlayer::ConvertJump(int nOffset)
           pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
 #ifdef HAVE_LIBEXIF
           pCmd->nRotationAngle = pImage[(h*nMatrix)+w]->DefaultRotate();
+          pCmd->nMirror = pImage[(h*nMatrix)+w]->DefaultMirror();
 #endif
           pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
   
@@ -201,6 +206,9 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
         else if (strcmp(szChange, "left") == 0) rot += 270;
     }
     pCmd->nRotationAngle = rot % 360;
+#ifdef HAVE_LIBEXIF
+    pCmd->nMirror = pImage->DefaultMirror();
+#endif
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -457,7 +465,32 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
                 av_frame_free(&rgb_frame);
             } else {
                 av_frame_free(&rot_frame);
-                rot_frame = rgb_frame; // Fallback to unrotated if out of memory
+                av_frame_free(&rgb_frame);
+                av_frame_free(&frame);
+                avcodec_free_context(&codec_ctx);
+                avformat_close_input(&fmt_ctx);
+                return false;
+            }
+        }
+
+        // EXIF orientations 2/4/5/7 require a mirror in addition to rotation.
+        // Apply the mirror to the *rotated* RGB frame before scaling/cropping.
+        if (pShell->nMirror == 1) {
+            for (int y = 0; y < rot_frame->height; ++y) {
+                uint8_t *row = rot_frame->data[0] + y * rot_frame->linesize[0];
+                for (int x = 0; x < rot_frame->width / 2; ++x) {
+                    uint8_t *a = row + x * 3;
+                    uint8_t *b = row + (rot_frame->width - 1 - x) * 3;
+                    for (int channel = 0; channel < 3; ++channel)
+                        std::swap(a[channel], b[channel]);
+                }
+            }
+        } else if (pShell->nMirror == 2) {
+            for (int y = 0; y < rot_frame->height / 2; ++y) {
+                uint8_t *a = rot_frame->data[0] + y * rot_frame->linesize[0];
+                uint8_t *b = rot_frame->data[0] + (rot_frame->height - 1 - y) * rot_frame->linesize[0];
+                for (int x = 0; x < rot_frame->width * 3; ++x)
+                    std::swap(a[x], b[x]);
             }
         }
 
