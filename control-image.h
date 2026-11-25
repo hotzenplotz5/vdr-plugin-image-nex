@@ -159,11 +159,12 @@ private:
   
   bool CheckAccess() const;
 private:
-  cImageControl(cSlideShow * pNewSlideShow);
+  cImageControl(cSlideShow * pNewSlideShow, bool autoplay);
 public:
   virtual ~ cImageControl();
 
   static void SetSlideShow(cSlideShow * pNewSlideShow);
+  static void SetSlideShow(cSlideShow * pNewSlideShow, bool autoplay);
 
   virtual eOSState ProcessKey(eKeys Key);
   virtual void Hide(void);
