@@ -31,7 +31,7 @@
 #include <libskindesignerapi/tokencontainer.h>
 #endif
 
-static const char *VERSION        = "0.6.2-dev";
+static const char *VERSION        = "0.6.3-dev";
 
 class cPluginImage : public cPlugin {
     cDirItem*      m_pServiceDirItem;
