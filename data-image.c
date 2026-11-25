@@ -31,6 +31,7 @@ cImageData::cImageData(const char *szName, cFileSource * pSource)
 , m_szFileName(NULL)
 #ifdef HAVE_LIBEXIF
 , m_nDefaultRotate(0)
+, m_nDefaultMirror(0)
 #endif
 {
   if(szName) {
@@ -38,9 +39,8 @@ cImageData::cImageData(const char *szName, cFileSource * pSource)
 #ifdef HAVE_LIBEXIF
     if (m_szFileName) {
         ImageMirror mirror = NONE;
-        GetRotationFromExifData (m_szFileName, m_nDefaultRotate, mirror);
-        if(mirror != NONE)
-            isyslog("imageplugin: automated rotation from exif data with mirroring (%d) is'nt supported, found at file '%s' \n", mirror, m_szFileName);
+        GetRotationFromExifData(m_szFileName, m_nDefaultRotate, mirror);
+        m_nDefaultMirror = static_cast<int>(mirror);
     }
 #endif
   }
