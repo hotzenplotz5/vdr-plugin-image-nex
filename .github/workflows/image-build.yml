@@ -1,4 +1,4 @@
-name: Image plugin build and source contracts
+name: Image plugin builds, Debian package and source contracts
 
 on:
   push:
@@ -8,7 +8,41 @@ on:
   workflow_dispatch:
 
 jobs:
-  native-build:
+  native-build-and-deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build and packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config vdr-dev gettext debhelper dpkg-dev \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libexif-dev
+
+      - name: Source contracts and release metadata
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Native build without Skindesigner
+        run: make -j2 WITH_SKINDESIGNER=0 libvdr-image_next.so
+
+      - name: Confirm native plugin
+        run: test -s libvdr-image_next.so
+
+      - name: Build Debian package without root installation
+        run: dpkg-buildpackage --build=binary --no-sign
+
+      - name: Inspect installed package contents
+        run: |
+          deb=$(find .. -maxdepth 1 -name 'vdr-plugin-image-next_*.deb' -print -quit)
+          test -n "$deb"
+          dpkg-deb --field "$deb" Version Depends
+          dpkg-deb --contents "$deb" | grep -F 'libvdr-image_next.so.'
+          dpkg-deb --contents "$deb" | grep -F 'plug-image_next-grid.xml'
+
+  vdr-2-8-4:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -18,14 +52,52 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config vdr-dev \
-            libavcodec-dev libavformat-dev libswscale-dev libexif-dev
+            git build-essential pkg-config vdr-dev libcap-dev \
+            libjpeg-dev libfreetype-dev libfontconfig-dev \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libexif-dev
 
-      - name: Source contracts
-        run: python3 -m unittest discover -s tests -v
+      - name: Obtain official VDR 2.8.4 headers
+        run: |
+          git clone --depth 1 --branch stable/latest \
+            https://git.tvdr.de/vdr.git "$RUNNER_TEMP/vdr"
+          grep -q '"2.8.4"' "$RUNNER_TEMP/vdr/config.h"
+          make -C "$RUNNER_TEMP/vdr" vdr.pc
 
-      - name: Build native image plugin (no Skindesigner required)
-        run: make -j2 WITH_SKINDESIGNER=0 libvdr-image_next.so
+      - name: Compile against official VDR 2.8.4
+        run: |
+          make -j2 WITH_SKINDESIGNER=0 \
+            VDRDIR="$RUNNER_TEMP/vdr" libvdr-image_next.so
+          test -s libvdr-image_next.so
 
-      - name: Verify built plugin exists
-        run: test -s libvdr-image_next.so
+  skindesigner-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git build-essential pkg-config vdr-dev \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libexif-dev
+
+      - name: Compile Skindesigner API without root
+        run: |
+          git clone --depth 1 \
+            https://github.com/vdr-projects/vdr-plugin-skindesigner.git \
+            "$RUNNER_TEMP/skindesigner"
+          make -C "$RUNNER_TEMP/skindesigner/libskindesignerapi" \
+            PREFIX="$RUNNER_TEMP/sd-sdk"
+          make -C "$RUNNER_TEMP/skindesigner/libskindesignerapi" \
+            PREFIX="$RUNNER_TEMP/sd-sdk" DESTDIR=/ install
+          PKG_CONFIG_PATH="$RUNNER_TEMP/sd-sdk/lib/pkgconfig" \
+            pkg-config --modversion libskindesignerapi
+
+      - name: Compile plugin with Skindesigner enabled
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/sd-sdk/lib/pkgconfig:$PKG_CONFIG_PATH"
+          make -j2 WITH_SKINDESIGNER=1 libvdr-image_next.so
+          test -s libvdr-image_next.so
