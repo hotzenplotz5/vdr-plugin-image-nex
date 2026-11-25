@@ -113,7 +113,7 @@ void cPluginImage::RegisterSkinDesigner(void)
 
   skindesignerapi::cPluginStructure *structure = new skindesignerapi::cPluginStructure();
   structure->name = "image_next";
-  structure->libskindesignerAPIVersion = "1.0";
+  structure->libskindesignerAPIVersion = LIBSKINDESIGNERAPIVERSION;
   structure->RegisterRootView("grid");
 
   skindesignerapi::cTokenContainer *background = new skindesignerapi::cTokenContainer();
