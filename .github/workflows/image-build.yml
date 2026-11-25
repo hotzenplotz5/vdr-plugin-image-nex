@@ -57,10 +57,11 @@ jobs:
             libavcodec-dev libavformat-dev libavutil-dev \
             libswscale-dev libexif-dev
 
-      - name: Obtain official VDR 2.8.4 headers
+      - name: Obtain VDR 2.8.4 release source from GitHub mirror
         run: |
-          git clone --depth 1 --branch stable/latest \
-            https://git.tvdr.de/vdr.git "$RUNNER_TEMP/vdr"
+          git clone --depth 1 https://github.com/vdr-projects/vdr.git "$RUNNER_TEMP/vdr"
+          test "$(git -C "$RUNNER_TEMP/vdr" rev-parse HEAD)" = \
+            "241c3f24d5af215536032f30c0cdb745e2d832e7"
           grep -q '"2.8.4"' "$RUNNER_TEMP/vdr/config.h"
           make -C "$RUNNER_TEMP/vdr" vdr.pc
 
