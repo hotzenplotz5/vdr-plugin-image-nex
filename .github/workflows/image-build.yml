@@ -63,7 +63,7 @@ jobs:
           test "$(git -C "$RUNNER_TEMP/vdr" rev-parse HEAD)" = \
             "241c3f24d5af215536032f30c0cdb745e2d832e7"
           grep -q '"2.8.4"' "$RUNNER_TEMP/vdr/config.h"
-          make -C "$RUNNER_TEMP/vdr" vdr.pc
+          make -C "$RUNNER_TEMP/vdr" LCLBLD=1 include-dir vdr.pc
 
       - name: Compile against official VDR 2.8.4
         run: |
