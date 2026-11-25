@@ -101,6 +101,25 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn('SetupStore("PictureOutput"', setup)
         self.assertIn("return bQueueEmpty", player)
 
+    def test_suiteosd_native_photo_services(self):
+        bridge = source("image-next-service-v1.h")
+        impl = source("image-next-service.c")
+        plugin = source("image.c")
+        player = source("control-image.c")
+        for service in ("ImageNext-Browse-v1.0", "ImageNext-Thumbnail-v1.0",
+                        "ImageNext-Play-v1.0"):
+            self.assertIn(service, bridge)
+        for action in ("BrowseSource(", "LoadThumbnail(", "StartPlayback("):
+            self.assertIn(action, impl)
+        self.assertIn("HandleImageNextSuiteService(Id, Data)", plugin)
+        self.assertIn("WithinSource(", impl)
+        self.assertIn("realpath(", impl)
+        self.assertIn('segment == ".."', impl)
+        self.assertIn("ImageNextCachedThumbnail(", impl)
+        self.assertIn("cImageControl::SetSlideShow(slideshow, request.slideshow)", impl)
+        self.assertIn("SetSlideShow(cSlideShow * pNewSlideShow, bool autoplay)", player)
+        self.assertIn("m_bSlideShowActiv = autoplay", player)
+
     def test_build_without_skindesigner_and_version(self):
         makefile = source("Makefile")
         self.assertIn("WITH_SKINDESIGNER ?= auto", makefile)
