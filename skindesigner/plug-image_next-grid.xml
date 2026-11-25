@@ -15,15 +15,15 @@
         </area>
     </viewelement>
     <grid name="imagegrid" x="4%" y="14%" width="92%" height="78%">
-        <area layer="1">
+        <area x="0" y="0" width="100%" height="100%" layer="1">
             <fill condition="not{current}" color="#ff303030" />
             <fill condition="{current}" color="#ff0055aa" />
         </area>
-        <area layer="2">
+        <area x="0" y="0" width="100%" height="100%" layer="2">
             <drawimage imagetype="image" path="{thumbnail}" x="5%" y="5%"
                        width="90%" height="72%" />
         </area>
-        <area layer="3">
+        <area x="0" y="0" width="100%" height="100%" layer="3">
             <drawtext text="{albumname}" font="{regular}" fontsize="60%"
                       color="#ffffffff" x="5%" y="78%" width="90%" />
         </area>
