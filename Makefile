@@ -123,7 +123,7 @@ endif
 
 ### The object files (add further files here):
 
-OBJS = image.o data.o menu.o data-image.o menu-image.o \
+OBJS = image.o data.o menu.o data-image.o menu-image.o image-next-service.o \
  setup-image.o player-image.o control-image.o commands.o menu-commands.o \
  list.o \
  liboutput/encode.o liboutput/stillimage.o liboutput/stillimage-player.o \
