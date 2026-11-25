@@ -80,13 +80,33 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertNotIn("ExtractExifThumbnail(firstJpgPath", data)
         self.assertNotIn("ExifThread->AddTask", data)
 
+    def test_direct_osd_uses_foreground_thread(self):
+        control = source("control-image.c")
+        player = source("player-image.c")
+        worker = source("liboutput/stillimage.c")
+        setup = source("setup-image.c")
+        self.assertIn("cOsdProvider::NewOsd(0, 0)", control)
+        self.assertIn("tArea area = {0, 0, width - 1, height - 1, 32}", control)
+        self.assertIn("osd->CanHandleAreas(&area, 1)", control)
+        self.assertIn("cImageControl::DrawPictureOsd", control)
+        self.assertIn("m_pictureOsd->DrawImage", control)
+        self.assertIn("TakeDirectPicture()", control)
+        self.assertNotIn("cOsdProvider::NewOsd", player)
+        self.assertIn("PublishDirectPicture()", player)
+        self.assertIn("AV_PIX_FMT_BGRA", player)
+        self.assertIn("if (player->DirectOutput())", worker)
+        self.assertIn("m_nPictureOutput = 0", setup)
+        self.assertIn('ParseInteger("PictureOutput"', setup)
+        self.assertIn('SetupStore("PictureOutput"', setup)
+        self.assertIn("return bQueueEmpty", player)
+
     def test_build_without_skindesigner_and_version(self):
         makefile = source("Makefile")
         self.assertIn("WITH_SKINDESIGNER ?= auto", makefile)
         self.assertIn("-DHAVE_SKINDESIGNER", makefile)
         self.assertIn("LIBSKINDESIGNERAPIVERSION", makefile)
         self.assertIn("$(DEPFILE): Makefile", makefile)
-        self.assertIn('VERSION        = "0.6.2-dev"', source("image.c"))
+        self.assertIn('VERSION        = "0.6.3-dev"', source("image.c"))
 
 
 if __name__ == "__main__":
