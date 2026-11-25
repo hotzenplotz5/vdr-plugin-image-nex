@@ -16,10 +16,13 @@
 
 #include <vdr/player.h>
 #include <vdr/osdbase.h>
+#include <memory>
 
 #define memberof(x) (sizeof(x)/sizeof(*x))
 
-class cImagePlayer;    
+class cImagePlayer;
+class cOsd;
+class cImage;    
 class cImageMenuCommands;
 
 class cImageControl
@@ -55,6 +58,15 @@ class cImageControl
   static char*            m_szLastShowStatusMsg;
   /** Display replayprogress*/
   cSkinDisplayReplay *m_pDisplayReplay;
+  // Foreground-thread image renderer; MPEG-2 output remains the fallback.
+  cOsd *m_pictureOsd;
+  std::shared_ptr<cImage> m_pictureImage;
+  int m_pictureWidth;
+  int m_pictureHeight;
+  int m_pictureDrawnIndex;
+  int m_pictureDrawnStatus;
+  bool m_pictureDrawnSlide;
+  bool m_pictureDirty;
   /** Faked Marks for Images*/
   cMarks m_Marks;
 
@@ -86,6 +98,9 @@ class cImageControl
   unsigned int m_nRotation;
 
 private:  
+  bool OpenPictureOsd(void);
+  void ClosePictureOsd(void);
+  void DrawPictureOsd(void);
   void ShowOSD(void);
   void HideOSD(void);
   void ShowMode(void);
