@@ -581,7 +581,11 @@ void cMenuImageGrid::DrawGrid()
     int kachelHoehe = kachelBreite * 3 / 4;
 
     int totalItems = list->Count();
-    
+    // Only visit tiles on the current page; thousands of photos must not
+    // cause thousands of iterations on every remote-control keypress.
+    int firstVisible = startRow * columns;
+    int lastVisible = std::min(totalItems, (startRow + visibleRows) * columns);
+
     tColor bgFull     = 0xFF151515;
     tColor textFg     = 0xFF00AAFF;
     tColor btnRed     = 0xFFCC0000;
@@ -616,7 +620,7 @@ void cMenuImageGrid::DrawGrid()
     myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + fntTitle->Height() + 10, btnBlue);
     myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnBlueFg, btnBlue, fntTitle);
 
-    for (int i = 0; i < totalItems; i++) {
+    for (int i = firstVisible; i < lastVisible; i++) {
         int row = (i / columns) - startRow;
         if (row < 0 || row >= visibleRows) continue;
 
@@ -853,6 +857,7 @@ cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesigner
     needsRedraw = true;
     
     rootView = NULL;
+    fallbackGrid = NULL;
     back = NULL;
     header = NULL;
     imagegrid = NULL;
@@ -884,6 +889,7 @@ cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
     if (imagegrid) delete imagegrid;
     // cOsdView owns the Skindesigner OSD session and calls CloseOsd().
     if (rootView) delete rootView;
+    if (fallbackGrid) delete fallbackGrid;
 
     delete list;
     free(currentdir);
@@ -903,12 +909,22 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
-    if (!SkindesignerAvailable()) return;
-    
+    if (fallbackGrid) {
+        fallbackGrid->Show();
+        return;
+    }
+    if (!SkindesignerAvailable()) {
+        isyslog("imageplugin: Skindesigner API unavailable; switching to native grid");
+        fallbackGrid = new cMenuImageGrid(source);
+        fallbackGrid->Show();
+        return;
+    }
     if (!rootView) {
         rootView = GetOsdView();
         if (!rootView) {
-            esyslog("imageplugin: Skindesigner could not initialize grid OSD; check plug-image_next-grid.xml");
+            esyslog("imageplugin: Skindesigner grid OSD initialization failed; switching to native grid");
+            fallbackGrid = new cMenuImageGrid(source);
+            fallbackGrid->Show();
             return;
         }
         back = rootView->GetViewElement(0); // background
@@ -918,7 +934,7 @@ void cMenuImageSkinDesigner::Show(void)
 
     if (back) back->Display();
     rootView->Activate();
-    
+
     if (needsRedraw) {
         Draw();
         needsRedraw = false;
@@ -949,8 +965,10 @@ void cMenuImageSkinDesigner::Draw()
         int rows = 3; // 3 Zeilen pro Seite für Estuary
         int itemsPerPage = columns * rows;
         
-        double itemWidth = 100.0 / columns;
-        double itemHeight = 100.0 / rows;
+        // Skindesigner cViewGrid::PositionGrid takes normalized fractions (0..1),
+        // not 0..100 percent values. Percentages put most tiles off-screen.
+        double itemWidth = 1.0 / columns;
+        double itemHeight = 1.0 / rows;
 
         int page = currentIndex / itemsPerPage;
         int startIdx = page * itemsPerPage;
@@ -999,6 +1017,7 @@ void cMenuImageSkinDesigner::Draw()
 
 eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
 {
+    if (fallbackGrid) return fallbackGrid->ProcessKey(Key);
     int totalItems = list->Count();
     if (totalItems == 0) {
         if (Key == kBack || Key == kMenu) return osEnd;
