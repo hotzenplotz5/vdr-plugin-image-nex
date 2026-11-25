@@ -1,3 +1,14 @@
+vdr-plugin-image-next (0.6.3~dev-1) UNRELEASED; urgency=medium
+
+  * Prepare true-colour OSD photo playback with MPEG-2 compatibility mode.
+  * Repair Skindesigner image grid, thumbnails and EXIF orientation handling.
+  * Make Skindesigner an optional build dependency.
+  * Centralize upstream version in the VERSION file and keep GPL-2+ notices.
+  * Install Skindesigner XML template as a skin-independent package asset.
+  * Modernize Debian build dependencies and add offline build tests.
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 25 Nov 2026 17:30:00 +0100
+
 vdr-plugin-image-next (0.6.0+git2026) resolute; urgency=medium
 
   [ Holger Schvestka ]
