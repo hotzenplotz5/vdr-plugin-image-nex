@@ -85,20 +85,28 @@ jobs:
             libavcodec-dev libavformat-dev libavutil-dev \
             libswscale-dev libexif-dev
 
-      - name: Compile Skindesigner API without root
+      - name: Obtain pinned VDR 2.8.4 headers
+        run: |
+          git clone --depth 1 https://github.com/vdr-projects/vdr.git "$RUNNER_TEMP/vdr"
+          test "$(git -C "$RUNNER_TEMP/vdr" rev-parse HEAD)" = \
+            "241c3f24d5af215536032f30c0cdb745e2d832e7"
+          grep -q '"2.8.4"' "$RUNNER_TEMP/vdr/config.h"
+          make -C "$RUNNER_TEMP/vdr" LCLBLD=1 include-dir vdr.pc
+
+      - name: Compile Skindesigner API against VDR 2.8.4 without root
         run: |
           git clone --depth 1 \
             https://github.com/vdr-projects/vdr-plugin-skindesigner.git \
             "$RUNNER_TEMP/skindesigner"
           make -C "$RUNNER_TEMP/skindesigner/libskindesignerapi" \
-            PREFIX="$RUNNER_TEMP/sd-sdk"
+            PREFIX="$RUNNER_TEMP/sd-sdk" VDRDIR="$RUNNER_TEMP/vdr"
           make -C "$RUNNER_TEMP/skindesigner/libskindesignerapi" \
             PREFIX="$RUNNER_TEMP/sd-sdk" DESTDIR=/ install
           PKG_CONFIG_PATH="$RUNNER_TEMP/sd-sdk/lib/pkgconfig" \
             pkg-config --modversion libskindesignerapi
 
-      - name: Compile plugin with Skindesigner enabled
+      - name: Compile plugin with Skindesigner against VDR 2.8.4
         run: |
           export PKG_CONFIG_PATH="$RUNNER_TEMP/sd-sdk/lib/pkgconfig:$PKG_CONFIG_PATH"
-          make -j2 WITH_SKINDESIGNER=1 libvdr-image_next.so
+          make -j2 WITH_SKINDESIGNER=1 VDRDIR="$RUNNER_TEMP/vdr" libvdr-image_next.so
           test -s libvdr-image_next.so
