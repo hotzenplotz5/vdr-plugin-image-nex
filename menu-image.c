@@ -516,16 +516,10 @@ cMenuImageGrid::~cMenuImageGrid()
 
     // Thumbnail-Cache leeren, um ein unbegrenztes Anwachsen des RAMs zu verhindern
     cThumbCache::Clear();
-#ifdef HAVE_LIBEXIF
-    ClearExifExtractorTasks();
-#endif
 }
 
 bool cMenuImageGrid::LoadDir(const char *dir)
 {
-#ifdef HAVE_LIBEXIF
-    ClearExifExtractorTasks();
-#endif
     currentIndex = 0;
     return list->Load(source, dir);
 }
@@ -846,6 +840,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     return osContinue;
 }
 
+#ifdef HAVE_SKINDESIGNER
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
 cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
@@ -887,6 +882,8 @@ cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
     if (back) delete back;
     if (header) delete header;
     if (imagegrid) delete imagegrid;
+    // cOsdView owns the Skindesigner OSD session and calls CloseOsd().
+    if (rootView) delete rootView;
 
     delete list;
     free(currentdir);
@@ -908,15 +905,18 @@ void cMenuImageSkinDesigner::Show(void)
 {
     if (!SkindesignerAvailable()) return;
     
-    rootView = GetOsdView();
-    if (!rootView) return;
-    
-    back = rootView->GetViewElement(0); // background
-    header = rootView->GetViewElement(1); // header
-    imagegrid = rootView->GetViewGrid(0); // imagegrid
-    
-    if (back) back->Display();
+    if (!rootView) {
+        rootView = GetOsdView();
+        if (!rootView) {
+            esyslog("imageplugin: Skindesigner could not initialize grid OSD; check plug-image_next-grid.xml");
+            return;
+        }
+        back = rootView->GetViewElement(0); // background
+        header = rootView->GetViewElement(1); // header
+        imagegrid = rootView->GetViewGrid(0); // imagegrid
+    }
 
+    if (back) back->Display();
     rootView->Activate();
     
     if (needsRedraw) {
@@ -1121,6 +1121,8 @@ eOSState cMenuImageSkinDesigner::Select(bool isred)
     }
     return osContinue;
 }
+
+#endif // HAVE_SKINDESIGNER
 
 eOSState cMenuImageGrid::Parent(void)
 {
