@@ -711,6 +711,10 @@ bool cImagePlayer::Worker(bool bDoIt)
         esyslog("imageplugin: direct OSD transfer failed; resuming MPEG-2 output");
         m_directOutput.store(false);
         m_StillImage.EncodeRequired(true);
+      } else if (!m_directOutput.load()) {
+        // The foreground OSD may have been closed while we were decoding.
+        // Keep a valid legacy picture behind the newly opened menu.
+        m_StillImage.EncodeRequired(true);
       }
     } else {
       m_StillImage.EncodeRequired(true);
