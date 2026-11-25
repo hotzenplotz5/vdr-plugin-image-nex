@@ -10,6 +10,8 @@
  */
 
 #include <time.h>
+#include <algorithm>
+#include <cstring>
 
 #include "player-image.h"
 #include "control-image.h"
