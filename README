@@ -66,7 +66,15 @@ Pictures remain in their original directories. If present, folder.jpg is
 used as a directory cover. Photo directories are NOT modified just because
 a directory is opened: the old automatic EXIF-to-folder.jpg writer has
 been removed. JPEG EXIF thumbnails for the native grid are extracted into
-a temporary file and deleted after use.
+a unique temporary file and deleted after use.
+
+The asynchronous native grid loads only visible tiles and uses an LRU bitmap
+cache with a 64 MiB budget (up to 100 cached thumbnails). Cache entries
+include image file size and modification time to avoid serving outdated
+thumbnails when a file changes. EXIF orientation, including mirrored camera
+orientations, is applied to thumbnails and to full-size/zoomed playback.
+The image player still uses MPEG-2 still-image output; a direct VAAPI
+rendering path remains future work.
 
 The existing imagecmds.conf functionality can run explicitly configured
 commands; only enable commands you trust.
@@ -81,6 +89,16 @@ Quick manual smoke test
 6. Switch to a non-Skindesigner skin: mode 2 must fall back to the C++ grid.
 7. Remove/rename imagesources.conf: verify the informative menu, not root /.
 8. Verify no folder.jpg is generated in photo directories.
+
+Source-only checks (no VDR installation necessary)
+--------------------------------------------------
+  python3 -m unittest discover -s tests -v
+
+These checks verify the C++/XML naming contract, normalized grid geometry,
+fallback presence, optional dependencies and cache/EXIF invariants. They
+are not a substitute for compiling against VDR and Skindesigner, nor for
+visual tests using the active Skindesigner skin. This development branch
+has not been installed on the user's VDR.
 
 Known limitation
 ----------------
