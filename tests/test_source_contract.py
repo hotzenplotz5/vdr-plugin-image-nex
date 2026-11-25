@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Dependency-free source contract checks for the VDR image-next fork.
 
 Run: python3 -m unittest discover -s tests -v
@@ -106,7 +107,11 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn("-DHAVE_SKINDESIGNER", makefile)
         self.assertIn("LIBSKINDESIGNERAPIVERSION", makefile)
         self.assertIn("$(DEPFILE): Makefile", makefile)
-        self.assertIn('VERSION        = "0.6.3-dev"', source("image.c"))
+        version = source("VERSION").strip()
+        self.assertRegex(version, r"^\\d+\\.\\d+\\.\\d+(?:-(?:dev|rc\\d+))?$")
+        self.assertIn("VERSION := $(strip $(shell cat VERSION))", makefile)
+        self.assertIn('IMAGE_PLUGIN_VERSION=\'"$(VERSION)"\'', makefile)
+        self.assertIn("static const char *VERSION        = IMAGE_PLUGIN_VERSION;", source("image.c"))
 
 
 if __name__ == "__main__":
