@@ -152,7 +152,7 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
         codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
     }
 
-    if (avcodec_open2(codec_ctx, codec, nullptr) {
+    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         if (useTempThumb) unlink(tempThumbPath);
@@ -649,11 +649,6 @@ void cMenuImageGrid::DrawGrid()
     int kachelHoehe = kachelBreite * 3 / 4;
 
     int totalItems = list->Count();
-    // Only visit tiles on the current page; thousands of photos must not
-    // cause thousands of iterations on every remote-control keypress.
-    int firstVisible = startRow * columns;
-    int lastVisible = std::min(totalItems, (startRow + visibleRows) * columns);
-
     tColor bgFull     = 0xFF151515;
     tColor textFg     = 0xFF00AAFF;
     tColor btnRed     = 0xFFCC0000;
@@ -676,6 +671,9 @@ void cMenuImageGrid::DrawGrid()
     int visibleRows = (osdHeight - titleHeight - buttonAreaHeight) / (kachelHoehe + padding);
     if (visibleRows < 1) visibleRows = 1;
     int startRow = (currentIndex / columns / visibleRows) * visibleRows;
+    // Draw only the visible tiles rather than iterating the entire folder.
+    int firstVisible = startRow * columns;
+    int lastVisible = std::min(totalItems, (startRow + visibleRows) * columns);
 
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
     char titleBuf[256];
