@@ -1,3 +1,10 @@
+2026-11-25: Version 0.7.0-rc1
+- Release-candidate source version after native VDR, VDR 2.8.4 and
+  Skindesigner-enabled CI builds succeeded.
+- Includes direct true-color OSD playback, legacy MPEG-2 fallback and
+  the restored native/Skindesigner photo grid.
+- Release tag, installation and on-device validation remain pending.
+
 2026-11-25: Version 0.6.3-dev
 - Add true-color ARGB image rendering directly through VDR's foreground OSD; no MPEG-2 re-encoding when supported.
 - Keep JPEG/PNG decoding and swscale in the background worker; hand off frames under a mutex to cControl.
