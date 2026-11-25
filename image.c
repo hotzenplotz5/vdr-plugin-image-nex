@@ -25,16 +25,20 @@
 #include <vdr/i18n.h>
 #include "commands.h"
 #include "liboutput/encode.h"
+#ifdef HAVE_SKINDESIGNER
 #include <libskindesignerapi/skindesignerapi.h>
 #include <libskindesignerapi/pluginstructure.h>
 #include <libskindesignerapi/tokencontainer.h>
+#endif
 
-static const char *VERSION        = "0.6.0";
+static const char *VERSION        = "0.6.2-dev";
 
 class cPluginImage : public cPlugin {
     cDirItem*      m_pServiceDirItem;
     cFileSource*   m_pServiceFileSource;
+#ifdef HAVE_SKINDESIGNER
     skindesignerapi::cPluginStructure *m_pluginStructure;
+#endif
 
 public:
   cPluginImage();
@@ -51,6 +55,9 @@ public:
   virtual bool Service(const char *Id, void *Data);
 private:
   void RemoveServiceSource();
+#ifdef HAVE_SKINDESIGNER
+  void RegisterSkinDesigner(void);
+#endif
 };
 
 bool cPluginImage::SetupParse(const char *szName, const char *szValue)
@@ -97,38 +104,52 @@ bool cPluginImage::ProcessArgs(int argc, char *argv[])
   return true;
 }
 
+#ifdef HAVE_SKINDESIGNER
+void cPluginImage::RegisterSkinDesigner(void)
+{
+  // The Skindesigner API might only become available after our Start().
+  if (m_pluginStructure || !skindesignerapi::SkindesignerAPI::ServiceAvailable())
+    return;
+
+  skindesignerapi::cPluginStructure *structure = new skindesignerapi::cPluginStructure();
+  structure->name = "image_next";
+  structure->libskindesignerAPIVersion = "1.0";
+  structure->RegisterRootView("grid");
+
+  skindesignerapi::cTokenContainer *background = new skindesignerapi::cTokenContainer();
+  structure->RegisterViewElement(0, 0, "background", background);
+
+  skindesignerapi::cTokenContainer *header = new skindesignerapi::cTokenContainer();
+  header->DefineStringToken("{title}", 0);
+  structure->RegisterViewElement(0, 1, "header", header);
+
+  skindesignerapi::cTokenContainer *items = new skindesignerapi::cTokenContainer();
+  items->DefineStringToken("{thumbnail}", 0);
+  items->DefineStringToken("{albumname}", 1);
+  items->DefineIntToken("{is_folder}", 0);
+  items->DefineIntToken("{current}", 1);
+  structure->RegisterViewGrid(0, 0, "imagegrid", items);
+
+  if (!skindesignerapi::SkindesignerAPI::RegisterPlugin(structure)) {
+    esyslog("imageplugin: Skindesigner registration failed; native grid is available");
+    delete structure;
+    return;
+  }
+  m_pluginStructure = structure;
+  isyslog("imageplugin: registered Skindesigner view image_next/grid");
+}
+#endif
+
 bool cPluginImage::Start(void)
 {
   if(!cEncode::Register()) {   
     return false;
   }
   
-  if (skindesignerapi::SkindesignerAPI::ServiceAvailable()) {
-      m_pluginStructure = new skindesignerapi::cPluginStructure();
-      m_pluginStructure->name = "image_next";
-      m_pluginStructure->libskindesignerAPIVersion = "1.0"; 
-      m_pluginStructure->RegisterRootView("grid");
-      
-      skindesignerapi::cTokenContainer *tkBg = new skindesignerapi::cTokenContainer();
-      tkBg->CreateContainers();
-      m_pluginStructure->RegisterViewElement(0, 0, "background", tkBg);
-      
-      skindesignerapi::cTokenContainer *tkHeader = new skindesignerapi::cTokenContainer();
-      tkHeader->DefineStringToken("{title}", 0);
-      tkHeader->CreateContainers();
-      m_pluginStructure->RegisterViewElement(0, 1, "header", tkHeader);
-      
-      skindesignerapi::cTokenContainer *tkDef = new skindesignerapi::cTokenContainer();
-      tkDef->DefineStringToken("{thumbnail}", 0);
-      tkDef->DefineStringToken("{albumname}", 1);
-      tkDef->DefineIntToken("{is_folder}", 0);
-      tkDef->DefineIntToken("{current}", 1);
-      tkDef->CreateContainers();
-      m_pluginStructure->RegisterViewGrid(0, 0, "imagegrid", tkDef);
+#ifdef HAVE_SKINDESIGNER
+  RegisterSkinDesigner();
+#endif
 
-      skindesignerapi::SkindesignerAPI::RegisterPlugin(m_pluginStructure);
-  }
-  
   cString szConfSource = AddDirectory(ConfigDirectory(g_szConfigDirectory),  "imagesources.conf");
   ImageSources.Load(szConfSource);
 
@@ -138,13 +159,9 @@ bool cPluginImage::Start(void)
     ImageSources.Load(szOldConfSource);
   }
 
-  // Fallback 2: Notfall-Quelle anlegen, damit der VDR NICHT mehr abstürzt!
-  if(ImageSources.Count()<1) {
-    const char* sz = szConfSource;
-    esyslog("imageplugin: no sources defined in %s, adding default Root source", sz);
-    ImageSources.Add(new cFileSource("/", "Root", false, ""));
-    ImageSources.SetSource(ImageSources.First());
-  }
+  // Do not expose the complete filesystem when configuration is missing.
+  if (ImageSources.Count() < 1)
+    esyslog("imageplugin: no imagesources.conf entries; configure a photo source before browsing");
   
   return true;
 }
@@ -153,15 +170,14 @@ cPluginImage::cPluginImage()
 {
     m_pServiceDirItem = NULL;
     m_pServiceFileSource = NULL;
+#ifdef HAVE_SKINDESIGNER
     m_pluginStructure = NULL;
+#endif
 }
 
 cPluginImage::~cPluginImage()
 {
   cEncode::UnRegister();
-#ifdef HAVE_LIBEXIF
-  StopExifExtractor();
-#endif
   StopThumbLoader();
   RemoveServiceSource();
 }
@@ -181,13 +197,27 @@ void cPluginImage::RemoveServiceSource()
 
 cOsdObject *cPluginImage::MainMenuAction(void)
 {
-  if (ImageSetup.m_nDisplayMode == 2) {
-      if (m_pluginStructure) {
-          return new cMenuImageSkinDesigner(ImageSources.GetSource(), m_pluginStructure);
-      }
-  } else if (ImageSetup.m_nDisplayMode == 1) {
-      return new cMenuImageGrid(ImageSources.GetSource()); // Standalone C++ Fallback (Weg B)
+  if (!ImageSources.GetSource()) {
+    cOsdMenu *menu = new cOsdMenu(tr("Images"));
+    menu->Add(new cOsdItem(tr("No image sources configured")));
+    return menu;
   }
+
+  if (ImageSetup.m_nDisplayMode == 2) {
+#ifdef HAVE_SKINDESIGNER
+    RegisterSkinDesigner();
+    if (m_pluginStructure &&
+        skindesignerapi::SkindesignerAPI::GetDisplayPlugin(m_pluginStructure->id)) {
+      return new cMenuImageSkinDesigner(ImageSources.GetSource(), m_pluginStructure);
+    }
+    isyslog("imageplugin: Skindesigner view not available in active skin; using native grid (see README)");
+#else
+    isyslog("imageplugin: built without Skindesigner API; using native grid");
+#endif
+    return new cMenuImageGrid(ImageSources.GetSource());
+  }
+  if (ImageSetup.m_nDisplayMode == 1)
+    return new cMenuImageGrid(ImageSources.GetSource());
   return new cMenuImageBrowse();
 }
 
