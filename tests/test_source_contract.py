@@ -108,7 +108,7 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn("LIBSKINDESIGNERAPIVERSION", makefile)
         self.assertIn("$(DEPFILE): Makefile", makefile)
         version = source("VERSION").strip()
-        self.assertRegex(version, r"^\\d+\\.\\d+\\.\\d+(?:-(?:dev|rc\\d+))?$")
+        self.assertRegex(version, r"^\d+\.\d+\.\d+(?:-(?:dev|rc\d+))?$")
         self.assertIn("VERSION := $(strip $(shell cat VERSION))", makefile)
         self.assertIn('IMAGE_PLUGIN_VERSION=\'"$(VERSION)"\'', makefile)
         self.assertIn("static const char *VERSION        = IMAGE_PLUGIN_VERSION;", source("image.c"))
