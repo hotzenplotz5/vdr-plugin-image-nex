@@ -1,3 +1,12 @@
+vdr-plugin-image-next (0.7.0~rc1-1) UNRELEASED; urgency=medium
+
+  * Prepare 0.7.0 release candidate after native, VDR 2.8.4 and
+    Skindesigner-enabled source builds succeeded in GitHub CI.
+  * Keep this package unreleased until VDR device testing is completed.
+  * Retain automatic true-colour OSD playback and MPEG-2 fallback.
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 25 Nov 2026 17:45:00 +0100
+
 vdr-plugin-image-next (0.6.3~dev-1) UNRELEASED; urgency=medium
 
   * Prepare true-colour OSD photo playback with MPEG-2 compatibility mode.
