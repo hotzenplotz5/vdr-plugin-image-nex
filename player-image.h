@@ -158,6 +158,7 @@ public:
 
   int SourceWidth() const { return m_nSourceWidth; }
   int SourceHeight() const { return m_nSourceHeight; }
+  bool DirectOutputActive() const { return m_directOutput.load(); }
   void SetDirectOutput(bool enabled, int width = 0, int height = 0);
   std::shared_ptr<cImage> TakeDirectPicture();
 };
