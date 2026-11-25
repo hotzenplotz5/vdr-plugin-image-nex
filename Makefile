@@ -100,9 +100,18 @@ CXXFLAGS += $(shell pkg-config --cflags libavcodec)
 LIBS += $(shell pkg-config --libs libswscale)
 CXXFLAGS += $(shell pkg-config --cflags libswscale)
 
-# Skindesigner API
-LIBS += $(shell pkg-config --libs libskindesignerapi 2>/dev/null || pkg-config --libs skindesignerapi 2>/dev/null || echo "-lskindesignerapi")
-INCLUDES += $(shell pkg-config --cflags libskindesignerapi 2>/dev/null) -I/usr/include/libskindesignerapi
+# Skindesigner integration is optional. WITH_SKINDESIGNER=0 forces a native-only build.
+WITH_SKINDESIGNER ?= auto
+SKINDESIGNER_PC := $(shell pkg-config --exists libskindesignerapi && echo libskindesignerapi || (pkg-config --exists skindesignerapi && echo skindesignerapi))
+ifneq ($(WITH_SKINDESIGNER),0)
+  ifneq ($(strip $(SKINDESIGNER_PC)),)
+    DEFINES += -DHAVE_SKINDESIGNER
+    CXXFLAGS += $(shell pkg-config --cflags $(SKINDESIGNER_PC))
+    LIBS += $(shell pkg-config --libs $(SKINDESIGNER_PC))
+  else
+    $(warning Skindesigner API not found; building with native image grid only)
+  endif
+endif
 
 ifndef WITHOUT_LIBEXIF
   CXXFLAGS += $(shell pkg-config --cflags libexif)
