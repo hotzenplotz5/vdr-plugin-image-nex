@@ -25,7 +25,7 @@ PLUGIN = image_next
 
 #### The version number of this plugin (taken from the main source file):
 
-VERSION = $(shell grep 'static const char \*VERSION *=' image.c | awk '{ print $$6 }' | sed -e 's/[";]//g')
+VERSION := $(strip $(shell cat VERSION))
 
 ### The directory environment:
 
@@ -64,6 +64,7 @@ SOFILE = libvdr-$(PLUGIN).so
  
 INCLUDES += -I$(VDRDIR)/include -I.
 DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+DEFINES += -DIMAGE_PLUGIN_VERSION='"$(VERSION)"'
 CXXFLAGS +=-D__STDC_CONSTANT_MACROS
 
 ifneq (exists, $(shell pkg-config libavcodec && echo exists))
