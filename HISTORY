@@ -1,4 +1,9 @@
 2026-11-25: Version 0.7.0-rc1
+- Add scoped ImageNext-Browse/Thumbnail/Play-v1.0 VDR services for SuiteOSD.
+- Reuse configured photo sources and async thumbnails; reject traversal and
+  symlink paths outside configured roots before decoding or playback.
+- Allow SuiteOSD to launch the existing slideshow control with explicit autoplay,
+  without changing normal standalone image_next playback.
 - Release-candidate source version after native VDR, VDR 2.8.4 and
   Skindesigner-enabled CI builds succeeded.
 - Includes direct true-color OSD playback, legacy MPEG-2 fallback and
