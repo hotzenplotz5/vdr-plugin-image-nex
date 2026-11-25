@@ -120,9 +120,4 @@ public:
   cFileSource *FindSource(const char *filename);
   };
 
-#ifdef HAVE_LIBEXIF
-void StopExifExtractor();
-void ClearExifExtractorTasks();
-#endif
-
 #endif //___DATA_H
