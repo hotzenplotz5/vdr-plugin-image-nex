@@ -4,7 +4,7 @@ VDR image_next — native image viewer and slideshow
 This fork builds on the VDR Image plugin and its 2022 FFmpeg updates.
 The native decoder uses libavcodec/libswscale rather than the historical
 imageplugin.sh conversion scripts. The current development version is
-0.6.2-dev (see HISTORY).
+0.6.3-dev (see HISTORY).
 
 Requirements
 ------------
@@ -28,6 +28,25 @@ Example:
 
 A missing or empty imagesources.conf will not expose the filesystem root.
 The menu instead displays "No image sources configured".
+
+Picture output
+--------------
+The plugin setup now offers three picture output modes:
+  Automatic (OSD / MPEG-2) — default. Uses true-color OSD if supported,
+                             otherwise the traditional MPEG-2 device output.
+  True-color OSD            — requests direct OSD first, with MPEG-2 fallback
+                             if the device cannot provide the requested area.
+  Legacy MPEG-2             — always uses the previous video-output path.
+
+This setting applies to full-screen images, slideshow, zoom and jump preview.
+The standard VDR remote-control keys remain unchanged. JPEG/PNG/other images
+are decoded by FFmpeg on the image worker thread, and only a ready ARGB frame
+is transferred to the foreground thread for the VDR cOsd::DrawImage call.
+A 32-bpp true-color OSD covering the current OSD resolution is required;
+this is a VDR output-device feature, not a VAAPI-only API.
+
+Existing UseDeviceStillPicture and LiveAudio settings are preserved. The
+former controls only the legacy MPEG-2 output mode.
 
 Display modes
 -------------
@@ -73,8 +92,9 @@ cache with a 64 MiB budget (up to 100 cached thumbnails). Cache entries
 include image file size and modification time to avoid serving outdated
 thumbnails when a file changes. EXIF orientation, including mirrored camera
 orientations, is applied to thumbnails and to full-size/zoomed playback.
-The image player still uses MPEG-2 still-image output; a direct VAAPI
-rendering path remains future work.
+The new player prefers full-screen true-color VDR OSD output without
+MPEG-2 recompression. The original MPEG-2 still-image path remains available
+as a compatibility fallback for output plugins without a suitable 32-bpp OSD.
 
 The existing imagecmds.conf functionality can run explicitly configured
 commands; only enable commands you trust.
@@ -100,10 +120,18 @@ are not a substitute for compiling against VDR and Skindesigner, nor for
 visual tests using the active Skindesigner skin. This development branch
 has not been installed on the user's VDR.
 
-Known limitation
-----------------
-Picture playback still encodes an MPEG-2 still image for the VDR output
-device. Direct VAAPI image output is not provided by this plugin.
+Known limitations
+-----------------
+OSD picture rendering has no independent hardware test yet. Actual RGB
+resolution depends on the device's advertised VDR OSD size; high-resolution
+photo quality cannot exceed the available OSD resolution. The legacy MPEG-2
+fallback remains present and unchanged for devices without true-color OSD.
+This is not a specialized VAAPI texture renderer (no VAAPI requirement).
+A JPEG embedded EXIF thumbnail can still be used for fast grid loading.
+
+On an actual VDR, verify fullscreen, slideshow, zoom, jump, image commands,
+native grid, Skindesigner grid and each Picture output setting before
+merging the draft pull request.
 
 Original authors: Kai Tobias Burwieck, Interpohl, Onno Kreuzinger,
 Andreas Brachold and contributors. GPL-2.0 (see COPYING).
