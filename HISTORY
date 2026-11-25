@@ -1,3 +1,12 @@
+2026-11-25: Version 0.6.3-dev
+- Add true-color ARGB image rendering directly through VDR's foreground OSD; no MPEG-2 re-encoding when supported.
+- Keep JPEG/PNG decoding and swscale in the background worker; hand off frames under a mutex to cControl.
+- Offer Automatic (OSD then MPEG-2), direct OSD and legacy MPEG-2 picture output modes.
+- Automatically fall back to MPEG-2 if a full-size 32-bpp OSD is unavailable or image upload fails.
+- Render slideshow status within the same picture OSD instead of competing with skin replay OSDs.
+- Apply EXIF camera rotation only once before manual rotation (removes doubled EXIF rotation).
+- Preserve legacy still-picture settings and allow startup without an MPEG-2 encoder.
+
 2026-11-25: Version 0.6.2-dev
 - Use the installed Skindesigner API version from pkg-config instead of a hard-coded 1.0.
 - Added a reference Skindesigner image grid XML template and documented its required installation in the active skin.
