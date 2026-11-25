@@ -28,6 +28,7 @@
 #include <vdr/plugin.h>
 #include <vdr/eitscan.h>
 #include <vdr/device.h>
+#include <vdr/osd.h>
 
 // --- cImageControl ---------------------------------------------------------
 
@@ -61,6 +62,13 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow)
  : cControl(player = new cImagePlayer(pNewSlideShow))
  , m_pCmdMenu(NULL)
  , m_pDisplayReplay(NULL)
+ , m_pictureOsd(NULL)
+ , m_pictureWidth(0)
+ , m_pictureHeight(0)
+ , m_pictureDrawnIndex(-1)
+ , m_pictureDrawnStatus(-1)
+ , m_pictureDrawnSlide(false)
+ , m_pictureDirty(true)
 {
   // Notity all cStatusMonitor
   cStatus::MsgReplaying(this, "image_next", NULL, true );
@@ -120,11 +128,26 @@ cImageControl::~cImageControl()
 
 void cImageControl::Show(void)
 {
+  // cControl::Show() runs on VDR's foreground thread. Only this thread may
+  // allocate and draw a raw OSD; the player thread supplies ARGB frames.
+  if (ImageSetup.m_nPictureOutput != 2 && player && !m_pictureOsd) {
+    if (OpenPictureOsd()) {
+      player->SetDirectOutput(true, m_pictureWidth, m_pictureHeight);
+      // The constructor may already have queued a legacy frame; enqueue
+      // the current image once more for direct output.
+      player->Convert(szRotation[m_nRotation]);
+      isyslog("imageplugin: using true-color OSD picture output (%dx%d)",
+              m_pictureWidth, m_pictureHeight);
+    } else {
+      isyslog("imageplugin: true-color OSD unavailable; retaining MPEG-2 picture output");
+    }
+  }
   ShowOSD();
 }
 
 void cImageControl::Hide(void)
 {
+  ClosePictureOsd();
   HideOSD();
     
   if(m_szLastShowStatusMsg)
@@ -132,8 +155,139 @@ void cImageControl::Hide(void)
   m_szLastShowStatusMsg = 0;
 }
 
+bool cImageControl::OpenPictureOsd(void)
+{
+  if (m_pictureOsd)
+    return true;
+
+  cDevice *device = cDevice::PrimaryDevice();
+  if (!device)
+    return false;
+  int width = 0;
+  int height = 0;
+  double pixelAspect = 1.0;
+  device->GetOsdSize(width, height, pixelAspect);
+  if (width <= 0 || height <= 0)
+    return false;
+
+  // A fullscreen 32-bpp OSD is optional: leave the traditional VDR
+  // MPEG-2 output untouched when the active output device cannot offer it.
+  HideOSD();
+  cOsd *osd = cOsdProvider::NewOsd(0, 0);
+  if (!osd)
+    return false;
+  tArea area = {0, 0, width - 1, height - 1, 32};
+  if (osd->CanHandleAreas(&area, 1) != oeOk ||
+      osd->SetAreas(&area, 1) != oeOk) {
+    delete osd;
+    return false;
+  }
+
+  m_pictureOsd = osd;
+  m_pictureWidth = width;
+  m_pictureHeight = height;
+  m_pictureDirty = true;
+  m_pictureDrawnIndex = -1;
+  m_pictureDrawnStatus = -1;
+  m_pictureImage.reset();
+  m_pictureOsd->DrawRectangle(0, 0, width - 1, height - 1, 0xFF000000);
+  m_pictureOsd->Flush();
+  return true;
+}
+
+void cImageControl::ClosePictureOsd(void)
+{
+  if (player)
+    player->SetDirectOutput(false);
+  if (m_pictureOsd) {
+    delete m_pictureOsd;
+    m_pictureOsd = NULL;
+  }
+  m_pictureImage.reset();
+  m_pictureWidth = 0;
+  m_pictureHeight = 0;
+  m_pictureDirty = true;
+}
+
+void cImageControl::DrawPictureOsd(void)
+{
+  if (!m_pictureOsd || !player)
+    return;
+
+  // Only the foreground thread accesses cOsd. The decoder transfers one
+  // shared image through a mutex-protected queue.
+  std::shared_ptr<cImage> freshFrame = player->TakeDirectPicture();
+  if (freshFrame) {
+    m_pictureImage = freshFrame;
+    m_pictureDirty = true;
+  }
+  if (!m_pictureImage)
+    return;
+
+  const int index = ImageCurrent();
+  const int status = static_cast<int>(m_eOSDStatusVisable);
+  if (!m_pictureDirty && m_pictureDrawnIndex == index &&
+      m_pictureDrawnStatus == status &&
+      m_pictureDrawnSlide == m_bSlideShowActiv)
+    return;
+
+  m_pictureOsd->DrawRectangle(0, 0, m_pictureWidth - 1,
+                              m_pictureHeight - 1, 0xFF000000);
+  m_pictureOsd->DrawImage(cPoint(0, 0), *m_pictureImage);
+
+  // Keep the replay information inside the same OSD, not in a separate
+  // skin OSD that could replace the fullscreen photo.
+  if (m_eOSDStatusVisable != eDisplayNothing) {
+    const cFont *font = cFont::GetFont(fontOsd);
+    if (font) {
+      const int bannerHeight = font->Height() + 22 +
+                               (m_eOSDStatusVisable == eDisplayProgress ? 10 : 0);
+      const int top = std::max(0, m_pictureHeight - bannerHeight);
+      m_pictureOsd->DrawRectangle(0, top, m_pictureWidth - 1,
+                                 m_pictureHeight - 1, 0xD0000000);
+      const char *name = FileName();
+      if (name) {
+        const char *slash = strrchr(name, '/');
+        if (slash)
+          name = slash + 1;
+      } else {
+        name = "";
+      }
+      cString label = cString::sprintf("%s  (%d/%d)%s", name,
+                          index + 1, ImageTotal(),
+                          m_bSlideShowActiv ? "  [Play]" : "");
+      m_pictureOsd->DrawText(14, top + 6, *label, 0xFFFFFFFF,
+                             0xD0000000, font, std::max(0, m_pictureWidth - 28));
+      if (m_eOSDStatusVisable == eDisplayProgress && ImageTotal() > 0) {
+        const int fill = m_pictureWidth * (index + 1) / ImageTotal();
+        m_pictureOsd->DrawRectangle(0, m_pictureHeight - 5,
+                                   m_pictureWidth - 1, m_pictureHeight - 1,
+                                   0xFF444444);
+        if (fill > 0)
+          m_pictureOsd->DrawRectangle(0, m_pictureHeight - 5,
+                                     fill - 1, m_pictureHeight - 1,
+                                     0xFF56A9FF);
+      }
+    }
+  }
+  m_pictureOsd->Flush();
+  m_pictureDirty = false;
+  m_pictureDrawnIndex = index;
+  m_pictureDrawnStatus = status;
+  m_pictureDrawnSlide = m_bSlideShowActiv;
+}
+
 void cImageControl::ShowOSD()
 {
+  if (m_pictureOsd) {
+    if (player && player->DirectOutputActive()) {
+      DrawPictureOsd();
+      return; // Do not create a competing skin replay OSD.
+    }
+    // A background decode failed to produce an ARGB frame. The player has
+    // already resumed its MPEG-2 path; release our empty true-color OSD.
+    ClosePictureOsd();
+  }
   switch(m_eOSDStatusVisable) {
     case eDisplayNothing:	HideOSD();      break;
     case eDisplayModeOnly:	ShowMode();     break;
@@ -627,6 +781,7 @@ eOSState cImageControl::ProcessKeyCommands(eKeys nKey)
           OriginalImage(false); 
         delete m_pCmdMenu;
         m_pCmdMenu = NULL;
+        Show(); // Restore true-color OSD after the command menu closes.
         return osContinue;
       default:
         return eOSRet;
@@ -707,31 +862,9 @@ void cImageControl::OriginalImage(bool bCached)
 {
   SetAspectRatioEnv();
   m_nZoomFactor = 0;
+  // EXIF orientation is applied once by cImagePlayer::Convert().
+  // Manual rotation is always relative to that orientation.
   m_nRotation = 2;
-#ifdef HAVE_LIBEXIF
-    cImageData* pImage = theSlideShow.GetImage();
-    if(pImage)
-    {
-        int nRot = pImage->DefaultRotate();
-        switch(nRot)
-        {
-        default:
-        case 0:
-          m_nRotation = 2;
-          break;
-        case 90:
-          m_nRotation = 1;
-          break;
-        case 180:
-          m_nRotation = 0;
-          break;
-        case 270:
-          m_nRotation = 3;
-          break;
-        }
-        //fprintf(stderr,"imageplugin: Use '%s' : Rotated %d(%d)\n", pImage->Name(), nRot, m_nRotation);
-    }
-#endif
   m_ePlayMode = ePlayModeNormal;
   if(!CheckAccess()
     || !player->Convert((bCached && m_nRotation == 2)?"":szRotation[m_nRotation]))
