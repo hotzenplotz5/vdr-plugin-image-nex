@@ -1,4 +1,5 @@
 2026-11-25: Version 0.6.2-dev
+- Use the installed Skindesigner API version from pkg-config instead of a hard-coded 1.0.
 - Added a reference Skindesigner image grid XML template and documented its required installation in the active skin.
 - Fall back to the native C++ grid when the active skin does not expose the Skindesigner plugin view.
 - Register Skindesigner lazily when necessary; close the plugin OSD view on exit and reuse it on Show().
