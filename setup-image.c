@@ -43,6 +43,7 @@ cImageSetup::cImageSetup(void)
   m_bShowNumbers = 1;
   m_bLiveAudio = 0;
   m_bUseDeviceStillPicture = 1;
+  m_nPictureOutput = 0;
   m_nDisplayMode = 0;
   m_nGridColumns = 0;
 
@@ -72,6 +73,7 @@ bool cImageSetup::SetupParse(const char *szName, const char *szValue)
   else ParseInteger("LiveAudio",     m_bLiveAudio,0,1)
   else ParseInteger("HideMainMenu",  m_bHideMenu,0,1)
   else ParseInteger("UseDeviceStillPicture",  m_bUseDeviceStillPicture,0,1)
+  else ParseInteger("PictureOutput",   m_nPictureOutput,0,2)
   else ParseInteger("DisplayMode",   m_nDisplayMode,0,2)
   else ParseInteger("GridColumns",   m_nGridColumns,0,20)
   else return false;
@@ -91,6 +93,7 @@ void cMenuSetupImage::Store(void)
   SetupStore("BorderWidth",             ImageSetup.m_nBorderWidth);
   SetupStore("HideMainMenu",            ImageSetup.m_bHideMenu);
   SetupStore("UseDeviceStillPicture",   ImageSetup.m_bUseDeviceStillPicture);
+  SetupStore("PictureOutput",           ImageSetup.m_nPictureOutput);
   SetupStore("DisplayMode",             ImageSetup.m_nDisplayMode);
   SetupStore("GridColumns",             ImageSetup.m_nGridColumns);
 }
@@ -129,6 +132,12 @@ cMenuSetupImage::cMenuSetupImage(void)
   Add(new cMenuEditBoolItem(tr("Hide main menu entry"),                    
           &m_tmpSetup.m_bHideMenu,    
           trVDR("no"), trVDR("yes")));
+
+  static const char *outputModes[3] = {
+    "Automatic (OSD / MPEG-2)", "True-color OSD", "Legacy MPEG-2"
+  };
+  Add(new cMenuEditStraItem(tr("Picture output"), &m_tmpSetup.m_nPictureOutput,
+                           3, outputModes));
 
   Add(new cMenuEditBoolItem(tr("Output via DeviceStillPicture"),                    
           &m_tmpSetup.m_bUseDeviceStillPicture,    
