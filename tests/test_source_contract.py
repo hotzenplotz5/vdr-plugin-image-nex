@@ -114,6 +114,8 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn("HandleImageNextSuiteService(Id, Data)", plugin)
         self.assertIn("WithinSource(", impl)
         self.assertIn("realpath(", impl)
+        self.assertIn("IsFileWithinSource(src, picture->Name())", impl)
+        self.assertIn("slideshow->Del(picture)", impl)
         self.assertIn('segment == ".."', impl)
         self.assertIn("ImageNextCachedThumbnail(", impl)
         self.assertIn("cImageControl::SetSlideShow(slideshow, request.slideshow)", impl)
