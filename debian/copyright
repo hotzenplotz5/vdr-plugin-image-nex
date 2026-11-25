@@ -1,43 +1,34 @@
-Upstream Homepage:
-    http://vdr-image.berlios.de/
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: vdr-plugin-image-next
+Source: https://github.com/hotzenplotz5/vdr-plugin-image-nex
+Comment: This fork keeps the original copyright and license notices.
+ The legacy COPYING file contains the full GPL version 2 text; the
+ pre-existing Debian copyright declaration permits GPL v2 or later.
 
-Upstream Authors:
-    Andreas Brachold <vdr04-at-deltab.de> (maintainer)
-    Kai Tobias Burwieck <kai-at-burwieck.net>
-    "Interpohl" <interpohl-at-vdr-portal.de>
-    Onno Kreuzinger <o.kreuzinger-at-kreuzinger.biz>
+Files: *
+Copyright: 2003 Kai Tobias Burwieck <kai@burwieck.net>
+ 2004 "Interpohl" <interpohl@vdr-portal.de>
+ 2004 Onno Kreuzinger <o.kreuzinger@kreuzinger.biz>
+ 2004-2011 Andreas Brachold <vdr07@deltab.de>
+ 2026 Holger Schvestka <hotzenplotz5@gmx.de>
+ and additional contributors named in source file headers and HISTORY
+License: GPL-2+
 
-Debian Maintainers:
-    Tobias Grimm <etobi@debian.org>
-    Thomas Günther <tom@toms-cafe.de>
-    Thomas Schmidt <tschmidt@debian.org>
+Files: debian/*
+Copyright: 2004 Andreas Brachold, "Interpohl", Onno Kreuzinger
+ 2004-2010 Tobias Grimm, Thomas Günther, Thomas Schmidt
+ 2026 Holger Schvestka <hotzenplotz5@gmx.de>
+License: GPL-2+
 
-Copyright:
-    (C) 2004 - 2009 Andreas Brachold, Kai Tobias Burwieck, "Interpohl",
-                    Onno Kreuzinger
-
-Copyright (Debian packaging):
-    (C) 2004        Andreas Brachold, "Interpohl", Onno Kreuzinger
-    (C) 2004 - 2010 Tobias Grimm, Thomas Günther, Thomas Schmidt
-
-License:
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-    The complete text of the GNU General Public License can be found
-    in /usr/share/common-licenses/GPL-2 on most Debian systems.
-
-License (Debian packaging):
-    The Debian packaging is licensed under the GPL, version 2 or any
-    later version, see /usr/share/common-licenses/GPL-2.
+License: GPL-2+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License as
+ published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ .
+ The full license text is available in COPYING in the source tree,
+ and on Debian systems at /usr/share/common-licenses/GPL-2.
