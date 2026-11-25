@@ -31,6 +31,20 @@ Example:
 A missing or empty imagesources.conf will not expose the filesystem root.
 The menu instead displays "No image sources configured".
 
+SuiteOSD image gallery (native VDR services)
+------------------------------------------
+The SuiteOSD plugin can request configured photo sources, browse folders,
+receive thumbnails from image_next's existing asynchronous cache and launch
+a selected photo/slideshow through the existing image_next player. No second
+decoder, player or HTTP API is added. Every relative path is validated
+against an imagesources.conf root after resolving symlinks.
+
+The versioned C++ VDR plugin service ABI is documented in
+docs/suiteosd-service.md and image-next-service-v1.h. Both plugins must
+be built against the same VDR ABI. SuiteOSD's initial gallery is
+implemented on its main development branch (0.9.3-dev). Actual VDR
+remote-control and TV output acceptance is still required.
+
 Picture output
 --------------
 The plugin setup now offers three picture output modes:
