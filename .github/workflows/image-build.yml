@@ -28,8 +28,10 @@ jobs:
       - name: Native build without Skindesigner
         run: make -j2 WITH_SKINDESIGNER=0 libvdr-image_next.so
 
-      - name: Confirm native plugin
-        run: test -s libvdr-image_next.so
+      - name: Confirm native plugin embeds the VERSION value
+        run: |
+          test -s libvdr-image_next.so
+          strings libvdr-image_next.so | grep -Fx "$(cat VERSION)"
 
       - name: Build Debian package without root installation
         run: dpkg-buildpackage --build=binary --no-sign
@@ -39,6 +41,8 @@ jobs:
           deb=$(find .. -maxdepth 1 -name 'vdr-plugin-image-next_*.deb' -print -quit)
           test -n "$deb"
           dpkg-deb --field "$deb" Version Depends
+          expected="$(sed 's/-/~/g' VERSION)-1"
+          test "$(dpkg-deb --field "$deb" Version)" = "$expected"
           dpkg-deb --contents "$deb" | grep -F 'libvdr-image_next.so.'
           dpkg-deb --contents "$deb" | grep -F 'plug-image_next-grid.xml'
 
