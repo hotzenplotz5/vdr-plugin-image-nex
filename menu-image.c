@@ -25,6 +25,7 @@
 #include <atomic>
 #include <functional>
 #include <algorithm>
+#include <vector>
 
 #include "image.h"
 #include "menu.h"
@@ -59,6 +60,15 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
     char tempThumbPath[256];
     bool useTempThumb = false;
     const char* loadPath = path;
+    int rotation = 0;
+#ifdef HAVE_LIBEXIF
+    ImageMirror mirror = NONE;
+    // EXIF orientation belongs to the original JPEG, not the extracted
+    // thumbnail, which may lack its own orientation metadata.
+    GetRotationFromExifData(path, rotation, mirror);
+#else
+    const int mirror = 0;
+#endif
 
 #ifdef HAVE_LIBEXIF
     // EXIF Thumbnails are instantly loaded compared to 24 Megapixel JPEGs
@@ -129,12 +139,6 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
         return nullptr;
     }
     
-    // Speed up decoding for full JPEGs by rendering at lower resolution (1/8)
-    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
-        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
-        codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
-    }
-
     if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
@@ -142,7 +146,14 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
         return nullptr;
     }
 
-    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
+    // Set lowres only after copying codec parameters: before that codec_id
+    // may still be unset and the optimization would never activate.
+    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
+        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
+        codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
+    }
+
+    if (avcodec_open2(codec_ctx, codec, nullptr) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         if (useTempThumb) unlink(tempThumbPath);
@@ -198,34 +209,60 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
     }
     av_packet_free(&pkt);
 
-    std::shared_ptr<cImage> retImage = nullptr;
+    std::shared_ptr<cImage> retImage;
     if (decoded && frame->width > 0 && frame->height > 0) {
-        double aspect = (double)frame->height / frame->width;
-        int newWidth = maxWidth;
-        int newHeight = newWidth * aspect;
+        const bool quarterTurn = rotation == 90 || rotation == 270;
+        const int displayW = quarterTurn ? frame->height : frame->width;
+        const int displayH = quarterTurn ? frame->width : frame->height;
+        const double aspect = static_cast<double>(displayH) / displayW;
+        int newWidth = std::max(1, maxWidth);
+        int newHeight = std::max(1, static_cast<int>(newWidth * aspect));
         if (newHeight > maxHeight) {
-            newHeight = maxHeight;
-            if (aspect > 0.0) newWidth = newHeight / aspect;
+            newHeight = std::max(1, maxHeight);
+            newWidth = std::max(1, static_cast<int>(newHeight / aspect));
         }
-        if (newWidth <= 0) newWidth = 1;
-        if (newHeight <= 0) newHeight = 1;
+        // Scale in source orientation, then apply EXIF rotation/mirroring.
+        const int scaledW = quarterTurn ? newHeight : newWidth;
+        const int scaledH = quarterTurn ? newWidth : newHeight;
 
-        esyslog("imageplugin: Decoding finished, scaling to %dx%d...", newWidth, newHeight);
-
-        retImage = std::make_shared<cImage>(cSize(newWidth, newHeight));
-        if (retImage && retImage->Data()) {
-            SwsContext *sws_ctx = sws_getContext(
-                frame->width, frame->height, (AVPixelFormat)frame->format,
-                newWidth, newHeight, AV_PIX_FMT_BGRA,
-                SWS_FAST_BILINEAR, nullptr, nullptr, nullptr
-            );
-
-            if (sws_ctx) {
-                uint8_t *dest[4] = { (uint8_t*)const_cast<tColor*>(retImage->Data()), nullptr, nullptr, nullptr };
-                int dest_linesize[4] = { newWidth * 4, 0, 0, 0 };
-                sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height, dest, dest_linesize);
-                sws_freeContext(sws_ctx);
+        SwsContext *sws_ctx = sws_getContext(
+            frame->width, frame->height, static_cast<AVPixelFormat>(frame->format),
+            scaledW, scaledH, AV_PIX_FMT_BGRA,
+            SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+        if (sws_ctx) {
+            std::vector<tColor> scaled(static_cast<size_t>(scaledW) * scaledH);
+            uint8_t *dest[4] = {
+                reinterpret_cast<uint8_t*>(scaled.data()), nullptr, nullptr, nullptr
+            };
+            int destLinesize[4] = {scaledW * static_cast<int>(sizeof(tColor)), 0, 0, 0};
+            if (sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height,
+                          dest, destLinesize) > 0) {
+                retImage = std::make_shared<cImage>(cSize(newWidth, newHeight));
+                if (retImage && retImage->Data()) {
+                    tColor *pixels = const_cast<tColor*>(retImage->Data());
+                    for (int y = 0; y < newHeight; ++y) {
+                        for (int x = 0; x < newWidth; ++x) {
+                            int dx = x;
+                            int dy = y;
+#ifdef HAVE_LIBEXIF
+                            if (mirror == MIRROR) dx = newWidth - 1 - dx;
+                            if (mirror == FLIP) dy = newHeight - 1 - dy;
+#endif
+                            int sx = dx, sy = dy;
+                            switch (rotation) {
+                                case 90:  sx = dy; sy = scaledH - 1 - dx; break;
+                                case 180: sx = scaledW - 1 - dx; sy = scaledH - 1 - dy; break;
+                                case 270: sx = scaledW - 1 - dy; sy = dx; break;
+                                default: break;
+                            }
+                            pixels[y * newWidth + x] = scaled[sy * scaledW + sx];
+                        }
+                    }
+                } else {
+                    retImage.reset();
+                }
             }
+            sws_freeContext(sws_ctx);
         }
     }
 
