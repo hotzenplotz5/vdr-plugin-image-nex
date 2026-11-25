@@ -83,6 +83,25 @@ bool WithinSource(cFileSource *src, const std::string &relative,
     return true;
 }
 
+// The legacy slideshow scanner follows symbolic links. A service caller
+// must never receive or play such an entry outside the configured source.
+bool IsFileWithinSource(cFileSource *src, const char *file)
+{
+    if (!src || !src->BaseDir() || !file)
+        return false;
+    char root[PATH_MAX] = {0};
+    char resolved[PATH_MAX] = {0};
+    if (!realpath(src->BaseDir(), root) || !realpath(file, resolved))
+        return false;
+    const std::string base(root), full(resolved);
+    if (full != base && (full.size() <= base.size() ||
+        full.compare(0, base.size(), base) != 0 ||
+        (base != "/" && full[base.size()] != '/')))
+        return false;
+    struct stat st;
+    return stat(resolved, &st) == 0 && S_ISREG(st.st_mode);
+}
+
 bool IsPhoto(const std::string &relative)
 {
     const size_t dot = relative.find_last_of('.');
@@ -201,6 +220,18 @@ bool StartPlayback(imagenext::Play &request)
                   name.c_str(), itFile);
     cSlideShow *slideshow = new cSlideShow(&item);
     if (!slideshow->Load() || !slideshow->Count()) {
+        delete slideshow;
+        return true;
+    }
+    // Filter the legacy recursive scanner output: it follows symlinks,
+    // including entries that escape the configured imagesources.conf root.
+    for (cImageData *picture = slideshow->First(); picture; ) {
+        cImageData *next = slideshow->Next(picture);
+        if (!IsFileWithinSource(src, picture->Name()))
+            slideshow->Del(picture);
+        picture = next;
+    }
+    if (!slideshow->Count()) {
         delete slideshow;
         return true;
     }
