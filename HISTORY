@@ -1,6 +1,13 @@
 2026-11-25: Version 0.6.2-dev
 - Use the installed Skindesigner API version from pkg-config instead of a hard-coded 1.0.
 - Added a reference Skindesigner image grid XML template and documented its required installation in the active skin.
+- Corrected grid cell coordinates from percentages (0..100) to the normalized values (0..1) required by Skindesigner.
+- Added native-grid fallback when Skindesigner OSD initialization is unavailable.
+- Render only the currently visible native grid tiles rather than iterating an entire photo collection.
+- Limit thumbnail cache use to 64 MiB, invalidate changed files, and ignore stale background tasks.
+- Apply all EXIF orientations (including mirroring) for thumbnails, slideshow, zoom and jump previews.
+- Use unique temporary EXIF JPEG files and handle failed image conversions gracefully.
+- Add dependency-free source contract tests for offline regression checks.
 - Fall back to the native C++ grid when the active skin does not expose the Skindesigner plugin view.
 - Register Skindesigner lazily when necessary; close the plugin OSD view on exit and reuse it on Show().
 - Make the Skindesigner build dependency optional.
