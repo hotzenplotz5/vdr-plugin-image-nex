@@ -17,8 +17,10 @@
 
 #include "menu.h"
 #include "data.h"
+#ifdef HAVE_SKINDESIGNER
 #include <libskindesignerapi/skindesignerapi.h>
 #include <libskindesignerapi/skindesignerosdbase.h>
+#endif
 
 // ----------------------------------------------------------------
 class cMenuImageBrowse:public cMenuBrowse {
@@ -53,6 +55,7 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
+#ifdef HAVE_SKINDESIGNER
 class cMenuImageSkinDesigner : public skindesignerapi::cSkindesignerOsdObject {
 private:
     cFileSource *source;
@@ -77,6 +80,7 @@ public:
     virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
 };
+#endif
 
 void StopThumbLoader();
 
