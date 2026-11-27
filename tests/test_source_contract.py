@@ -101,6 +101,24 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn('SetupStore("PictureOutput"', setup)
         self.assertIn("return bQueueEmpty", player)
 
+    def test_replay_control_opens_osd_after_vdr_attach(self):
+        # VDR's cControl::Attach() attaches the player but never calls
+        # cControl::Show(). An image launched from a SuiteOSD menu must open
+        # its fullscreen OSD after that menu returns osEnd.
+        control = source("control-image.c")
+        header = source("control-image.h")
+        self.assertIn("bool m_pictureOutputInitialized;", header)
+        self.assertIn("m_pictureOutputInitialized(false)", control)
+        self.assertIn("m_pictureOutputInitialized = true;", control)
+        self.assertIn(
+            "if (!m_pictureOutputInitialized && player && player->IsAttached())",
+            control,
+        )
+        process = control.split("eOSState cImageControl::ProcessKey(eKeys nKey)", 1)[1]
+        self.assertLess(process.index("    Show();"), process.index("  SlideImage();"))
+        self.assertIn("cControl::Launch(pControl)", control)
+        self.assertNotIn("Show();", control.split("void cImageControl::SetSlideShow(cSlideShow * pNewSlideShow, bool autoplay)", 1)[1].split("cImageControl::cImageControl(", 1)[0])
+
     def test_suiteosd_native_photo_services(self):
         bridge = source("image-next-service-v1.h")
         impl = source("image-next-service.c")
