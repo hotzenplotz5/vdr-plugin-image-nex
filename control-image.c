@@ -78,6 +78,10 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow, bool autoplay)
  , m_pictureDirty(true)
  , m_pictureOutputInitialized(false)
 {
+  // VDR normally blocks up to 1 second waiting for a remote key.
+  // Request rapid foreground iterations only until the first picture is
+  // rendered, then return to the normal idle cadence.
+  SetNeedsFastResponse(true);
   // Notity all cStatusMonitor
   cStatus::MsgReplaying(this, "image_next", NULL, true );
   
@@ -145,6 +149,7 @@ void cImageControl::Show(void)
   // allocate and draw a raw OSD; the player thread supplies ARGB frames.
   if (ImageSetup.m_nPictureOutput != 2 && player && !m_pictureOsd) {
     if (OpenPictureOsd()) {
+      SetNeedsFastResponse(true);
       player->SetDirectOutput(true, m_pictureWidth, m_pictureHeight);
       // The constructor may already have queued a legacy frame; enqueue
       // the current image once more for direct output.
@@ -152,8 +157,12 @@ void cImageControl::Show(void)
       isyslog("imageplugin: using true-color OSD picture output (%dx%d)",
               m_pictureWidth, m_pictureHeight);
     } else {
+      SetNeedsFastResponse(false);
       isyslog("imageplugin: true-color OSD unavailable; retaining MPEG-2 picture output");
     }
+  } else if (!m_pictureOsd) {
+    // Explicit legacy output remains event-driven by VDR as before.
+    SetNeedsFastResponse(false);
   }
   ShowOSD();
 }
@@ -210,6 +219,7 @@ bool cImageControl::OpenPictureOsd(void)
 
 void cImageControl::ClosePictureOsd(void)
 {
+  SetNeedsFastResponse(false);
   if (player)
     player->SetDirectOutput(false);
   if (m_pictureOsd) {
@@ -284,6 +294,8 @@ void cImageControl::DrawPictureOsd(void)
     }
   }
   m_pictureOsd->Flush();
+  // No need for VDR's 10-ms foreground cadence after first image arrives.
+  SetNeedsFastResponse(false);
   m_pictureDirty = false;
   m_pictureDrawnIndex = index;
   m_pictureDrawnStatus = status;
