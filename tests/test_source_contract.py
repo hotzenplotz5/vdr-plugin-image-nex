@@ -110,6 +110,11 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn("bool m_pictureOutputInitialized;", header)
         self.assertIn("m_pictureOutputInitialized(false)", control)
         self.assertIn("m_pictureOutputInitialized = true;", control)
+        self.assertIn("SetNeedsFastResponse(true);", control)
+        self.assertIn("SetNeedsFastResponse(false);", control)
+        picture = control.split("void cImageControl::DrawPictureOsd(void)", 1)[1].split("void cImageControl::ShowOSD()", 1)[0]
+        self.assertIn("SetNeedsFastResponse(false);", picture)
+
         self.assertIn(
             "if (!m_pictureOutputInitialized && player && player->IsAttached())",
             control,
