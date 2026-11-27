@@ -67,6 +67,9 @@ class cImageControl
   int m_pictureDrawnStatus;
   bool m_pictureDrawnSlide;
   bool m_pictureDirty;
+  // VDR cControl::Launch/Attach does not call Show() for replay controls.
+  // Open the photo OSD once on the foreground ProcessKey path instead.
+  bool m_pictureOutputInitialized;
   /** Faked Marks for Images*/
   cMarks m_Marks;
 
