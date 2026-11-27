@@ -124,6 +124,16 @@ class ImageGridContractTests(unittest.TestCase):
         self.assertIn("cControl::Launch(pControl)", control)
         self.assertNotIn("Show();", control.split("void cImageControl::SetSlideShow(cSlideShow * pNewSlideShow, bool autoplay)", 1)[1].split("cImageControl::cImageControl(", 1)[0])
 
+    def test_back_stops_replay_even_during_decode(self):
+        control = source("control-image.c")
+        stop = control.split("eOSState cImageControl::ProcessKeyStopped()", 1)[1].split("void cImageControl::ProcessKeyBeginJump()", 1)[0]
+        self.assertNotIn("IsConvertRunning()", stop)
+        self.assertIn("return osEnd;", stop)
+        destructor = control.split("cImageControl::~cImageControl()", 1)[1].split("void cImageControl::Show", 1)[0]
+        self.assertLess(destructor.index("Stop();"), destructor.index("Hide();"))
+        player = source("player-image.c").split("cImagePlayer::~cImagePlayer()", 1)[1].split("void cImagePlayer::Activate", 1)[0]
+        self.assertLess(player.index("Detach();"), player.index("theSlideShow.Shutdown();"))
+
     def test_suiteosd_native_photo_services(self):
         bridge = source("image-next-service-v1.h")
         impl = source("image-next-service.c")

@@ -129,13 +129,10 @@ cImageControl::~cImageControl()
 {
   // Notity cleanup all cStatusMonitor
   cStatus::MsgReplaying(this, "image_next", NULL, false);
-  // Free OSD Data
-  Hide();
-  // Stop Playback
+  // Stop the worker and detach while the direct-output mode is still
+  // active; hiding first would send it back into legacy video output.
   Stop();
-  if(player)
-	  delete player;
-  player = NULL;
+  Hide();
 }
 
 void cImageControl::Show(void)
@@ -737,12 +734,10 @@ eOSState cImageControl::ProcessKeyStopped()
         return osContinue;
     }
   
-    if(IsConvertRunning())
-        return osContinue;
   }
-  
-  HideOSD();
-  Stop();
+
+  // VDR owns the control shutdown. Do not discard Back/Stop during decode.
+  // The destructor stops the worker before releasing its resources.
   return osEnd;
 }
 
@@ -1160,8 +1155,10 @@ void cImageControl::SlideImage()
 
 void cImageControl::Stop(void)
 {
-  delete player;
+  cImagePlayer *old = player;
   player = NULL;
+  SetPlayer(NULL);
+  delete old;
 }
 
 void cImageControl::IncSlideTime(void)

@@ -69,7 +69,9 @@ bool cImagePlayer::GetIndex(int &nCurrent, int &nTotal, bool /*bSnapToIFrame*/)
 
 cImagePlayer::~cImagePlayer()
 {
-  // Remove Slideshow
+  // Detach stops the worker via Activate(false) while the derived
+  // player, queue and slideshow are still alive.
+  Detach();
   theSlideShow.Shutdown();
 }
 
