@@ -1,22 +1,33 @@
-ffmpeg-usage
-------------
+vdr-plugin-image-next: Debian/Ubuntu packaging
+================================================
 
-The image plugin compiles with Debian's ffmpeg-free version, but it won't work,
-because an MPEG2 encoder is required, which has been removed from ffmpeg-free.
+The original ffmpeg-free/MPEG-2 encoder warning in this file (2008) is
+obsolete. The fork can render directly through VDR's true-colour OSD,
+and keeps MPEG-2 still-image output as a compatibility fallback.
 
-Therefore, this plug-in should use the ffmpeg-Version (libav*cvs) from 
-Cristian Marillats Dbeian Multimedia Repository
+Runtime modes:
+  Automatic (default)    - prefer native 32-bpp VDR OSD, else MPEG-2
+  True-color OSD         - request native OSD, fallback when unavailable
+  Legacy MPEG-2         - explicitly use old still-image device output
 
-    http://debian-multimedia.org/
+The Skindesigner API is an optional compile-time dependency. The build
+uses pkg-config when libskindesignerapi is present; it also builds without
+that library. Do not add a hard dependency on libskindesignerapi-dev for
+platforms that do not ship it.
 
-It's technically possible to use MPEG1 (which is available in ffmpeg-free)
-instead of MPEG2, but the image quality then seems to be really bad
-on some pictures (flickering in the MPEG-still image loop).
+Skindesigner view template
+--------------------------
+The package installs:
 
-Maybe with some more tweaking, MPEG1 / ffmpeg-free can be used, but
-for know I decided to stay with the non-free ffmpeg.
+  /usr/share/vdr-plugin-image-next/skindesigner/plug-image_next-grid.xml
 
-The build-dependencies to libavutilcvs-dev, liblame-dev and libxvidcore-dev
-are required because of a bug in libavcodeccvs51-dev (20070329-0.0etch1).
+Skindesigner templates are skin-specific. This file MUST be placed into
+the xmlfiles/ directory of the ACTIVE Skindesigner skin, using the skin's
+own installation mechanism, and the skin must be reloaded. The package
+does not silently modify installed third-party skins. Native grid remains
+available if the XML view is absent. The plugin's own README explains
+the expected template name and native fallback.
 
- -- Tobias Grimm <tg@e-tobi.net>  Wed, 21 May 2008 20:16:44 +0200
+The package never installs sample image sources automatically, does not
+alter the user's photographs, and does not modify VDR's existing output
+plugin configuration.

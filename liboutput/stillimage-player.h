@@ -36,6 +36,8 @@ protected:
   bool Wait();
   
   virtual bool Worker(bool bDoIt) = 0;
+  // The derived image player can decode frames for the foreground-thread OSD.
+  virtual bool DirectOutput(void) const { return false; }
 };
 
 

@@ -25,7 +25,7 @@ PLUGIN = image_next
 
 #### The version number of this plugin (taken from the main source file):
 
-VERSION = $(shell grep 'static const char \*VERSION *=' image.c | awk '{ print $$6 }' | sed -e 's/[";]//g')
+VERSION := $(strip $(shell cat VERSION))
 
 ### The directory environment:
 
@@ -64,6 +64,7 @@ SOFILE = libvdr-$(PLUGIN).so
  
 INCLUDES += -I$(VDRDIR)/include -I.
 DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+DEFINES += -DIMAGE_PLUGIN_VERSION='"$(VERSION)"'
 CXXFLAGS +=-D__STDC_CONSTANT_MACROS
 
 ifneq (exists, $(shell pkg-config libavcodec && echo exists))
@@ -100,9 +101,19 @@ CXXFLAGS += $(shell pkg-config --cflags libavcodec)
 LIBS += $(shell pkg-config --libs libswscale)
 CXXFLAGS += $(shell pkg-config --cflags libswscale)
 
-# Skindesigner API
-LIBS += $(shell pkg-config --libs libskindesignerapi 2>/dev/null || pkg-config --libs skindesignerapi 2>/dev/null || echo "-lskindesignerapi")
-INCLUDES += $(shell pkg-config --cflags libskindesignerapi 2>/dev/null) -I/usr/include/libskindesignerapi
+# Skindesigner integration is optional. WITH_SKINDESIGNER=0 forces a native-only build.
+WITH_SKINDESIGNER ?= auto
+SKINDESIGNER_PC := $(shell pkg-config --exists libskindesignerapi && echo libskindesignerapi || (pkg-config --exists skindesignerapi && echo skindesignerapi))
+ifneq ($(WITH_SKINDESIGNER),0)
+  ifneq ($(strip $(SKINDESIGNER_PC)),)
+    DEFINES += -DHAVE_SKINDESIGNER
+    DEFINES += -DLIBSKINDESIGNERAPIVERSION='"$(shell pkg-config --modversion $(SKINDESIGNER_PC))"'
+    CXXFLAGS += $(shell pkg-config --cflags $(SKINDESIGNER_PC))
+    LIBS += $(shell pkg-config --libs $(SKINDESIGNER_PC))
+  else
+    $(warning Skindesigner API not found; building with native image grid only)
+  endif
+endif
 
 ifndef WITHOUT_LIBEXIF
   CXXFLAGS += $(shell pkg-config --cflags libexif)
@@ -112,7 +123,7 @@ endif
 
 ### The object files (add further files here):
 
-OBJS = image.o data.o menu.o data-image.o menu-image.o \
+OBJS = image.o data.o menu.o data-image.o menu-image.o image-next-service.o \
  setup-image.o player-image.o control-image.o commands.o menu-commands.o \
  list.o \
  liboutput/encode.o liboutput/stillimage.o liboutput/stillimage-player.o \
@@ -122,6 +133,9 @@ OBJS = image.o data.o menu.o data-image.o menu-image.o \
 ifndef WITHOUT_LIBEXIF
   OBJS    += exif.o
 endif
+
+### Install the reference XML as a package asset, not into arbitrary third-party skins.
+SKINDESIGNER_TEMPLATE_DIR ?= /usr/share/vdr-plugin-image-next/skindesigner
 
 ### The main target:
 
@@ -136,10 +150,13 @@ all: $(SOFILE) i18n
 
 MAKEDEP = $(CXX) -MM -MG
 DEPFILE = .dependencies
-$(DEPFILE): makefile
+$(DEPFILE): Makefile
 	@$(MAKEDEP) $(DEFINES) $(INCLUDES) $(OBJS:%.o=%.c) *.h > $@
 
 -include $(DEPFILE)
+
+# Version changes must rebuild the object that embeds IMAGE_PLUGIN_VERSION.
+image.o: VERSION
 
 ### Internationalization (I18N):
 
@@ -175,7 +192,10 @@ $(SOFILE): $(OBJS)
 install-lib: $(SOFILE)
 	install -D $^ $(DESTDIR)$(LIBDIR)/$^.$(APIVERSION)
 
-install: install-lib install-i18n
+install-skin-template:
+	install -D -m644 skindesigner/plug-image_next-grid.xml $(DESTDIR)$(SKINDESIGNER_TEMPLATE_DIR)/plug-image_next-grid.xml
+
+install: install-lib install-i18n install-skin-template
 
 dist: $(I18Npo) clean
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)

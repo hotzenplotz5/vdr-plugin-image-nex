@@ -35,6 +35,8 @@ public:
   int m_bLiveAudio;
   /* Use as output DeviceStillPicture */
   int m_bUseDeviceStillPicture;
+  // 0 = Automatic (prefer direct OSD), 1 = direct OSD, 2 = MPEG-2 legacy.
+  int m_nPictureOutput;
   
   /* 0 = List, 1 = Grid View */
   int m_nDisplayMode;

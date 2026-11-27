@@ -1,3 +1,41 @@
+2026-11-25: Version 0.7.0-rc1
+- Add scoped ImageNext-Browse/Thumbnail/Play-v1.0 VDR services for SuiteOSD.
+- Reuse configured photo sources and async thumbnails; reject traversal and
+  symlink paths outside configured roots before decoding or playback.
+- Allow SuiteOSD to launch the existing slideshow control with explicit autoplay,
+  without changing normal standalone image_next playback.
+- Release-candidate source version after native VDR, VDR 2.8.4 and
+  Skindesigner-enabled CI builds succeeded.
+- Includes direct true-color OSD playback, legacy MPEG-2 fallback and
+  the restored native/Skindesigner photo grid.
+- Release tag, installation and on-device validation remain pending.
+
+2026-11-25: Version 0.6.3-dev
+- Add true-color ARGB image rendering directly through VDR's foreground OSD; no MPEG-2 re-encoding when supported.
+- Keep JPEG/PNG decoding and swscale in the background worker; hand off frames under a mutex to cControl.
+- Offer Automatic (OSD then MPEG-2), direct OSD and legacy MPEG-2 picture output modes.
+- Automatically fall back to MPEG-2 if a full-size 32-bpp OSD is unavailable or image upload fails.
+- Render slideshow status within the same picture OSD instead of competing with skin replay OSDs.
+- Apply EXIF camera rotation only once before manual rotation (removes doubled EXIF rotation).
+- Preserve legacy still-picture settings and allow startup without an MPEG-2 encoder.
+
+2026-11-25: Version 0.6.2-dev
+- Use the installed Skindesigner API version from pkg-config instead of a hard-coded 1.0.
+- Added a reference Skindesigner image grid XML template and documented its required installation in the active skin.
+- Corrected grid cell coordinates from percentages (0..100) to the normalized values (0..1) required by Skindesigner.
+- Added native-grid fallback when Skindesigner OSD initialization is unavailable.
+- Render only the currently visible native grid tiles rather than iterating an entire photo collection.
+- Limit thumbnail cache use to 64 MiB, invalidate changed files, and ignore stale background tasks.
+- Apply all EXIF orientations (including mirroring) for thumbnails, slideshow, zoom and jump previews.
+- Use unique temporary EXIF JPEG files and handle failed image conversions gracefully.
+- Add dependency-free source contract tests for offline regression checks.
+- Fall back to the native C++ grid when the active skin does not expose the Skindesigner plugin view.
+- Register Skindesigner lazily when necessary; close the plugin OSD view on exit and reuse it on Show().
+- Make the Skindesigner build dependency optional.
+- Do not default to browsing / when imagesources.conf is absent.
+- Do not generate folder.jpg inside user photo directories.
+- Bring the plugin version string in sync with the changelog and refresh the README.
+
 VDR Plugin 'image' Revision History
 -----------------------------------
 

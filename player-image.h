@@ -16,12 +16,14 @@
 #define __STL_CONFIG_H
 
 #include <memory>
+#include <atomic>
 #include <vdr/thread.h>
 #include <vdr/player.h>
 #include <liboutput/stillimage-player.h>
 
 class cImageData;
-class cSlideShow;    
+class cSlideShow;
+class cImage;    
 
 struct cDecodeRequest {
     
@@ -37,6 +39,7 @@ struct cDecodeRequest {
   int nCropX;      // X offset for cropping in original image pixels (or zoomed image pixels for zoom mode)
   int nCropY;      // Y offset for cropping in original image pixels (or zoomed image pixels for zoom mode)
   int nRotationAngle; // 0, 90, 180, 270
+  int nMirror; // EXIF: 0 none, 1 mirror horizontally, 2 flip vertically
 
   cDecodeRequest()
   : szSource(nullptr) // Initialize all members
@@ -50,6 +53,7 @@ struct cDecodeRequest {
   , nCropX(0)
   , nCropY(0)
   , nRotationAngle(0)
+  , nMirror(0)
   {
   }
 
@@ -110,6 +114,15 @@ class cImagePlayer
   // Store dimensions of the last decoded source image
   int                         m_nSourceWidth;
   int                         m_nSourceHeight;
+
+  // An RGBA frame is handed from the decoder thread to cControl.
+  // Never call any cOsd methods from this player/worker thread.
+  std::atomic<bool>            m_directOutput;
+  std::atomic<int>             m_directWidth;
+  std::atomic<int>             m_directHeight;
+  cMutex                      m_pictureMutex;
+  std::shared_ptr<cImage>      m_pendingPicture;
+  bool PublishDirectPicture();
 protected:
   void Exec(std::unique_ptr<cDecodeRequest> pCmd);
 
@@ -119,6 +132,7 @@ protected:
 
   virtual void Activate(bool On);
   virtual bool Worker(bool bDoIt);
+  virtual bool DirectOutput(void) const { return m_directOutput.load(); }
 public:
 
   cImagePlayer(cSlideShow *pCurSlideShow);
@@ -144,6 +158,9 @@ public:
 
   int SourceWidth() const { return m_nSourceWidth; }
   int SourceHeight() const { return m_nSourceHeight; }
+  bool DirectOutputActive() const { return m_directOutput.load(); }
+  void SetDirectOutput(bool enabled, int width = 0, int height = 0);
+  std::shared_ptr<cImage> TakeDirectPicture();
 };
 
 #endif				//__DVB_IMAGE_H

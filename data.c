@@ -28,98 +28,8 @@
 #include <string>
 #include <vdr/tools.h>
 
-#ifdef HAVE_LIBEXIF
-#include "exif.h"
-#include <queue>
-#include <string>
-#include <vdr/thread.h>
-
-struct ExifTask {
-    std::string folderPath;
-    std::string folderJpgPath;
-};
-
-class cExifExtractorThread : public cThread {
-private:
-    std::queue<ExifTask> tasks;
-    cMutex mutex;
-    cCondVar cond;
-public:
-    cExifExtractorThread() : cThread("ImageExifExtractor") {}
-    
-    void StopThread() {
-        cond.Broadcast();
-        Cancel(3);
-    }
-
-    void AddTask(const std::string& folder, const std::string& folderJpg) {
-        bool bStart = false;
-        {
-            cMutexLock lock(&mutex);
-            ExifTask t;
-            t.folderPath = folder;
-            t.folderJpgPath = folderJpg;
-            tasks.push(t);
-            bStart = !Active();
-        }
-        cond.Broadcast();
-        if (bStart) Start();
-    }
-    
-    void ClearTasks() {
-        cMutexLock lock(&mutex);
-        std::queue<ExifTask> empty;
-        std::swap(tasks, empty); // Schnellste Methode, um eine Queue in C++ zu leeren
-    }
-    
-    virtual void Action() {
-        while (Running()) {
-            ExifTask task;
-            {
-                cMutexLock lock(&mutex);
-                if (tasks.empty()) {
-                    cond.TimedWait(mutex, 1000);
-                    if (tasks.empty()) continue;
-                }
-                task = tasks.front();
-                tasks.pop();
-            }
-            if (!task.folderPath.empty() && !task.folderJpgPath.empty()) {
-                DIR *dp = opendir(task.folderPath.c_str());
-                if (dp) {
-                    struct dirent *ep;
-                    while ((ep = readdir(dp)) != NULL && Running()) {
-                        const char *ext = strrchr(ep->d_name, '.');
-                        if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-                            char *firstJpgPath = AddPath(task.folderPath.c_str(), ep->d_name);
-                            ExtractExifThumbnail(firstJpgPath, task.folderJpgPath.c_str());
-                            free(firstJpgPath);
-                            break;
-                        }
-                    }
-                    closedir(dp);
-                }
-            }
-        }
-    }
-};
-
-static cExifExtractorThread* ExifThread = nullptr;
-
-void StopExifExtractor() {
-    if (ExifThread) {
-        ExifThread->StopThread();
-        delete ExifThread;
-        ExifThread = nullptr;
-    }
-}
-
-void ClearExifExtractorTasks() {
-    if (ExifThread) {
-        ExifThread->ClearTasks();
-    }
-}
-#endif
+// EXIF thumbnails are extracted on demand into temporary cache files.
+ // No background worker writes folder.jpg into the original photo folders.
 
 // ----------------------------------------------------------------
 
@@ -352,15 +262,6 @@ cDirItem::cDirItem(cFileSource * src, const char *subdir, const char *name,
       if (access(folderJpgPath, R_OK) == 0) {
           HasFolderJpg = true;
       }
-#ifdef HAVE_LIBEXIF
-      else {
-          if (!ExifThread) {
-              ExifThread = new cExifExtractorThread();
-          }
-          ExifThread->AddTask(fullDirPath, folderJpgPath);
-      }
-#endif
-
       FILE *f = fopen(aliasPath, "r");
       if (f) {
           char buf[256];

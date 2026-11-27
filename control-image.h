@@ -16,10 +16,13 @@
 
 #include <vdr/player.h>
 #include <vdr/osdbase.h>
+#include <memory>
 
 #define memberof(x) (sizeof(x)/sizeof(*x))
 
-class cImagePlayer;    
+class cImagePlayer;
+class cOsd;
+class cImage;    
 class cImageMenuCommands;
 
 class cImageControl
@@ -55,6 +58,18 @@ class cImageControl
   static char*            m_szLastShowStatusMsg;
   /** Display replayprogress*/
   cSkinDisplayReplay *m_pDisplayReplay;
+  // Foreground-thread image renderer; MPEG-2 output remains the fallback.
+  cOsd *m_pictureOsd;
+  std::shared_ptr<cImage> m_pictureImage;
+  int m_pictureWidth;
+  int m_pictureHeight;
+  int m_pictureDrawnIndex;
+  int m_pictureDrawnStatus;
+  bool m_pictureDrawnSlide;
+  bool m_pictureDirty;
+  // VDR cControl::Launch/Attach does not call Show() for replay controls.
+  // Open the photo OSD once on the foreground ProcessKey path instead.
+  bool m_pictureOutputInitialized;
   /** Faked Marks for Images*/
   cMarks m_Marks;
 
@@ -86,6 +101,9 @@ class cImageControl
   unsigned int m_nRotation;
 
 private:  
+  bool OpenPictureOsd(void);
+  void ClosePictureOsd(void);
+  void DrawPictureOsd(void);
   void ShowOSD(void);
   void HideOSD(void);
   void ShowMode(void);
@@ -144,11 +162,12 @@ private:
   
   bool CheckAccess() const;
 private:
-  cImageControl(cSlideShow * pNewSlideShow);
+  cImageControl(cSlideShow * pNewSlideShow, bool autoplay);
 public:
   virtual ~ cImageControl();
 
   static void SetSlideShow(cSlideShow * pNewSlideShow);
+  static void SetSlideShow(cSlideShow * pNewSlideShow, bool autoplay);
 
   virtual eOSState ProcessKey(eKeys Key);
   virtual void Hide(void);

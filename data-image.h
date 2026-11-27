@@ -31,6 +31,7 @@ class cImageData
   
 #ifdef HAVE_LIBEXIF
   int          m_nDefaultRotate;
+  int          m_nDefaultMirror;
 #endif
 protected:
   void Clear(void);
@@ -46,6 +47,7 @@ public:
 
 #ifdef HAVE_LIBEXIF
   int DefaultRotate() const { return m_nDefaultRotate; }
+  int DefaultMirror() const { return m_nDefaultMirror; }
 #endif
 };
 
@@ -67,6 +69,7 @@ public:
   cSlideShow(cDirItem * Item);
   virtual ~cSlideShow();
   virtual bool Load(void);
+  bool Load(bool recursive); // SuiteOSD: current album only, avoid scanning every descendant
 
   inline const char* FirstImage() const { return m_szFirstImageName; } 
 };

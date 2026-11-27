@@ -31,6 +31,8 @@ extern "C" {
 #include "list.h"
 #include <vdr/i18n.h>
 #include <vdr/device.h>
+#include <vdr/osd.h>
+#include <algorithm>
 
 #include "libimage/xpm.h"
 
@@ -48,6 +50,9 @@ cImagePlayer::cImagePlayer(cSlideShow *pCurSlideShow)
 , m_szError(NULL)
 , m_nSourceWidth(0)
 , m_nSourceHeight(0)
+, m_directOutput(false)
+, m_directWidth(0)
+, m_directHeight(0)
 {
   theSlideShow.Assign(pCurSlideShow);
 }
@@ -64,7 +69,9 @@ bool cImagePlayer::GetIndex(int &nCurrent, int &nTotal, bool /*bSnapToIFrame*/)
 
 cImagePlayer::~cImagePlayer()
 {
-  // Remove Slideshow
+  // Detach stops the worker via Activate(false) while the derived
+  // player, queue and slideshow are still alive.
+  Detach();
   theSlideShow.Shutdown();
 }
 
@@ -117,12 +124,18 @@ bool cImagePlayer::Convert(const char *szChange)
     pCmd->nCropY = 0;      // No crop
     
     int rot = 0;
+#ifdef HAVE_LIBEXIF
+    rot = pImage->DefaultRotate();
+#endif
     if (szChange) {
-        if (strcmp(szChange, "right") == 0) rot = 90;
-        else if (strcmp(szChange, "rotated") == 0) rot = 180;
-        else if (strcmp(szChange, "left") == 0) rot = 270;
+        if (strcmp(szChange, "right") == 0) rot += 90;
+        else if (strcmp(szChange, "rotated") == 0) rot += 180;
+        else if (strcmp(szChange, "left") == 0) rot += 270;
     }
-    pCmd->nRotationAngle = rot;
+    pCmd->nRotationAngle = rot % 360;
+#ifdef HAVE_LIBEXIF
+    pCmd->nMirror = pImage->DefaultMirror();
+#endif
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -158,6 +171,10 @@ bool cImagePlayer::ConvertJump(int nOffset)
           pCmd->nOffTop =  (pCmd->nTargetHeight * h); // Border wird in DecodeNative addiert
         
           pCmd->szSource = strdup(pImage[(h*nMatrix)+w]->Name());
+#ifdef HAVE_LIBEXIF
+          pCmd->nRotationAngle = pImage[(h*nMatrix)+w]->DefaultRotate();
+          pCmd->nMirror = pImage[(h*nMatrix)+w]->DefaultMirror();
+#endif
           pCmd->szNumber = '0'+((h*nMatrix)+w)+1;
   
           Exec(std::move(pCmd));
@@ -186,12 +203,18 @@ bool cImagePlayer::ConvertZoom(const char *szChange, int nZoomFaktor,
     pCmd->nCropY = nTopPos; // These are pixel offsets in the *zoomed* image
 
     int rot = 0;
+#ifdef HAVE_LIBEXIF
+    rot = pImage->DefaultRotate();
+#endif
     if (szChange) {
-        if (strcmp(szChange, "right") == 0) rot = 90;
-        else if (strcmp(szChange, "rotated") == 0) rot = 180;
-        else if (strcmp(szChange, "left") == 0) rot = 270;
+        if (strcmp(szChange, "right") == 0) rot += 90;
+        else if (strcmp(szChange, "rotated") == 0) rot += 180;
+        else if (strcmp(szChange, "left") == 0) rot += 270;
     }
-    pCmd->nRotationAngle = rot;
+    pCmd->nRotationAngle = rot % 360;
+#ifdef HAVE_LIBEXIF
+    pCmd->nMirror = pImage->DefaultMirror();
+#endif
   
     pCmd->szSource = strdup(pImage->Name());
   
@@ -235,8 +258,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         avformat_close_input(&fmt_ctx);
         return false;
     }
-    avcodec_parameters_to_context(codec_ctx, codecpar);
-    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
+    if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0 ||
+        avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         return false;
@@ -337,7 +360,8 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         // VDR Output Aspect Ratio Correction (Fixes distorted/stretched images)
         double pixelAspect = 1.0;
         int dummyW, dummyH;
-        cDevice::PrimaryDevice()->GetOsdSize(dummyW, dummyH, pixelAspect);
+        if (cDevice::PrimaryDevice())
+            cDevice::PrimaryDevice()->GetOsdSize(dummyW, dummyH, pixelAspect);
         if (pixelAspect <= 0.0) pixelAspect = 1.0;
 
         // Calculate Pixel Aspect Ratio (Non-square pixels on TVs, e.g. 720x576 to 16:9)
@@ -366,6 +390,12 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
         if (osd_offset_y < 0) osd_offset_y = 0;
         if (osd_offset_x + scaled_w > (int)m_StillImage.GetWidth()) scaled_w = m_StillImage.GetWidth() - osd_offset_x;
         if (osd_offset_y + scaled_h > (int)m_StillImage.GetHeight()) scaled_h = m_StillImage.GetHeight() - osd_offset_y;
+        if (scaled_w <= 0 || scaled_h <= 0) {
+            av_frame_free(&frame);
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+            return false;
+        }
 
         // Convert to RGB24 full image to safely crop & avoid planar chroma issues
         AVFrame *rgb_frame = av_frame_alloc();
@@ -441,7 +471,32 @@ bool cImagePlayer::DecodeNative(cDecodeRequest* pShell)
                 av_frame_free(&rgb_frame);
             } else {
                 av_frame_free(&rot_frame);
-                rot_frame = rgb_frame; // Fallback to unrotated if out of memory
+                av_frame_free(&rgb_frame);
+                av_frame_free(&frame);
+                avcodec_free_context(&codec_ctx);
+                avformat_close_input(&fmt_ctx);
+                return false;
+            }
+        }
+
+        // EXIF orientations 2/4/5/7 require a mirror in addition to rotation.
+        // Apply the mirror to the *rotated* RGB frame before scaling/cropping.
+        if (pShell->nMirror == 1) {
+            for (int y = 0; y < rot_frame->height; ++y) {
+                uint8_t *row = rot_frame->data[0] + y * rot_frame->linesize[0];
+                for (int x = 0; x < rot_frame->width / 2; ++x) {
+                    uint8_t *a = row + x * 3;
+                    uint8_t *b = row + (rot_frame->width - 1 - x) * 3;
+                    for (int channel = 0; channel < 3; ++channel)
+                        std::swap(a[channel], b[channel]);
+                }
+            }
+        } else if (pShell->nMirror == 2) {
+            for (int y = 0; y < rot_frame->height / 2; ++y) {
+                uint8_t *a = rot_frame->data[0] + y * rot_frame->linesize[0];
+                uint8_t *b = rot_frame->data[0] + (rot_frame->height - 1 - y) * rot_frame->linesize[0];
+                for (int x = 0; x < rot_frame->width * 3; ++x)
+                    std::swap(a[x], b[x]);
             }
         }
 
@@ -550,6 +605,80 @@ void cImagePlayer::Exec(std::unique_ptr<cDecodeRequest> pCmd)
   }
 }
 
+void cImagePlayer::SetDirectOutput(bool enabled, int width, int height)
+{
+  // Only called by the foreground cControl when an OSD is opened/closed.
+  // Avoid publishing any stale decoded image after an output mode change.
+  m_directOutput.store(false);
+  {
+    cMutexLock lock(&m_pictureMutex);
+    m_pendingPicture.reset();
+  }
+  m_directWidth.store(width);
+  m_directHeight.store(height);
+  if (enabled) {
+    m_StillImage.EncodeRequired(false);
+    m_directOutput.store(true);
+  }
+}
+
+std::shared_ptr<cImage> cImagePlayer::TakeDirectPicture()
+{
+  cMutexLock lock(&m_pictureMutex);
+  std::shared_ptr<cImage> frame;
+  frame.swap(m_pendingPicture);
+  return frame;
+}
+
+bool cImagePlayer::PublishDirectPicture()
+{
+  const int width = m_directWidth.load();
+  const int height = m_directHeight.load();
+  const int sourceWidth = static_cast<int>(m_StillImage.GetWidth());
+  const int sourceHeight = static_cast<int>(m_StillImage.GetHeight());
+  uint8_t *rgb = m_StillImage.GetRGBMem();
+  if (width <= 0 || height <= 0 || sourceWidth <= 0 || sourceHeight <= 0 || !rgb)
+    return false;
+
+  std::shared_ptr<cImage> image = std::make_shared<cImage>(cSize(width, height));
+  if (!image || !image->Data())
+    return false;
+
+  // VDR's cImage uses ARGB tColor; BGRA is the corresponding FFmpeg
+  // byte layout on little-endian VDR platforms. Unlike MPEG-2, this
+  // transfer keeps the decoded image in a lossless 32-bit OSD bitmap.
+  SwsContext *scaler = sws_getContext(
+      sourceWidth, sourceHeight, AV_PIX_FMT_RGB24,
+      width, height, AV_PIX_FMT_BGRA,
+      SWS_BICUBIC, nullptr, nullptr, nullptr);
+  if (!scaler)
+    return false;
+
+  const uint8_t *source[4] = {rgb, nullptr, nullptr, nullptr};
+  int sourceStride[4] = {sourceWidth * 3, 0, 0, 0};
+  uint8_t *destination[4] = {
+      reinterpret_cast<uint8_t*>(const_cast<tColor*>(image->Data())),
+      nullptr, nullptr, nullptr
+  };
+  int destinationStride[4] = {width * static_cast<int>(sizeof(tColor)), 0, 0, 0};
+  const int rows = sws_scale(scaler, source, sourceStride, 0, sourceHeight,
+                             destination, destinationStride);
+  sws_freeContext(scaler);
+  if (rows != height)
+    return false;
+
+  // Output state may have changed while the background conversion ran.
+  if (!m_directOutput.load() || width != m_directWidth.load() ||
+      height != m_directHeight.load())
+    return true;
+  {
+    cMutexLock lock(&m_pictureMutex);
+    if (m_directOutput.load())
+      m_pendingPicture = image;
+  }
+  return true;
+}
+
 bool cImagePlayer::Worker(bool bDoIt)
 {
   bool bQueueEmpty;
@@ -571,12 +700,26 @@ bool cImagePlayer::Worker(bool bDoIt)
   }  
 
   if(pShell->szSource) {
-    if(DecodeNative(pShell.get())) {
+    const bool decoded = DecodeNative(pShell.get());
+    if (!decoded) {
+      esyslog("imageplugin: native decoding failed for '%s'", pShell->szSource);
+      ExecFailed(pShell.get(), tr("Image couldn't load"));
+    }
+
+    if (m_directOutput.load()) {
+      if (!PublishDirectPicture()) {
+        // If the direct transfer cannot be created, resume the existing
+        // MPEG-2 renderer rather than leaving a black screen.
+        esyslog("imageplugin: direct OSD transfer failed; resuming MPEG-2 output");
+        m_directOutput.store(false);
         m_StillImage.EncodeRequired(true);
+      } else if (!m_directOutput.load()) {
+        // The foreground OSD may have been closed while we were decoding.
+        // Keep a valid legacy picture behind the newly opened menu.
+        m_StillImage.EncodeRequired(true);
+      }
     } else {
-        esyslog("imageplugin: native decoding failed for '%s'", pShell->szSource);
-        ExecFailed(pShell.get(), tr("Image couldn't load"));        
-        m_StillImage.EncodeRequired(true);
+      m_StillImage.EncodeRequired(true);
     }
   } 
   return bQueueEmpty;

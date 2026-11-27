@@ -1,0 +1,116 @@
+name: Image plugin builds, Debian package and source contracts
+
+on:
+  push:
+    branches:
+      - fix/skindesigner-grid-20261125
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  native-build-and-deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build and packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config vdr-dev gettext debhelper dpkg-dev \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libexif-dev
+
+      - name: Source contracts and release metadata
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Native build without Skindesigner
+        run: make -j2 WITH_SKINDESIGNER=0 libvdr-image_next.so
+
+      - name: Confirm native plugin embeds the VERSION value
+        run: |
+          test -s libvdr-image_next.so
+          strings libvdr-image_next.so | grep -Fx "$(cat VERSION)"
+
+      - name: Build Debian package without root installation
+        run: dpkg-buildpackage --build=binary --no-sign
+
+      - name: Inspect installed package contents
+        run: |
+          deb=$(find .. -maxdepth 1 -name 'vdr-plugin-image-next_*.deb' -print -quit)
+          test -n "$deb"
+          dpkg-deb --field "$deb" Version Depends
+          expected="$(sed 's/-/~/g' VERSION)-1"
+          test "$(dpkg-deb --field "$deb" Version)" = "$expected"
+          dpkg-deb --contents "$deb" | grep -F 'libvdr-image_next.so.'
+          dpkg-deb --contents "$deb" | grep -F 'plug-image_next-grid.xml'
+
+  vdr-2-8-4:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git build-essential pkg-config vdr-dev libcap-dev \
+            libjpeg-dev libfreetype-dev libfontconfig-dev \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libexif-dev
+
+      - name: Obtain VDR 2.8.4 release source from GitHub mirror
+        run: |
+          git clone --depth 1 https://github.com/vdr-projects/vdr.git "$RUNNER_TEMP/vdr"
+          test "$(git -C "$RUNNER_TEMP/vdr" rev-parse HEAD)" = \
+            "241c3f24d5af215536032f30c0cdb745e2d832e7"
+          grep -q '"2.8.4"' "$RUNNER_TEMP/vdr/config.h"
+          make -C "$RUNNER_TEMP/vdr" LCLBLD=1 include-dir vdr.pc
+
+      - name: Compile against official VDR 2.8.4
+        run: |
+          make -j2 WITH_SKINDESIGNER=0 \
+            VDRDIR="$RUNNER_TEMP/vdr" libvdr-image_next.so
+          test -s libvdr-image_next.so
+
+  skindesigner-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git build-essential pkg-config vdr-dev \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libexif-dev
+
+      - name: Obtain pinned VDR 2.8.4 headers
+        run: |
+          git clone --depth 1 https://github.com/vdr-projects/vdr.git "$RUNNER_TEMP/vdr"
+          test "$(git -C "$RUNNER_TEMP/vdr" rev-parse HEAD)" = \
+            "241c3f24d5af215536032f30c0cdb745e2d832e7"
+          grep -q '"2.8.4"' "$RUNNER_TEMP/vdr/config.h"
+          make -C "$RUNNER_TEMP/vdr" LCLBLD=1 include-dir vdr.pc
+
+      - name: Compile Skindesigner API against VDR 2.8.4 without root
+        run: |
+          git clone --depth 1 \
+            https://github.com/vdr-projects/vdr-plugin-skindesigner.git \
+            "$RUNNER_TEMP/skindesigner"
+          make -C "$RUNNER_TEMP/skindesigner/libskindesignerapi" \
+            PREFIX="$RUNNER_TEMP/sd-sdk" VDRDIR="$RUNNER_TEMP/vdr"
+          make -C "$RUNNER_TEMP/skindesigner/libskindesignerapi" \
+            PREFIX="$RUNNER_TEMP/sd-sdk" DESTDIR=/ install
+          PKG_CONFIG_PATH="$RUNNER_TEMP/sd-sdk/lib/pkgconfig" \
+            pkg-config --modversion libskindesignerapi
+
+      - name: Compile plugin with Skindesigner against VDR 2.8.4
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/sd-sdk/lib/pkgconfig:$PKG_CONFIG_PATH"
+          make -j2 WITH_SKINDESIGNER=1 VDRDIR="$RUNNER_TEMP/vdr" libvdr-image_next.so
+          test -s libvdr-image_next.so

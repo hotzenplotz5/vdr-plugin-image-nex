@@ -1,204 +1,155 @@
-This is a "plugin" for the Video Disk Recorder (VDR).
+VDR image_next â€” native image viewer and slideshow
+=================================================
 
-Originaly written by:           Kai Tobias Burwieck <kai-at-burwieck.net>
-                                "Interpohl" <interpohl-at-vdr-portal.de>
-                                Onno Kreuzinger <o.kreuzinger-at-kreuzinger.biz>
-                                Andreas Brachold <vdr07 at deltab.de>
+This fork builds on the VDR Image plugin and its 2022 FFmpeg updates.
+The native decoder uses libavcodec/libswscale rather than the historical
+imageplugin.sh conversion scripts. The current development version is
+read from the root VERSION file (currently 0.7.0-rc1; see HISTORY).
+The Makefile passes this version to the compiled VDR plugin as
+IMAGE_PLUGIN_VERSION. Do not edit version strings independently in C++ sources.
 
-Maintainer:                     Andreas Brachold <vdr07 at deltab.de>
-
-Project homepage:               http://projects.vdr-developer.org/projects/plg-image
-
-Some files are from the mp3/MPlayer Plugin.	Thanks to Stefan Hülswitt
-
-
-Required:
------------
-- fullfeatured dvb card
-- vdr 1.5.8+
-- plugin depends follow packages
-    + ffmpeg (tested with ffmpeg-0.4.8/ffmpeg-0.4.9pre1/ffmpeg-cvs)
-        http://ffmpeg.sourceforge.net
-    + for build you need 'pkg-config'
-        http://pkgconfig.freedesktop.org/
-    + libexif-0.6.13 ... 0.6.15 (see below for build without this)
-        http://libexif.sourceforge.net/
-    + for running your will need also package netpbm
-        http://netpbm.sourceforge.net/
-        netpbm 10.0+ (check for "anytopnm", if  it does not exist upgrade/install netpbm)
-    + not necessary but useful utils/file (file) for better imagetyp detection, 
-        this tools is used by script anytopnm
-        ftp://ftp.astron.com/pub/file
-
-Important Note:
-if tools are installed by source absolutely also for it provide that the 
-programs (anytopnm pnmscale pnmfile pnmcut pnmflip) are inside the search-path, 
-otherwise adapt the variable "PATH"  within the file imageplugin.sh.
-
-Install:
+Requirements
 ------------
-Install the plugin part as usual (see vdr docs if you not know already).
-You will need a full source tree from vdr, to build this plugins.
-copy source to below defined folder.
+- VDR development headers and pkg-config (tested compilation with VDR 2.8.x
+  still needs to be verified on the target distribution)
+- FFmpeg development libraries: libavcodec, libavformat, libswscale
+- Optional: libexif for metadata and fast JPEG thumbnail extraction
+- Optional: libskindesignerapi development package for Skindesigner mode
 
-    cd $VDRSOURCE/PLUGINS/src
-    tar -xzvf vdr-image-x.x.x.tgz
-    ln -s image-x.x.x image
+Build using the usual VDR plugin make targets. Set WITH_SKINDESIGNER=0
+to build without the Skindesigner API, even when it is installed.
 
-Compile depends package ffmpeg, libexif. later for running your 
-need netpbm for image conversion.
+Configuring sources
+-------------------
+Place imagesources.conf in the image_next plugin configuration directory.
+Legacy entries from the image plugin configuration directory are also read.
 
- build ffmpeg
-    $ configure --enable-shared && make && make install
+Syntax: path;display name;needs mount (0/1);filename patterns
+Example:
+  /srv/photos;Photos;0;*.jpg *.jpeg *.png *.tif* *.bmp
 
- build libexif 
-    $ configure && make && make install
+A missing or empty imagesources.conf will not expose the filesystem root.
+The menu instead displays "No image sources configured".
 
- now compile plugin
+SuiteOSD image gallery (native VDR services)
+------------------------------------------
+The SuiteOSD plugin can request configured photo sources, browse folders,
+receive thumbnails from image_next's existing asynchronous cache and launch
+a selected photo/slideshow through the existing image_next player. No second
+decoder, player or HTTP API is added. Every relative path is validated
+against an imagesources.conf root after resolving symlinks.
 
-    $ cd $VDRSOURCE
-    $ make plugins
+The versioned C++ VDR plugin service ABI is documented in
+docs/suiteosd-service.md and image-next-service-v1.h. Both plugins must
+be built against the same VDR ABI. SuiteOSD's initial gallery is
+implemented on its main development branch (0.9.3-dev). Actual VDR
+remote-control and TV output acceptance is still required.
 
- or if you need, defined a ffmpeg source folder ¹) 
- this essential if build ffmpeg without "--enable-shared"
+Picture output
+--------------
+The plugin setup now offers three picture output modes:
+  Automatic (OSD / MPEG-2) â€” default. Uses true-color OSD if supported,
+                             otherwise the traditional MPEG-2 device output.
+  True-color OSD            â€” requests direct OSD first, with MPEG-2 fallback
+                             if the device cannot provide the requested area.
+  Legacy MPEG-2             â€” always uses the previous video-output path.
 
-    $ make plugins FFMDIR=/usr/src/ffmpeg-cvs
+This setting applies to full-screen images, slideshow, zoom and jump preview.
+The standard VDR remote-control keys remain unchanged. JPEG/PNG/other images
+are decoded by FFmpeg on the image worker thread, and only a ready ARGB frame
+is transferred to the foreground thread for the VDR cOsd::DrawImage call.
+A 32-bpp true-color OSD covering the current OSD resolution is required;
+this is a VDR output-device feature, not a VAAPI-only API.
 
- compile without swscaler to convert images via ffmpeg
-   (WITHOUT_SWSCALER=1 use img_convert, needed for older versions from ffmpeg)
-    
-    $ make plugins WITHOUT_SWSCALER=1
+Existing UseDeviceStillPicture and LiveAudio settings are preserved. The
+former controls only the legacy MPEG-2 output mode.
 
- compile without libexif ¹)
-    
-    $ make plugins WITHOUT_LIBEXIF=1
+Display modes
+-------------
+In the image_next plugin setup:
+  0: List
+  1: Grid (C++)      -- works with the native VDR OSD, without Skindesigner
+  2: Grid (Skin XML) -- needs a compatible active Skindesigner skin
 
- to install plugin
+IMPORTANT: Building against Skindesigner is not enough! The active XML skin
+must provide the template named plug-image_next-grid.xml. A reference
+template is included in skindesigner/plug-image_next-grid.xml.
+The build records the actual libskindesignerapi version from pkg-config.
+Install a copy into the xmlfiles/ directory of your ACTIVE Skindesigner skin,
+then reload the skin or restart VDR as required by Skindesigner.
+For example, the target filename is:
+  <skindesigner skin root>/<active-skin>/xmlfiles/plug-image_next-grid.xml
 
-    $ make plugins-install
+The active skin's location is configured by the Skindesigner plugin. Do not
+assume a fixed yaVDR, MLD, or Debian path.
 
+This file matches the following C++ registrations:
+  plugin name   image_next
+  root view     grid
+  view elements background / header
+  view grid     imagegrid
+  tokens        thumbnail, albumname, is_folder, current
 
-¹) Build options can also defined inside $VDRSOURCE/Make.config
+If the current skin is not a Skindesigner skin or it does not expose the
+plugin view, mode 2 falls back to the native C++ grid and logs the reason.
+If a template fails to parse or initialize, inspect the VDR logs for
+"skindesigner" and "imageplugin" errors before changing the skin.
 
+Files and thumbnails
+--------------------
+Pictures remain in their original directories. If present, folder.jpg is
+used as a directory cover. Photo directories are NOT modified just because
+a directory is opened: the old automatic EXIF-to-folder.jpg writer has
+been removed. JPEG EXIF thumbnails for the native grid are extracted into
+a unique temporary file and deleted after use.
 
+The asynchronous native grid loads only visible tiles and uses an LRU bitmap
+cache with a 64 MiB budget (up to 100 cached thumbnails). Cache entries
+include image file size and modification time to avoid serving outdated
+thumbnails when a file changes. EXIF orientation, including mirrored camera
+orientations, is applied to thumbnails and to full-size/zoomed playback.
+The new player prefers full-screen true-color VDR OSD output without
+MPEG-2 recompression. The original MPEG-2 still-image path remains available
+as a compatibility fallback for output plugins without a suitable 32-bpp OSD.
 
-In the ./examples directory you can find a sample file for
-imagesources.conf, change this file if needed and place it in
-the plugins folder in your config folder (the video folder by default).
+The existing imagecmds.conf functionality can run explicitly configured
+commands; only enable commands you trust.
 
-The syntax is :
-<path>;<name in vdr menu>;<0/1>;<pattern to filter file display>
+Quick manual smoke test
+-----------------------
+1. Configure a valid imagesources.conf with a small JPEG photo directory.
+2. Build with Skindesigner support; ensure a Skindesigner skin is active.
+3. Select mode 1 and verify the native grid, arrows, OK, Back and slideshow.
+4. Copy the XML file into the active skin's xmlfiles/ and reload Skindesigner.
+5. Select mode 2; verify grid visibility, highlighted selection and images.
+6. Switch to a non-Skindesigner skin: mode 2 must fall back to the C++ grid.
+7. Remove/rename imagesources.conf: verify the informative menu, not root /.
+8. Verify no folder.jpg is generated in photo directories.
 
-examples:
-/media/cdrom;CDROM;1;*.jpg *.jpeg *.png *.tif* *.bmp
-/archive/photos/holiday;Holiday pictures;0;DSC10*.jpg
+Source-only checks (no VDR installation necessary)
+--------------------------------------------------
+  python3 -m unittest discover -s tests -v
 
-0/1 is for media that need to be mounted (uses the same mount.sh
-as mplayer/mp3 plugin).
+These checks verify the C++/XML naming contract, normalized grid geometry,
+fallback presence, optional dependencies and cache/EXIF invariants. They
+are not a substitute for compiling against VDR and Skindesigner, nor for
+visual tests using the active Skindesigner skin. This development branch
+has not been installed on the user's VDR.
 
+Known limitations
+-----------------
+OSD picture rendering has no independent hardware test yet. Actual RGB
+resolution depends on the device's advertised VDR OSD size; high-resolution
+photo quality cannot exceed the available OSD resolution. The legacy MPEG-2
+fallback remains present and unchanged for devices without true-color OSD.
+This is not a specialized VAAPI texture renderer (no VAAPI requirement).
+A JPEG embedded EXIF thumbnail can still be used for fast grid loading.
 
-The file ./scripts/imageplugin.sh could go to /usr/bin, or any other folder in your path.
-You can also use the plugin options (vdr -help after installing the plugin) to specify
-the path's to the files, if you don't want to those files in you system.
-[ e.g.: ./vdr '-Pimage -C /usr/local/bin/imageplugin.sh -m /usr/local/bin/mount.sh' ...]
+On an actual VDR, verify fullscreen, slideshow, zoom, jump, image commands,
+native grid, Skindesigner grid and each Picture output setting before
+merging the draft pull request.
 
-All plugin options :
-
-  -m CMD,   --mount=CMD    use CMD to mount/unmount/eject image sources
-                           (default: "mount.sh")
-  -C CMD,   --convert=CMD  use CMD when converting images
-                           (default: "imageplugin.sh")
-  -c PATH,  --config=PATH  to specify directory of configuration data
-                           relative to VDR Plugin configuration directory
-                           (default: "" )
-
-
-Manual:
-------------
-Start the plugin, than select a file (or folder) and press OK.
-
-
-At all modi
-   OK          toggle OSD informations
-   Play/Pause  begin/halt slide
-   Stop/Blue   stop plugin
- 
-While watching pictures
-   Back        stop plugin
-   Red         open menu with imagecommands
-   Info        show exif informations 
- 
-   Left        previous picture
-   Right       next picture
-   Down        jump three pictures back
-   Up          jump three pictures forward
-
-   7           jump five pictures back
-   9           jump five pictures forward
- 
-   0           view original image
-   1           Rotate 90 Grad counter clockwise
-   3           Rotate 90 Grad clockwise direction
- 
-   4 	       slide show - decrease the time (seconds) each picture shows
-   6 	       slide show - increase the time (seconds) each picture shows
-   5           Zoom inside image
-   8           Zoom outside image and call Jumpmenu
- 
-'Zoom menu'
-   Back        Zoom outside image 
-   Red         open menu with imagecommands
-   Info        show exif informations 
- 
-   Left        scroll zoomedframe inside picture to left
-   Right       scroll zoomedframe inside picture to right
-   Down        scroll zoomedframe inside picture to left
-   Up          scroll zoomedframe inside picture to up
- 
-   0           view original image
-   5           Zoom inside image
-   8           Zoom outside image 
-  
-'Jump menu' (3x3 preview):
-   Back        view original image
-  
-   Left        previous picture group (go 9 pictures back)
-   Right       next picture group (go to the next 9 pictures)
-  
-   0           view original image
-   1 ... 9     pick the corresponding image
-
-(thx for the english readme/keymapping description to Kai Steinbach)
-
-image commands
-------------
-The file imagecmds.conf can be used to define commands that can be applied to the 
-currently viewed image. The syntax is exactly the same as described for the 
-file commands.conf, see "man 5 vdr". If only one instruction is indicated, 
-the filename of the image will be appended to the command string, 
-separated by a blank and enclosed in single quotes.
-
-Format> Menutext ?: command %s
-?  - Confirmation request (optionally)
-%s - placeholder for filename (optionally)
-
-See for a sample at examples/imagecmds.conf .
-
-
-Diagnosis of the scripts and installation
------------------------------------------
-If the script does not work like it should, start the Script to test from the console.
-
-imageplugin.sh [infile] [outfile] [WIDTH] [HEIGHT] [ZOOMFACTOR] [LEFTPOS] [TOPPOS] {FLIPCMD}
-e.g. imageplugin.sh myimage.png outfile.pnm 720 576 0 0 0 original
-
-and please examine the produced syslog messages at /var/log/message or messages on console
-
-if that does not help repeats the procedure with > export DEBUG=yes;
-
-export DEBUG=yes;imageplugin.sh myimage.png outfile.pnm 720 576 0 0 0 original
-
-and examine the expenditure on the screendump
-
-*) if script work for your, it's could reduce the message on syslog, 
-if your change on imageplugin.sh inside from VERBOSE=yes to VERBOSE=no
+Original authors: Kai Tobias Burwieck, Interpohl, Onno Kreuzinger,
+Andreas Brachold and contributors; later contributions by the fork maintainers.
+Licensed under GPL-2.0-or-later (see COPYING and debian/copyright).
+The authorship and original copyright notices are retained.

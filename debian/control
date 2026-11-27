@@ -1,26 +1,29 @@
 Source: vdr-plugin-image-next
 Section: video
-Priority: extra
-Maintainer: Debian VDR Team <pkg-vdr-dvb-devel@lists.alioth.debian.org>
-Uploaders: Tobias Grimm <etobi@debian.org>, Thomas Günther <tom@toms-cafe.de>
-Build-Depends: debhelper-compat (= 13), cdbs, vdr-dev (>= 2.2.0-1), gettext, pkg-config,
- libavcodec-dev, libavformat-dev, libswscale-dev, libavutil-dev, libmp3lame-dev | liblame-dev, libexif-dev (>= 0.6.12), libxvidcore-dev, libskindesignerapi-dev
-Standards-Version: 3.9.1
-Vcs-Svn: svn://svn.debian.org/pkg-vdr-dvb/vdr/vdr-plugin-image-next/trunk/
-Vcs-Browser: http://svn.debian.org/wsvn/pkg-vdr-dvb/vdr/vdr-plugin-image-next/trunk/
+Priority: optional
+Maintainer: Holger Schvestka <hotzenplotz5@gmx.de>
+Build-Depends: debhelper-compat (= 13),
+ vdr-dev (>= 2.2.0),
+ gettext,
+ pkg-config,
+ libavcodec-dev,
+ libavformat-dev,
+ libavutil-dev,
+ libswscale-dev,
+ libexif-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/hotzenplotz5/vdr-plugin-image-nex
+Vcs-Git: https://github.com/hotzenplotz5/vdr-plugin-image-nex.git
+Vcs-Browser: https://github.com/hotzenplotz5/vdr-plugin-image-nex
 
 Package: vdr-plugin-image-next
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${vdr:Depends}, netpbm, file
-Suggests: imagemagick, libjpeg-progs
-Description: Image plugin for vdr
- This plugin implements a image viewer for vdr.
-
-Package: vdr-plugin-image-next-dbg
-Architecture: any
-Section: debug
-Priority: extra
-Depends: vdr-plugin-image-next (= ${binary:Version}), ${misc:Depends}
-Description: debugging symbols for vdr-plugin-image-next
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${vdr:Depends}
+Description: native photo viewer and slideshow for VDR
+ Browse local picture directories, view photos as a slideshow and use
+ thumbnails and EXIF metadata in the VDR on-screen display.
  .
- This package contains only the debugging symbols for vdr-plugin-image-next
+ Supports direct true-colour OSD rendering on compatible output devices,
+ with the original MPEG-2 still-picture method as a fallback. Optional
+ Skindesigner XML templates are included as assets for supported skins.

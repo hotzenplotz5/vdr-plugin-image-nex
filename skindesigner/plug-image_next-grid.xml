@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE displayplugin SYSTEM "../../../dtd/displayplugin.dtd">
+<!-- Install into the xmlfiles/ directory of the ACTIVE Skindesigner skin. -->
+<displayplugin x="0" y="0" width="100%" height="100%" fadetime="0"
+               scaletvx="0" scaletvy="0" scaletvwidth="100%" scaletvheight="100%">
+    <viewelement name="background">
+        <area x="0" y="0" width="100%" height="100%" layer="1">
+            <fill color="#ff151515" />
+        </area>
+    </viewelement>
+    <viewelement name="header">
+        <area x="4%" y="2%" width="92%" height="9%" layer="2">
+            <drawtext text="{title}" font="{regular}" fontsize="70%"
+                      color="#ffffffff" x="0" y="0" width="100%" />
+        </area>
+    </viewelement>
+    <grid name="imagegrid" x="4%" y="14%" width="92%" height="78%">
+        <area x="0" y="0" width="100%" height="100%" layer="1">
+            <fill condition="not{current}" color="#ff303030" />
+            <fill condition="{current}" color="#ff0055aa" />
+        </area>
+        <area x="0" y="0" width="100%" height="100%" layer="2">
+            <drawimage imagetype="image" path="{thumbnail}" x="5%" y="5%"
+                       width="90%" height="72%" />
+        </area>
+        <area x="0" y="0" width="100%" height="100%" layer="3">
+            <drawtext text="{albumname}" font="{regular}" fontsize="60%"
+                      color="#ffffffff" x="5%" y="78%" width="90%" />
+        </area>
+    </grid>
+</displayplugin>

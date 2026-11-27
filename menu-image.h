@@ -17,8 +17,10 @@
 
 #include "menu.h"
 #include "data.h"
+#ifdef HAVE_SKINDESIGNER
 #include <libskindesignerapi/skindesignerapi.h>
 #include <libskindesignerapi/skindesignerosdbase.h>
+#endif
 
 // ----------------------------------------------------------------
 class cMenuImageBrowse:public cMenuBrowse {
@@ -53,6 +55,7 @@ public:
     virtual eOSState ProcessKey(eKeys Key);
 };
 
+#ifdef HAVE_SKINDESIGNER
 class cMenuImageSkinDesigner : public skindesignerapi::cSkindesignerOsdObject {
 private:
     cFileSource *source;
@@ -62,6 +65,7 @@ private:
     bool needsRedraw;
 
     skindesignerapi::cOsdView *rootView;
+    cMenuImageGrid *fallbackGrid;
     skindesignerapi::cViewElement *back;
     skindesignerapi::cViewElement *header;
     skindesignerapi::cViewGrid *imagegrid;
@@ -77,7 +81,10 @@ public:
     virtual void Show(void);
     virtual eOSState ProcessKey(eKeys Key);
 };
+#endif
 
+// Reuse image_next's async, bounded thumbnail cache for SuiteOSD.
+std::shared_ptr<cImage> ImageNextCachedThumbnail(const char *path, int width, int height);
 void StopThumbLoader();
 
 #endif				//___MENU_IMAGE_H

@@ -25,6 +25,7 @@
 #include <atomic>
 #include <functional>
 #include <algorithm>
+#include <vector>
 
 #include "image.h"
 #include "menu.h"
@@ -56,19 +57,27 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
     uint64_t tStart = cTimeMs::Now();
     esyslog("imageplugin: ---> Start loading thumbnail: %s", path);
 
-    char tempThumbPath[256];
+    char tempThumbPath[] = "/tmp/vdr-image-thumb-XXXXXX";
     bool useTempThumb = false;
     const char* loadPath = path;
-
+    int rotation = 0;
 #ifdef HAVE_LIBEXIF
-    // EXIF Thumbnails are instantly loaded compared to 24 Megapixel JPEGs
+    ImageMirror mirror = NONE;
+    // EXIF orientation belongs to the original JPEG, not the extracted
+    // thumbnail, which may lack its own orientation metadata.
     const char *ext = strrchr(path, '.');
     if (ext && (strcasecmp(ext, ".jpg") == 0 || strcasecmp(ext, ".jpeg") == 0)) {
-        std::hash<std::string> hasher;
-        snprintf(tempThumbPath, sizeof(tempThumbPath), "/tmp/vdr_thumb_%u_%zu.jpg", (unsigned int)getpid(), hasher(path));
-        if (ExtractExifThumbnail(path, tempThumbPath)) {
-            loadPath = tempThumbPath;
-            useTempThumb = true;
+        GetRotationFromExifData(path, rotation, mirror);
+        // mkstemp avoids collisions and predictable shared /tmp filenames.
+        int fd = mkstemp(tempThumbPath);
+        if (fd >= 0) {
+            close(fd);
+            if (ExtractExifThumbnail(path, tempThumbPath)) {
+                loadPath = tempThumbPath;
+                useTempThumb = true;
+            } else {
+                unlink(tempThumbPath);
+            }
         }
     }
 #endif
@@ -129,17 +138,18 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
         return nullptr;
     }
     
-    // Speed up decoding for full JPEGs by rendering at lower resolution (1/8)
-    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
-        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
-        codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
-    }
-
     if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
         if (useTempThumb) unlink(tempThumbPath);
         return nullptr;
+    }
+
+    // Set lowres only after copying codec parameters: before that codec_id
+    // may still be unset and the optimization would never activate.
+    if (codec_ctx->codec_id == AV_CODEC_ID_MJPEG) {
+        codec_ctx->lowres = std::min((int)codec->max_lowres, 3);
+        codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
     }
 
     if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
@@ -198,34 +208,60 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
     }
     av_packet_free(&pkt);
 
-    std::shared_ptr<cImage> retImage = nullptr;
+    std::shared_ptr<cImage> retImage;
     if (decoded && frame->width > 0 && frame->height > 0) {
-        double aspect = (double)frame->height / frame->width;
-        int newWidth = maxWidth;
-        int newHeight = newWidth * aspect;
+        const bool quarterTurn = rotation == 90 || rotation == 270;
+        const int displayW = quarterTurn ? frame->height : frame->width;
+        const int displayH = quarterTurn ? frame->width : frame->height;
+        const double aspect = static_cast<double>(displayH) / displayW;
+        int newWidth = std::max(1, maxWidth);
+        int newHeight = std::max(1, static_cast<int>(newWidth * aspect));
         if (newHeight > maxHeight) {
-            newHeight = maxHeight;
-            if (aspect > 0.0) newWidth = newHeight / aspect;
+            newHeight = std::max(1, maxHeight);
+            newWidth = std::max(1, static_cast<int>(newHeight / aspect));
         }
-        if (newWidth <= 0) newWidth = 1;
-        if (newHeight <= 0) newHeight = 1;
+        // Scale in source orientation, then apply EXIF rotation/mirroring.
+        const int scaledW = quarterTurn ? newHeight : newWidth;
+        const int scaledH = quarterTurn ? newWidth : newHeight;
 
-        esyslog("imageplugin: Decoding finished, scaling to %dx%d...", newWidth, newHeight);
-
-        retImage = std::make_shared<cImage>(cSize(newWidth, newHeight));
-        if (retImage && retImage->Data()) {
-            SwsContext *sws_ctx = sws_getContext(
-                frame->width, frame->height, (AVPixelFormat)frame->format,
-                newWidth, newHeight, AV_PIX_FMT_BGRA,
-                SWS_FAST_BILINEAR, nullptr, nullptr, nullptr
-            );
-
-            if (sws_ctx) {
-                uint8_t *dest[4] = { (uint8_t*)const_cast<tColor*>(retImage->Data()), nullptr, nullptr, nullptr };
-                int dest_linesize[4] = { newWidth * 4, 0, 0, 0 };
-                sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height, dest, dest_linesize);
-                sws_freeContext(sws_ctx);
+        SwsContext *sws_ctx = sws_getContext(
+            frame->width, frame->height, static_cast<AVPixelFormat>(frame->format),
+            scaledW, scaledH, AV_PIX_FMT_BGRA,
+            SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+        if (sws_ctx) {
+            std::vector<tColor> scaled(static_cast<size_t>(scaledW) * scaledH);
+            uint8_t *dest[4] = {
+                reinterpret_cast<uint8_t*>(scaled.data()), nullptr, nullptr, nullptr
+            };
+            int destLinesize[4] = {scaledW * static_cast<int>(sizeof(tColor)), 0, 0, 0};
+            if (sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height,
+                          dest, destLinesize) > 0) {
+                retImage = std::make_shared<cImage>(cSize(newWidth, newHeight));
+                if (retImage && retImage->Data()) {
+                    tColor *pixels = const_cast<tColor*>(retImage->Data());
+                    for (int y = 0; y < newHeight; ++y) {
+                        for (int x = 0; x < newWidth; ++x) {
+                            int dx = x;
+                            int dy = y;
+#ifdef HAVE_LIBEXIF
+                            if (mirror == MIRROR) dx = newWidth - 1 - dx;
+                            if (mirror == FLIP) dy = newHeight - 1 - dy;
+#endif
+                            int sx = dx, sy = dy;
+                            switch (rotation) {
+                                case 90:  sx = dy; sy = scaledH - 1 - dx; break;
+                                case 180: sx = scaledW - 1 - dx; sy = scaledH - 1 - dy; break;
+                                case 270: sx = scaledW - 1 - dy; sy = dx; break;
+                                default: break;
+                            }
+                            pixels[y * newWidth + x] = scaled[sy * scaledW + sx];
+                        }
+                    }
+                } else {
+                    retImage.reset();
+                }
             }
+            sws_freeContext(sws_ctx);
         }
     }
 
@@ -242,8 +278,24 @@ static std::shared_ptr<cImage> LoadThumbnail(const char* path, int maxWidth, int
 static cMutex ThumbCacheMutex;
 static cMutex ThumbLoaderMutex;
 
+static std::string ThumbCacheKey(const std::string& path, int w, int h)
+{
+    // Include file identity so replacing a photo does not reuse an older bitmap.
+    std::string key = path + "|" + std::to_string(w) + "x" + std::to_string(h);
+    struct stat st;
+    if (stat(path.c_str(), &st) == 0) {
+        key += "|" + std::to_string(static_cast<long long>(st.st_size));
+        key += "|" + std::to_string(static_cast<long long>(st.st_mtime));
+#if defined(__linux__)
+        key += "|" + std::to_string(static_cast<long long>(st.st_mtim.tv_nsec));
+#endif
+    }
+    return key;
+}
+
 struct ThumbRequest {
     std::string path;
+    std::string key;
     int w, h;
     uint64_t generation;
 };
@@ -255,6 +307,7 @@ static std::atomic<uint64_t> g_CacheGeneration(0);
 struct CacheEntry {
     std::shared_ptr<cImage> image;
     std::list<std::string>::iterator lruIt;
+    size_t bytes;
 };
 
 // Hintergrund-Thread: Lädt langsame JPEGs ruckelfrei im Hintergrund!
@@ -265,7 +318,7 @@ private:
     cCondVar cond;
 public:
     cThumbLoaderThread() : cThread("ImageThumbLoader") {}
-    void Add(const std::string& path, int w, int h, uint64_t generation);
+    void Add(const std::string& path, const std::string& key, int w, int h, uint64_t generation);
     void Clear();
     void StopThread();
     virtual void Action();
@@ -276,14 +329,14 @@ static cThumbLoaderThread* ThumbLoader = nullptr;
 class cThumbCache {
 public:
     static const size_t MAX_CACHE_SIZE = 100;
+    static const size_t MAX_CACHE_BYTES = 64U * 1024U * 1024U;
+    static size_t cacheBytes;
     static std::list<std::string> lruList;
     static std::unordered_map<std::string, CacheEntry> Cache;
     static std::unordered_set<std::string> Loading;
 
     static std::shared_ptr<cImage> Get(const char* path, int maxWidth, int maxHeight) {
-        char keyBuf[1024];
-        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", path, maxWidth, maxHeight);
-        std::string key = keyBuf;
+        const std::string key = ThumbCacheKey(path, maxWidth, maxHeight);
         
         {
             cMutexLock lock(&ThumbCacheMutex);
@@ -300,7 +353,7 @@ public:
                     cMutexLock loaderLock(&ThumbLoaderMutex);
                     if (!ThumbLoader) ThumbLoader = new cThumbLoaderThread();
                 }
-                ThumbLoader->Add(path, maxWidth, maxHeight, g_CacheGeneration.load());
+                ThumbLoader->Add(path, key, maxWidth, maxHeight, g_CacheGeneration.load());
             }
         }
         
@@ -311,20 +364,29 @@ public:
         if (ThumbLoader) ThumbLoader->Clear();
         cMutexLock lock(&ThumbCacheMutex);
         Cache.clear();
+        cacheBytes = 0;
         lruList.clear();
         Loading.clear();
     }
 };
+size_t cThumbCache::cacheBytes = 0;
 std::list<std::string> cThumbCache::lruList;
 std::unordered_map<std::string, CacheEntry> cThumbCache::Cache;
 std::unordered_set<std::string> cThumbCache::Loading;
 
-void cThumbLoaderThread::Add(const std::string& path, int w, int h, uint64_t generation) {
+std::shared_ptr<cImage> ImageNextCachedThumbnail(const char *path, int width, int height)
+{
+    if (!path || width <= 0 || height <= 0)
+        return nullptr;
+    return cThumbCache::Get(path, width, height);
+}
+
+void cThumbLoaderThread::Add(const std::string& path, const std::string& key, int w, int h, uint64_t generation) {
     cMutexLock lock(&queueMutex);
     for (auto const& req : queue) {
-        if (req.path == path && req.w == w && req.h == h) return;
+        if (req.key == key && req.generation == generation) return;
     }
-    queue.push_back({path, w, h, generation});
+    queue.push_back({path, key, w, h, generation});
     cond.Broadcast();
     if (!Active()) Start();
 }
@@ -336,7 +398,8 @@ void cThumbLoaderThread::Clear() {
 
 void cThumbLoaderThread::StopThread() {
     cond.Broadcast();
-    Cancel(0);
+    // Wait for the worker before destroying its queue/mutex members.
+    Cancel(3);
 }
 
 void StopThumbLoader() {
@@ -366,30 +429,42 @@ void cThumbLoaderThread::Action() {
             img = LoadThumbnail(req.path.c_str(), req.w, req.h, false);
         }
 
-        // Frühzeitiger Abbruch bei Generation-Mismatch (verhindert stale cache entries)
-        if (req.generation != g_CacheGeneration.load()) {
-            cCondWait::SleepMs(5);
+        // A queued request may become obsolete after a directory change or
+        // after the file was replaced while decoding. Never publish stale data.
+        if (req.generation != g_CacheGeneration.load())
             continue;
-        }
+        const bool fileChanged = (ThumbCacheKey(req.path, req.w, req.h) != req.key);
 
-        char keyBuf[1024];
-        snprintf(keyBuf, sizeof(keyBuf), "%s_%dx%d", req.path.c_str(), req.w, req.h);
-        std::string key = keyBuf;
-        
         {
             cMutexLock cacheLock(&ThumbCacheMutex);
-            cThumbCache::Loading.erase(key);
-            
-            if (img) {
-                if (cThumbCache::Cache.find(key) == cThumbCache::Cache.end()) {
-                    cThumbCache::lruList.push_front(key);
-                    if (cThumbCache::lruList.size() > cThumbCache::MAX_CACHE_SIZE) {
-                        cThumbCache::Cache.erase(cThumbCache::lruList.back());
+            if (req.generation != g_CacheGeneration.load())
+                continue;
+            cThumbCache::Loading.erase(req.key);
+            if (fileChanged) {
+                g_ThumbnailsUpdated.store(true); // request a fresh thumbnail
+                continue;
+            }
+
+            if (img && cThumbCache::Cache.find(req.key) == cThumbCache::Cache.end()) {
+                const size_t bytes = static_cast<size_t>(img->Width()) *
+                                     static_cast<size_t>(img->Height()) * sizeof(tColor);
+                if (bytes <= cThumbCache::MAX_CACHE_BYTES) {
+                    while (!cThumbCache::lruList.empty() &&
+                           (cThumbCache::Cache.size() >= cThumbCache::MAX_CACHE_SIZE ||
+                            cThumbCache::cacheBytes > cThumbCache::MAX_CACHE_BYTES - bytes)) {
+                        const std::string& oldest = cThumbCache::lruList.back();
+                        auto old = cThumbCache::Cache.find(oldest);
+                        if (old != cThumbCache::Cache.end()) {
+                            cThumbCache::cacheBytes -= old->second.bytes;
+                            cThumbCache::Cache.erase(old);
+                        }
                         cThumbCache::lruList.pop_back();
                     }
-                    cThumbCache::Cache[key] = { img, cThumbCache::lruList.begin() };
+                    cThumbCache::lruList.push_front(req.key);
+                    cThumbCache::Cache[req.key] = {img, cThumbCache::lruList.begin(), bytes};
+                    cThumbCache::cacheBytes += bytes;
+                    g_ThumbnailsUpdated.store(true);
                 }
-                g_ThumbnailsUpdated.store(true);
             }
         }
         
@@ -516,16 +591,10 @@ cMenuImageGrid::~cMenuImageGrid()
 
     // Thumbnail-Cache leeren, um ein unbegrenztes Anwachsen des RAMs zu verhindern
     cThumbCache::Clear();
-#ifdef HAVE_LIBEXIF
-    ClearExifExtractorTasks();
-#endif
 }
 
 bool cMenuImageGrid::LoadDir(const char *dir)
 {
-#ifdef HAVE_LIBEXIF
-    ClearExifExtractorTasks();
-#endif
     currentIndex = 0;
     return list->Load(source, dir);
 }
@@ -587,7 +656,6 @@ void cMenuImageGrid::DrawGrid()
     int kachelHoehe = kachelBreite * 3 / 4;
 
     int totalItems = list->Count();
-    
     tColor bgFull     = 0xFF151515;
     tColor textFg     = 0xFF00AAFF;
     tColor btnRed     = 0xFFCC0000;
@@ -610,6 +678,9 @@ void cMenuImageGrid::DrawGrid()
     int visibleRows = (osdHeight - titleHeight - buttonAreaHeight) / (kachelHoehe + padding);
     if (visibleRows < 1) visibleRows = 1;
     int startRow = (currentIndex / columns / visibleRows) * visibleRows;
+    // Draw only the visible tiles rather than iterating the entire folder.
+    int firstVisible = startRow * columns;
+    int lastVisible = std::min(totalItems, (startRow + visibleRows) * columns);
 
     myOsd->DrawRectangle(0, 0, osdWidth - 1, osdHeight - 1, bgFull);
     char titleBuf[256];
@@ -622,7 +693,7 @@ void cMenuImageGrid::DrawGrid()
     myOsd->DrawRectangle(margin + 190, btnY + 5, margin + 350, btnY + 5 + fntTitle->Height() + 10, btnBlue);
     myOsd->DrawText(margin + 200, btnY + 10, tr("Back"), btnBlueFg, btnBlue, fntTitle);
 
-    for (int i = 0; i < totalItems; i++) {
+    for (int i = firstVisible; i < lastVisible; i++) {
         int row = (i / columns) - startRow;
         if (row < 0 || row >= visibleRows) continue;
 
@@ -846,6 +917,7 @@ eOSState cMenuImageGrid::ProcessKey(eKeys Key)
     return osContinue;
 }
 
+#ifdef HAVE_SKINDESIGNER
 // --- cMenuImageSkinDesigner -----------------------------------------------
 
 cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesignerapi::cPluginStructure *plugStruct)
@@ -858,6 +930,7 @@ cMenuImageSkinDesigner::cMenuImageSkinDesigner(cFileSource *Source, skindesigner
     needsRedraw = true;
     
     rootView = NULL;
+    fallbackGrid = NULL;
     back = NULL;
     header = NULL;
     imagegrid = NULL;
@@ -887,6 +960,9 @@ cMenuImageSkinDesigner::~cMenuImageSkinDesigner()
     if (back) delete back;
     if (header) delete header;
     if (imagegrid) delete imagegrid;
+    // cOsdView owns the Skindesigner OSD session and calls CloseOsd().
+    if (rootView) delete rootView;
+    if (fallbackGrid) delete fallbackGrid;
 
     delete list;
     free(currentdir);
@@ -906,19 +982,32 @@ cDirItem *cMenuImageSkinDesigner::CurrentItem()
 
 void cMenuImageSkinDesigner::Show(void)
 {
-    if (!SkindesignerAvailable()) return;
-    
-    rootView = GetOsdView();
-    if (!rootView) return;
-    
-    back = rootView->GetViewElement(0); // background
-    header = rootView->GetViewElement(1); // header
-    imagegrid = rootView->GetViewGrid(0); // imagegrid
-    
-    if (back) back->Display();
+    if (fallbackGrid) {
+        fallbackGrid->Show();
+        return;
+    }
+    if (!SkindesignerAvailable()) {
+        isyslog("imageplugin: Skindesigner API unavailable; switching to native grid");
+        fallbackGrid = new cMenuImageGrid(source);
+        fallbackGrid->Show();
+        return;
+    }
+    if (!rootView) {
+        rootView = GetOsdView();
+        if (!rootView) {
+            esyslog("imageplugin: Skindesigner grid OSD initialization failed; switching to native grid");
+            fallbackGrid = new cMenuImageGrid(source);
+            fallbackGrid->Show();
+            return;
+        }
+        back = rootView->GetViewElement(0); // background
+        header = rootView->GetViewElement(1); // header
+        imagegrid = rootView->GetViewGrid(0); // imagegrid
+    }
 
+    if (back) back->Display();
     rootView->Activate();
-    
+
     if (needsRedraw) {
         Draw();
         needsRedraw = false;
@@ -949,8 +1038,10 @@ void cMenuImageSkinDesigner::Draw()
         int rows = 3; // 3 Zeilen pro Seite für Estuary
         int itemsPerPage = columns * rows;
         
-        double itemWidth = 100.0 / columns;
-        double itemHeight = 100.0 / rows;
+        // Skindesigner cViewGrid::PositionGrid takes normalized fractions (0..1),
+        // not 0..100 percent values. Percentages put most tiles off-screen.
+        double itemWidth = 1.0 / columns;
+        double itemHeight = 1.0 / rows;
 
         int page = currentIndex / itemsPerPage;
         int startIdx = page * itemsPerPage;
@@ -999,6 +1090,7 @@ void cMenuImageSkinDesigner::Draw()
 
 eOSState cMenuImageSkinDesigner::ProcessKey(eKeys Key)
 {
+    if (fallbackGrid) return fallbackGrid->ProcessKey(Key);
     int totalItems = list->Count();
     if (totalItems == 0) {
         if (Key == kBack || Key == kMenu) return osEnd;
@@ -1121,6 +1213,8 @@ eOSState cMenuImageSkinDesigner::Select(bool isred)
     }
     return osContinue;
 }
+
+#endif // HAVE_SKINDESIGNER
 
 eOSState cMenuImageGrid::Parent(void)
 {
