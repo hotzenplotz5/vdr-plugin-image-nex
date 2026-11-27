@@ -1157,7 +1157,7 @@ void cImageControl::Stop(void)
 {
   cImagePlayer *old = player;
   player = NULL;
-  SetPlayer(NULL);
+  cControl::player = NULL; // also supported by older VDR headers
   delete old;
 }
 
