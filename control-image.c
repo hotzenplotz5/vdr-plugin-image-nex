@@ -76,6 +76,7 @@ cImageControl::cImageControl(cSlideShow * pNewSlideShow, bool autoplay)
  , m_pictureDrawnStatus(-1)
  , m_pictureDrawnSlide(false)
  , m_pictureDirty(true)
+ , m_pictureOutputInitialized(false)
 {
   // Notity all cStatusMonitor
   cStatus::MsgReplaying(this, "image_next", NULL, true );
@@ -135,6 +136,11 @@ cImageControl::~cImageControl()
 
 void cImageControl::Show(void)
 {
+  // A VDR replay control launched with cControl::Launch() is attached by
+  // VDR's main loop, but Show() is NOT called automatically. ProcessKey()
+  // invokes this method once after the active menu has closed, so the
+  // picture OSD does not compete with SuiteOSD's still-open menu OSD.
+  m_pictureOutputInitialized = true;
   // cControl::Show() runs on VDR's foreground thread. Only this thread may
   // allocate and draw a raw OSD; the player thread supplies ARGB frames.
   if (ImageSetup.m_nPictureOutput != 2 && player && !m_pictureOsd) {
@@ -481,6 +487,13 @@ void cImageControl::ShowProgress(void)
 */
 eOSState cImageControl::ProcessKey(eKeys nKey)
 {
+  // VDR's cControl::Attach() attaches only the player; it does not call
+  // cControl::Show(). Initialize the native true-colour OSD on the first
+  // foreground key/idle event AFTER the launching OSD menu has exited.
+  // Never retry on every kNone if the output device rejects true-colour.
+  if (!m_pictureOutputInitialized && player && player->IsAttached())
+    Show();
+
   // Check for next image
   SlideImage();
 
