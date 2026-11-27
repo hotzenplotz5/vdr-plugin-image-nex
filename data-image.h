@@ -69,6 +69,7 @@ public:
   cSlideShow(cDirItem * Item);
   virtual ~cSlideShow();
   virtual bool Load(void);
+  bool Load(bool recursive); // SuiteOSD: current album only, avoid scanning every descendant
 
   inline const char* FirstImage() const { return m_szFirstImageName; } 
 };
