@@ -221,7 +221,9 @@ bool StartPlayback(imagenext::Play &request)
     cDirItem item(src, subdir.empty() ? nullptr : subdir.c_str(),
                   name.c_str(), itFile);
     cSlideShow *slideshow = new cSlideShow(&item);
-    if (!slideshow->Load() || !slideshow->Count()) {
+    // SuiteOSD already navigates the photo folders: build the slideshow
+    // from this album only. The legacy plugin menu retains recursive scans.
+    if (!slideshow->Load(false) || !slideshow->Count()) {
         delete slideshow;
         return true;
     }
