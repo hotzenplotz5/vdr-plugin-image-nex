@@ -88,6 +88,11 @@ cSlideShow::~cSlideShow()
 
 bool cSlideShow::Load(void)
 {
+  return Load(true); // legacy Image Next menu keeps recursive behavior
+}
+
+bool cSlideShow::Load(bool recursive)
+{
   bool res = false;
   Clear();
   if (m_szFirstImageName) {
@@ -102,7 +107,7 @@ bool cSlideShow::Load(void)
 		const char *path = m_DirItem.Subdir;
 		res =
 		    ScanDir(m_DirItem.Source, path, stFile, m_DirItem.Source->Include(),
-			    0, true);
+			    0, recursive);
         if(res)
         {
             if (m_DirItem.Name)
@@ -121,7 +126,7 @@ bool cSlideShow::Load(void)
 		char *path = m_DirItem.Path();
 		res =
 		    ScanDir(m_DirItem.Source, path, stFile, m_DirItem.Source->Include(),
-			    0, true);
+			    0, recursive);
  		free(path);
 		break;
 	    }
@@ -129,7 +134,7 @@ bool cSlideShow::Load(void)
 	    dsyslog("imageplugin: SlideShow: base\n");
 	    res =
 		ScanDir(m_DirItem.Source, 0, stFile, m_DirItem.Source->Include(), 0,
-			true);
+			recursive);
 	    break;
 	default:
 	    break;
